@@ -1,0 +1,38 @@
+{
+  "name": "@reason-native-web/jose",
+  "version": "0.1.0",
+  "description": "JOSE implementation in native Reason",
+  "esy": {
+    "build": "dune build --root . -p jose",
+    "buildDev": "refmterr dune build --root ."
+  },
+  "scripts": {
+    "test": "esy x RunTests.exe",
+    "fmt": "dune build @fmt --auto-promote --root .",
+    "docs": "dune build @doc --root .",
+    "docs-path": "esy echo #{self.target_dir}/default/_doc/_html"
+  },
+  "dependencies": {
+    "@esy-ocaml/reason": "< 4.0.0",
+    "@opam/base64": "*",
+    "@opam/dune": "*",
+    "@opam/nocrypto": "*",
+    "@opam/x509": "^0.8.1",
+    "@opam/yojson": "*",
+    "@opam/hex": "*",
+    "ocaml": ">=4.9.0"
+  },
+  "devDependencies": {
+    "@opam/merlin": "*",
+    "@opam/ocamlformat": "*",
+    "@reason-native/rely": "*",
+    "@opam/lwt": "*",
+    "refmterr": "^3.3.0",
+    "@opam/containers": "*",
+    "@opam/odoc": "*"
+  },
+  "resolutions": {
+    "@esy-ocaml/reason": "facebook/reason:reason.json#ede1f25c895ac9c6a93f7d3c87a19eaa8de366f0",
+    "@opam/nocrypto": "mirleft/ocaml-nocrypto:nocrypto.opam#80b7b4b9bd1ccfba3ec93d85cd82bfb3dc10f887"
+  }
+}
