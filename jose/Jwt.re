@@ -141,23 +141,6 @@ let from_string = token => {
   );
 };
 
-let sha256_asn1 =
-  Cstruct.of_string(
-    "\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01\x05\x00\x04\x20",
-  );
-
-let pkcs1_sig = (asn1, body) => {
-  let len = Cstruct.len(asn1);
-  if (Cstruct.check_bounds(body, len)) {
-    switch (Cstruct.split(~start=0, body, len)) {
-    | (a, b) when Cstruct.equal(a, asn1) => Some(b)
-    | _ => None
-    };
-  } else {
-    None;
-  };
-};
-
 let verify_internal = (~pub_key, t) => {
   let input_str = t.header_str ++ "." ++ t.payload_str;
 
@@ -168,14 +151,9 @@ let verify_internal = (~pub_key, t) => {
        switch (Nocrypto.Rsa.PKCS1.sig_decode(~key=pub_key, s)) {
        | None => Error(`Msg("Could not decode signature"))
        | Some(message) =>
-         switch (pkcs1_sig(sha256_asn1, message)) {
-         | None =>
-           Error(`Msg("PKCS something something, I must understand this"))
-         | Some(decrypted_sign) =>
-           let token_hash =
-             input_str |> Cstruct.of_string |> Nocrypto.Hash.SHA256.digest;
-           Ok(Cstruct.equal(decrypted_sign, token_hash));
-         }
+         let token_hash =
+           input_str |> Cstruct.of_string |> Nocrypto.Hash.SHA256.digest;
+         Ok(Cstruct.equal(message, token_hash));
        }
      );
 };

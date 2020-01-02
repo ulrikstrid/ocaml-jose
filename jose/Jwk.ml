@@ -85,7 +85,7 @@ module Pub = struct
     | Error (`Msg m), _, _ -> Error (`Msg ("n " ^ m))
     | _, Error (`Msg m), _ -> Error (`Msg ("e " ^ m))
 
-  let of_pub_pem pem: (t, [ `Msg of string ]) result =
+  let of_pub_pem pem : (t, [ `Msg of string ]) result =
     Cstruct.of_string pem |> X509.Public_key.decode_pem
     |> RResult.flat_map (function
          | `RSA pub_key -> Ok pub_key

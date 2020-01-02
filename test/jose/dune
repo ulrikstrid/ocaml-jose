@@ -1,5 +1,4 @@
 (library
  (name jose_test)
- (public_name jose.test)
- (libraries jose jose.framework rely.lib nocrypto nocrypto.lwt x509 cstruct)
+ (libraries jose TestFramework rely.lib nocrypto nocrypto.lwt x509 cstruct)
  (flags -linkall -g -w -9))

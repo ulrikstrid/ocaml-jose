@@ -2,4 +2,4 @@
  (name RunTests)
  (package jose)
  (public_name RunTests.exe)
- (libraries jose.framework jose.test))
+ (libraries TestFramework jose_test))

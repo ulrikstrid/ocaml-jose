@@ -1,5 +1,4 @@
 (library
  (name TestFramework)
- (public_name jose.framework)
  (libraries rely.lib)
  (flags -linkall -g -w -9))
