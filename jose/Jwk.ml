@@ -42,9 +42,7 @@ module Pub = struct
     kid : string;
     x5t : string option;
   }
-
-  let empty =
-    { alg = None; kty = ""; use = None; n = ""; e = ""; kid = ""; x5t = None }
+  [@@deriving yojson]
 
   let to_pub (t : t) : (Nocrypto.Rsa.pub, [ `Msg of string ]) result =
     let n = Util.get_modulus t.n in
@@ -97,33 +95,18 @@ module Pub = struct
     |> RResult.map (fun p -> X509.Public_key.encode_pem (`RSA p))
     |> RResult.map Cstruct.to_string
 
-  let to_json_from_opt = CCOpt.map_or ~default:`Null Yojson.Basic.from_string
+  let to_json_from_opt = CCOpt.map_or ~default:`Null Yojson.Safe.from_string
 
-  let to_json t =
-    `Assoc
-      [
-        ("alg", to_json_from_opt t.alg);
-        ("kty", `String t.kty);
-        ("use", to_json_from_opt t.use);
-        ("n", `String t.n);
-        ("e", `String t.e);
-        ("kid", `String t.kid);
-        ("x5t", to_json_from_opt t.x5t);
-      ]
+  let of_string str =
+    Yojson.Safe.from_string str
+    |> of_yojson
+    |> RResult.map_error (fun e -> `Msg e)
 
-  let from_json json =
-    Yojson.Basic.Util.
-      {
-        alg = json |> member "alg" |> to_string_option;
-        kty = json |> member "kty" |> to_string;
-        use = json |> member "use" |> to_string_option;
-        n = json |> member "n" |> to_string;
-        e = json |> member "e" |> to_string;
-        kid = json |> member "kid" |> to_string;
-        x5t = json |> member "x5t" |> to_string_option;
-      }
+  let to_string t = to_yojson t |> Yojson.Safe.to_string
 
-  let from_string str = Yojson.Basic.from_string str |> from_json
+  let to_json = to_yojson
+
+  let of_json json = of_yojson json |> RResult.map_error (fun e -> `Msg e)
 end
 
 module Priv = struct
@@ -140,6 +123,7 @@ module Priv = struct
     alg : string option;
     kid : string;
   }
+  [@@deriving yojson]
 
   let of_priv (rsa_priv : Nocrypto.Rsa.priv) =
     let n = Util.get_JWK_modulus rsa_priv.n in
@@ -192,4 +176,15 @@ module Priv = struct
     to_priv t
     |> RResult.map (fun p -> X509.Private_key.encode_pem (`RSA p))
     |> RResult.map Cstruct.to_string
+
+      let of_string str =
+    Yojson.Safe.from_string str
+    |> of_yojson
+    |> RResult.map_error (fun e -> `Msg e)
+
+  let to_string t = to_yojson t |> Yojson.Safe.to_string
+
+  let to_json = to_yojson
+
+  let of_json json = of_yojson json |> RResult.map_error (fun e -> `Msg e)
 end

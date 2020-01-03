@@ -33,8 +33,9 @@ describe("JWK.Pub", ({test}) => {
     )
   });
 
-  test("from_json", ({expect}) => {
-    Jose.Jwk.Pub.from_string(Fixtures.public_jwk_string)
+  test("of_json", ({expect}) => {
+    Jose.Jwk.Pub.of_string(Fixtures.public_jwk_string)
+    |> CCResult.get_exn
     |> (
       jwk => {
         expect.string(jwk.kty).toEqual(Fixtures.private_jwk.kty);

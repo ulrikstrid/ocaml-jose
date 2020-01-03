@@ -6,6 +6,13 @@ module RResult = {
     };
   };
 
+  let map_error = (fn, r) => {
+    switch (r) {
+    | Ok(r) => Ok(r)
+    | Error(e) => Error(fn(e))
+    };
+  };
+
   let flat_map = (fn, r) => {
     switch (r) {
     | Ok(v) => fn(v)

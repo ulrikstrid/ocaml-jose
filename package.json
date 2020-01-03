@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "JOSE implementation in native Reason",
   "esy": {
-    "build": "dune build --root . -p jose",
+    "build": "dune build -p jose",
     "buildDev": "refmterr dune build --root ."
   },
   "scripts": {
@@ -13,23 +13,25 @@
     "docs-path": "esy echo #{self.target_dir}/default/_doc/_html"
   },
   "dependencies": {
-    "@esy-ocaml/reason": "< 4.0.0",
+    "@esy-ocaml/reason": "<4.0.0",
     "@opam/base64": "*",
+    "@opam/containers": "*",
     "@opam/dune": "*",
-    "@opam/nocrypto": "*",
-    "@opam/x509": "^0.8.1",
-    "@opam/yojson": "*",
     "@opam/hex": "*",
+    "@opam/nocrypto": "*",
+    "@opam/ppx_deriving_yojson": "*",
+    "@opam/ppx_deriving": "*",
+    "@opam/x509": "*",
+    "@opam/yojson": "*",
     "ocaml": ">=4.9.0"
   },
   "devDependencies": {
+    "@opam/lwt": "*",
     "@opam/merlin": "*",
     "@opam/ocamlformat": "*",
+    "@opam/odoc": "*",
     "@reason-native/rely": "*",
-    "@opam/lwt": "*",
-    "refmterr": "^3.3.0",
-    "@opam/containers": "*",
-    "@opam/odoc": "*"
+    "refmterr": "*"
   },
   "resolutions": {
     "@esy-ocaml/reason": "facebook/reason:reason.json#ede1f25c895ac9c6a93f7d3c87a19eaa8de366f0",

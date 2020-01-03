@@ -34,7 +34,7 @@ let header_to_string = header => {
     ("alg", `String(alg)),
     ("kid", `String(header.kid)),
   ])
-  |> Yojson.Basic.to_string
+  |> Yojson.Safe.to_string
   |> base64_url_encode;
 };
 
@@ -54,36 +54,36 @@ let string_to_header = header_str => {
 
   base64_url_decode(header_str)
   |> RResult.map(decoded_header => {
-       Yojson.Basic.from_string(decoded_header)
+       Yojson.Safe.from_string(decoded_header)
        |> (
          json => {
            alg:
-             Yojson.Basic.Util.member("alg", json)
-             |> Yojson.Basic.Util.to_string
+             Yojson.Safe.Util.member("alg", json)
+             |> Yojson.Safe.Util.to_string
              |> to_alg,
            typ:
-             Yojson.Basic.Util.member("typ", json)
-             |> Yojson.Basic.Util.to_string_option
+             Yojson.Safe.Util.member("typ", json)
+             |> Yojson.Safe.Util.to_string_option
              |> to_typ,
            kid:
-             Yojson.Basic.Util.member("kid", json)
-             |> Yojson.Basic.Util.to_string,
+             Yojson.Safe.Util.member("kid", json)
+             |> Yojson.Safe.Util.to_string,
          }
        )
      });
 };
 
-type payload = Yojson.Basic.t;
-type claim = (string, Yojson.Basic.t);
+type payload = Yojson.Safe.t;
+type claim = (string, Yojson.Safe.t);
 
 let empty_payload = `Assoc([]);
 
 let payload_to_string = payload => {
-  payload |> Yojson.Basic.to_string |> base64_url_encode;
+  payload |> Yojson.Safe.to_string |> base64_url_encode;
 };
 
 let string_to_payload = payload_str => {
-  base64_url_decode(payload_str) |> RResult.map(Yojson.Basic.from_string);
+  base64_url_decode(payload_str) |> RResult.map(Yojson.Safe.from_string);
 };
 
 type signature = string;
@@ -97,10 +97,10 @@ type t = {
 };
 
 let add_claim =
-    (claim_name: string, claim_value: Yojson.Basic.t, payload: payload) =>
+    (claim_name: string, claim_value: Yojson.Safe.t, payload: payload) =>
   `Assoc([
     (claim_name, claim_value),
-    ...Yojson.Basic.Util.to_assoc(payload),
+    ...Yojson.Safe.Util.to_assoc(payload),
   ]);
 
 let sign = (header, key, payload) => {
@@ -185,7 +185,7 @@ let verify = (~jwks: list(Jwk.Pub.t), t) => {
   |> RResult.flat_map(Jwk.Pub.to_pub)
   |> RResult.flat_map(pub_key => verify_internal(~pub_key, t))
   |> RResult.flat_map(_ => {
-       module Json = Yojson.Basic.Util;
+       module Json = Yojson.Safe.Util;
        switch (Json.member("exp", payload) |> Json.to_int_option) {
        | Some(exp) when exp > int_of_float(Unix.time()) => Ok(t)
        | Some(_exp) => Error(`Msg("Token expired"))
