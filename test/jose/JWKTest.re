@@ -34,8 +34,11 @@ describe("JWK.Pub", ({test}) => {
   });
 
   test("of_json", ({expect}) => {
-    Jose.Jwk.Pub.of_string(Fixtures.public_jwk_string)
-    |> CCResult.get_exn
+    let jwk = Jose.Jwk.Pub.of_string(Fixtures.public_jwk_string);
+
+    expect.result(jwk).toBeOk();
+
+    CCResult.get_exn(jwk)
     |> (
       jwk => {
         expect.string(jwk.kty).toEqual(Fixtures.private_jwk.kty);
@@ -46,7 +49,7 @@ describe("JWK.Pub", ({test}) => {
           "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik",
         );
       }
-    )
+    );
   });
 });
 

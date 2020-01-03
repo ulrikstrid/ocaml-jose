@@ -1,99 +1,23 @@
 open Utils;
 
-type algorithm = [ | `RSA | `Unknown];
-type typ = [ | `JWT | `Unknown];
-
-type header = {
-  alg: algorithm,
-  typ,
-  kid: string,
-};
-
-let make_header = (jwk: Jwk.Pub.t) => {alg: `RSA, typ: `JWT, kid: jwk.kid};
-
-let base64_url_encode =
-  Base64.encode(~pad=false, ~alphabet=Base64.uri_safe_alphabet);
-let base64_url_decode =
-  Base64.decode(~pad=false, ~alphabet=Base64.uri_safe_alphabet);
-
-let header_to_string = header => {
-  let alg =
-    switch (header.alg) {
-    | `RSA => "RS256"
-    | _ => "Unknown"
-    };
-
-  let typ =
-    switch (header.typ) {
-    | `JWT => "JWT"
-    | _ => "Unknown"
-    };
-
-  `Assoc([
-    ("typ", `String(typ)),
-    ("alg", `String(alg)),
-    ("kid", `String(header.kid)),
-  ])
-  |> Yojson.Safe.to_string
-  |> base64_url_encode;
-};
-
-let string_to_header = header_str => {
-  let to_alg = alg => {
-    switch (alg) {
-    | "RS256" => `RSA
-    | _ => `Unknown
-    };
-  };
-
-  let to_typ = typ =>
-    switch (typ) {
-    | Some("JWT") => `JWT
-    | _ => `Unknown
-    };
-
-  base64_url_decode(header_str)
-  |> RResult.map(decoded_header => {
-       Yojson.Safe.from_string(decoded_header)
-       |> (
-         json => {
-           alg:
-             Yojson.Safe.Util.member("alg", json)
-             |> Yojson.Safe.Util.to_string
-             |> to_alg,
-           typ:
-             Yojson.Safe.Util.member("typ", json)
-             |> Yojson.Safe.Util.to_string_option
-             |> to_typ,
-           kid:
-             Yojson.Safe.Util.member("kid", json)
-             |> Yojson.Safe.Util.to_string,
-         }
-       )
-     });
-};
-
 type payload = Yojson.Safe.t;
 type claim = (string, Yojson.Safe.t);
 
 let empty_payload = `Assoc([]);
 
 let payload_to_string = payload => {
-  payload |> Yojson.Safe.to_string |> base64_url_encode;
+  payload |> Yojson.Safe.to_string |> RBase64.base64_url_encode;
 };
 
-let string_to_payload = payload_str => {
-  base64_url_decode(payload_str) |> RResult.map(Yojson.Safe.from_string);
+let payload_of_string = payload_str => {
+  RBase64.base64_url_decode(payload_str)
+  |> RResult.map(Yojson.Safe.from_string);
 };
-
-type signature = string;
 
 type t = {
-  header,
+  header: Header.t,
   payload,
-  header_str: string,
-  payload_str: string,
-  signature,
+  signature: Jws.signature,
 };
 
 let add_claim =
@@ -103,93 +27,61 @@ let add_claim =
     ...Yojson.Safe.Util.to_assoc(payload),
   ]);
 
-let sign = (header, key, payload) => {
-  let header_str = header_to_string(header);
-  let payload_str = payload_to_string(payload);
+let to_string = t => {
+  let header_str = Header.header_to_string(t.header);
+  let payload_str = payload_to_string(t.payload);
 
   RResult.both(header_str, payload_str)
-  |> RResult.flat_map(((header_str, payload_str)) => {
-       let input_str = header_str ++ "." ++ payload_str;
-
-       `Message(Cstruct.of_string(input_str))
-       |> Nocrypto.Rsa.PKCS1.sign(~hash=`SHA256, ~key)
-       |> Cstruct.to_string
-       |> base64_url_encode
-       |> RResult.map(sign => (header_str, payload_str, sign));
-     })
-  |> RResult.map(((header_str, payload_str, signature)) => {
-       {header, header_str, payload, payload_str, signature}
-     });
+  |> RResult.map(((header_str, payload_str)) =>
+       header_str ++ "." ++ payload_str ++ "." ++ t.signature
+     );
 };
 
-let to_string = t =>
-  t.header_str ++ "." ++ t.payload_str ++ "." ++ t.signature;
-
-let from_string = token => {
+let of_string = token => {
   String.split_on_char('.', token)
   |> (
     fun
     | [header_str, payload_str, signature] => {
-        let header = string_to_header(header_str);
-        let payload = string_to_payload(payload_str);
+        let header = Header.string_to_header(header_str);
+        let payload = payload_of_string(payload_str);
         RResult.both(header, payload)
         |> RResult.flat_map(((header, payload)) =>
-             Ok({header, payload, header_str, payload_str, signature})
+             Ok({header, payload, signature})
            );
       }
     | _ => Error(`Msg("token didn't include header, payload or signature"))
   );
 };
 
-let verify_internal = (~pub_key, t) => {
-  let input_str = t.header_str ++ "." ++ t.payload_str;
-
-  t.signature
-  |> base64_url_decode
-  |> RResult.map(Cstruct.of_string)
-  |> RResult.map(s =>
-       switch (Nocrypto.Rsa.PKCS1.sig_decode(~key=pub_key, s)) {
-       | None => Error(`Msg("Could not decode signature"))
-       | Some(message) =>
-         let token_hash =
-           input_str |> Cstruct.of_string |> Nocrypto.Hash.SHA256.digest;
-         Ok(Cstruct.equal(message, token_hash));
-       }
+let to_jws = t =>
+  payload_to_string(t.payload)
+  |> RResult.map((payload: string) =>
+       Jws.{header: t.header, signature: t.signature, payload}
      );
+
+let of_jws = (jws: Jws.t) =>
+  payload_of_string(jws.payload)
+  |> RResult.map(payload =>
+       {header: jws.header, signature: jws.signature, payload}
+     );
+
+let check_exp = t => {
+  module Json = Yojson.Safe.Util;
+  switch (Json.member("exp", t.payload) |> Json.to_int_option) {
+  | Some(exp) when exp > int_of_float(Unix.time()) => Ok(t)
+  | Some(_exp) => Error(`Msg("Token expired"))
+  | None => Ok(t)
+  };
 };
 
-let verify = (~jwks: list(Jwk.Pub.t), t) => {
-  let header = t.header;
-  let payload = t.payload;
-
-  (
-    switch (header.alg) {
-    | `RSA => Ok(header.alg)
-    | _ => Error(`Msg("alg must be RS256"))
-    }
-  )
-  |> RResult.flat_map(_ =>
-       switch (header.typ) {
-       | `JWT => Ok(header.typ)
-       | _ => Error(`Msg("typ must be JWT"))
-       }
-     )
-  |> RResult.flat_map(_ =>
-       RList.find_opt((jwk: Jwk.Pub.t) => jwk.kid == header.kid, jwks)
-       |> (
-         fun
-         | Some(jwk) => Ok(jwk)
-         | None => Error(`Msg("Did not find key with correct kid"))
-       )
-     )
-  |> RResult.flat_map(Jwk.Pub.to_pub)
-  |> RResult.flat_map(pub_key => verify_internal(~pub_key, t))
-  |> RResult.flat_map(_ => {
-       module Json = Yojson.Safe.Util;
-       switch (Json.member("exp", payload) |> Json.to_int_option) {
-       | Some(exp) when exp > int_of_float(Unix.time()) => Ok(t)
-       | Some(_exp) => Error(`Msg("Token expired"))
-       | None => Ok(t)
-       };
-     });
+let validate = (~jwks, t) => {
+  check_exp(t)
+  |> RResult.flat_map(to_jws)
+  |> RResult.flat_map(Jws.validate(~jwks))
+  |> RResult.flat_map(of_jws);
 };
+
+let sign = (~header, ~payload, key) =>
+  payload_to_string(payload)
+  |> RResult.flat_map(payload => Jws.sign(~header, ~payload, key))
+  |> RResult.flat_map(of_jws);

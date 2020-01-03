@@ -44,18 +44,18 @@ module Jwk: {
 
     /**
     [to_json t] takes a [t] and returns a [Yojson.Safe.t]
-    */ 
+    */
     let to_json: t => Yojson.Safe.t;
     /**
     [of_json json] takes a [Yojson.Safe.t] and returns a [t]
-    */ 
+    */
     let of_json: Yojson.Safe.t => result(t, [ | `Msg(string)]);
 
     /**
     [of_string json_string] takes a JSON string representation and tries to return a [t]
     */
     let of_string: string => result(t, [ | `Msg(string)]);
-    
+
     /**
     [to_string t] takes a t and returns a JSON string representation
     */
@@ -107,11 +107,11 @@ module Jwk: {
 
     /**
     [to_json t] takes a [t] and returns a [Yojson.Safe.t]
-    */ 
+    */
     let to_json: t => Yojson.Safe.t;
     /**
     [of_json json] takes a [Yojson.Safe.t] and returns a [t]
-    */ 
+    */
     let of_json: Yojson.Safe.t => result(t, [ | `Msg(string)]);
 
     /**
@@ -139,26 +139,48 @@ module Jwks: {
 
   /**
     [to_json t] takes a [t] and returns a [Yojson.Safe.t]
-    */ 
-    let to_json: t => Yojson.Safe.t;
-    /**
+    */
+  let to_json: t => Yojson.Safe.t;
+  /**
     [of_json json] takes a [Yojson.Safe.t] and returns a [t].
 
     Keys that can not be serialized safely will be removed from the list
-    */ 
-    let of_json: Yojson.Safe.t => t;
+    */
+  let of_json: Yojson.Safe.t => t;
 
-    /**
+  /**
     [of_string json_string] takes a JSON string representation and returns a [t].
 
     Keys that can not be serialized safely will be removed from the list
     */
-    let of_string: string => t;
+  let of_string: string => t;
 
-    /**
+  /**
     [to_string t] takes a t and returns a JSON string representation
     */
-    let to_string: t => string;
+  let to_string: t => string;
+};
+
+module Header: {
+  type t;
+
+  let make_header: Jwk.Pub.t => t;
+};
+
+module Jws: {
+  type signature = string;
+
+  type t = {
+    header: Header.t,
+    payload: string,
+    signature,
+  };
+
+  let validate: (~jwks: Jwks.t, t) => result(t, [ | `Msg(string)]);
+
+  let sign:
+    (~header: Header.t, ~payload: string, Nocrypto.Rsa.priv) =>
+    result(t, [ | `Msg(string)]);
 };
 
 /**
@@ -167,26 +189,23 @@ module Jwks: {
 */
 
 module Jwt: {
-  type header;
-
-  let make_header: Jwk.Pub.t => header;
-
   type payload = Yojson.Safe.t;
   type claim = (string, Yojson.Safe.t);
 
   let empty_payload: payload;
 
-  type signature;
-
   type t;
 
   let add_claim: (string, Yojson.Safe.t, payload) => payload;
 
+  let to_string: t => result(string, [ | `Msg(string)]);
+  let of_string: string => result(t, [ | `Msg(string)]);
+
+  let to_jws: t => result(Jws.t, [ | `Msg(string)]);
+  let of_jws: Jws.t => result(t, [ | `Msg(string)]);
+
+  let validate: (~jwks: Jwks.t, t) => result(t, [ | `Msg(string)]);
   let sign:
-    (header, Nocrypto.Rsa.priv, payload) => result(t, [ | `Msg(string)]);
-
-  let to_string: t => string;
-  let from_string: string => result(t, [ | `Msg(string)]);
-
-  let verify: (~jwks: list(Jwk.Pub.t), t) => result(t, [ | `Msg(string)]);
+    (~header: Header.t, ~payload: payload, Nocrypto.Rsa.priv) =>
+    result(t, [ | `Msg(string)]);
 };

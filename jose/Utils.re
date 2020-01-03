@@ -39,3 +39,10 @@ module RList = {
         find_opt(p, l);
       };
 };
+
+module RBase64 = {
+  let base64_url_encode =
+    Base64.encode(~pad=false, ~alphabet=Base64.uri_safe_alphabet);
+  let base64_url_decode =
+    Base64.decode(~pad=false, ~alphabet=Base64.uri_safe_alphabet);
+};

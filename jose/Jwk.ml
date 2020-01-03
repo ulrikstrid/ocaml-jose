@@ -33,14 +33,14 @@ end
 
 module Pub = struct
   type t = {
-    alg : string option;
+    alg : (string option [@default None]);
     kty : string;
     (* `RSA ? *)
-    use : string option;
+    use : (string option [@default None]);
     n : string;
     e : string;
     kid : string;
-    x5t : string option;
+    x5t : (string option [@default None]);
   }
   [@@deriving yojson]
 
@@ -120,7 +120,7 @@ module Priv = struct
     dp : string;
     dq : string;
     qi : string;
-    alg : string option;
+    alg : (string option [@default None]);
     kid : string;
   }
   [@@deriving yojson]
@@ -177,7 +177,7 @@ module Priv = struct
     |> RResult.map (fun p -> X509.Private_key.encode_pem (`RSA p))
     |> RResult.map Cstruct.to_string
 
-      let of_string str =
+  let of_string str =
     Yojson.Safe.from_string str
     |> of_yojson
     |> RResult.map_error (fun e -> `Msg e)
