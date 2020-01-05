@@ -16,7 +16,7 @@
     "@esy-ocaml/reason": "<4.0.0",
     "@opam/base64": "*",
     "@opam/containers": "*",
-    "@opam/dune": "*",
+    "@opam/dune": ">1.11.0",
     "@opam/hex": "*",
     "@opam/nocrypto": "*",
     "@opam/ppx_deriving_yojson": "*",

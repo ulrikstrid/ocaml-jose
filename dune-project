@@ -15,7 +15,7 @@
    reason
    base64
    containers
-   dune
+   (dune (>= 1.11))
    hex
    nocrypto
    ppx_deriving
