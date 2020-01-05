@@ -1,0 +1,14 @@
+description = ""
+requires = "base64
+            containers
+            hex
+            nocrypto
+            ppx_deriving.runtime
+            ppx_deriving_yojson.runtime
+            x509
+            yojson
+            zarith"
+archive(byte) = "Jose.cma"
+archive(native) = "Jose.cmxa"
+plugin(byte) = "Jose.cma"
+plugin(native) = "Jose.cmxs"

@@ -1,0 +1,4 @@
+EXCLUDE_QUERY_DIR
+B /Users/ulrik.strid/Projects/reason-native-web/reason-jose/_esy/default/store/b/reason_native_web__s__jose-6b0f2eb1/default/test/test_exe/.RunTests.eobjs/byte
+S .
+FLG -w @1..3@5..28@30..39@43@46..47@49..57@61..62-40 -strict-sequence -strict-formats -short-paths -keep-locs

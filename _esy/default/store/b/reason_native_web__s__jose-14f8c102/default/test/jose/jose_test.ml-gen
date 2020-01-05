@@ -1,0 +1,8 @@
+(** @canonical Jose_test.Fixtures *)
+module Fixtures = Jose_test__Fixtures
+
+(** @canonical Jose_test.JWKTest *)
+module JWKTest = Jose_test__JWKTest
+
+(** @canonical Jose_test.JWTTest *)
+module JWTTest = Jose_test__JWTTest

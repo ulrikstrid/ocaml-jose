@@ -1,0 +1,41 @@
+(lang dune 1.11)
+(name jose)
+(library
+ (name jose)
+ (kind normal)
+ (orig_src_dir /Users/ulrik.strid/Projects/reason-native-web/reason-jose/jose)
+ (archives (byte Jose.cma) (native Jose.cmxa))
+ (plugins (byte Jose.cma) (native Jose.cmxs))
+ (foreign_archives (native Jose.a))
+ (requires
+  yojson
+  ppx_deriving_yojson.runtime
+  ppx_deriving.runtime
+  containers
+  yojson
+  ppx_deriving_yojson.runtime
+  nocrypto
+  x509
+  base64
+  zarith
+  hex)
+ (main_module_name Jose)
+ (modes byte native)
+ (modules
+  (wrapped
+   (main_module_name Jose)
+   (modules
+    ((name Header) (obj_name jose__Header) (visibility public) (impl))
+    ((name Jose) (obj_name Jose) (visibility public) (impl) (intf))
+    ((name Jwk) (obj_name jose__Jwk) (visibility public) (impl))
+    ((name Jwks) (obj_name jose__Jwks) (visibility public) (impl))
+    ((name Jws) (obj_name jose__Jws) (visibility public) (impl))
+    ((name Jwt) (obj_name jose__Jwt) (visibility public) (impl))
+    ((name Utils) (obj_name jose__Utils) (visibility public) (impl)))
+   (alias_module
+    (name Jose__)
+    (obj_name jose__)
+    (visibility public)
+    (kind alias)
+    (impl))
+   (wrapped true))))

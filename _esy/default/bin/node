@@ -1,0 +1,4 @@
+#!/bin/sh
+export ESY__NODE_BIN_PATH="/Users/ulrik.strid/Projects/reason-native-web/reason-jose/_esy/default/bin"
+exec "/var/folders/bf/96ps8z7d1m59f_zp27ztg0nm0000gn/T/fnm-shell-6751854/bin/node" -r "/Users/ulrik.strid/Projects/reason-native-web/reason-jose/_esy/default/pnp.js" "$@"
+              

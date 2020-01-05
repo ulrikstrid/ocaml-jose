@@ -1,0 +1,7 @@
+(library
+ (name Jose)
+ (public_name jose)
+ (preprocess
+  (pps ppx_deriving_yojson))
+ (libraries containers yojson ppx_deriving_yojson.runtime nocrypto x509
+   base64 zarith hex))

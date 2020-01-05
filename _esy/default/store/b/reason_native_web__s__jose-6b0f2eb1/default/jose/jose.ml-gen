@@ -1,0 +1,8 @@
+(** @canonical Jose.Jwk *)
+module Jwk = Jose__Jwk
+
+(** @canonical Jose.Jwks *)
+module Jwks = Jose__Jwks
+
+(** @canonical Jose.Jwt *)
+module Jwt = Jose__Jwt

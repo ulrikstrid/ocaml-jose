@@ -1,0 +1,5 @@
+# dune build --root .
+# OCAMLPARAM: unset
+$ /usr/bin/getconf _NPROCESSORS_ONLN > /tmp/dune3b9e14.output 2> /dev/null
+$ /Users/ulrik.strid/.esy/3_____________________________________________________________/i/opam__s__ocamlfind-opam__c__1.8.1-15cc69e3/bin/ocamlfind printconf path > /tmp/dune5bc64c.output
+$ /Users/ulrik.strid/.esy/3_____________________________________________________________/i/ocaml-4.9.0-27f2b357/bin/ocamlc.opt -config > /tmp/dune30623a.output

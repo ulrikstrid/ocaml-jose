@@ -1,0 +1,4 @@
+(library
+ (name jose_test)
+ (libraries jose TestFramework rely.lib nocrypto nocrypto.lwt x509 cstruct)
+ (flags -linkall -g -w -9))
