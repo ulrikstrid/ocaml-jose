@@ -1,0 +1,32 @@
+name: Deploy to GitHub Pages
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+      - uses: actions/checkout@v1
+      - name: Install esy
+        run: npm install -g esy
+
+      - name: Build
+        run: esy
+
+      - name: Build docs
+        run: esy docs
+
+      - name: Save docs path
+        id: save_docs_path
+        run: echo "::set-output name=docs_path::$(esy docs-path)"
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@releases/v3
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: ${{ steps.save_docs_path.outputs.docs_path }}
