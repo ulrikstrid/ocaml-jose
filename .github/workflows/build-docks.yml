@@ -29,4 +29,5 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: gh-pages
-          FOLDER: ${{ steps.save_docs_path.outputs.docs_path }}
+          CLEAN: true
+          FOLDER: _esy/default/store/b/reason_native_web__s__jose-*/default/_doc/_html
