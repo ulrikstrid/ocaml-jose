@@ -33,14 +33,14 @@ end
 
 module Pub = struct
   type t = {
-    alg : (string option [@default None]);
+    alg : (string option[@default None]);
     kty : string;
     (* `RSA ? *)
-    use : (string option [@default None]);
+    use : (string option[@default None]);
     n : string;
     e : string;
     kid : string;
-    x5t : (string option [@default None]);
+    x5t : (string option[@default None]);
   }
   [@@deriving yojson]
 
@@ -120,7 +120,7 @@ module Priv = struct
     dp : string;
     dq : string;
     qi : string;
-    alg : (string option [@default None]);
+    alg : (string option[@default None]);
     kid : string;
   }
   [@@deriving yojson]
