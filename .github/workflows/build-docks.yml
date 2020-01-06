@@ -15,14 +15,27 @@ jobs:
         run: npm install -g esy
 
       - name: Build
-        run: esy
+        run: esy install
+
+      - name: Print esy cache
+        id: print_esy_cache
+        run: node .github/workflows/print_esy_cache.js
+      - name: Try to restore dependencies cache
+        id: deps-cache-macos
+        uses: actions/cache@v1
+        with:
+          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
+          key: ubuntu-latest-4.09-${{ hashFiles('**/index.json') }}
+
+      - name: Build
+        run: esy build
 
       - name: Build docs
         run: esy docs
 
-      - name: Save docs path
-        id: save_docs_path
-        run: echo "::set-output name=docs_path::$(esy docs-path)"
+      - name: Print esy cache
+        id: print_docs_path
+        run: node .github/workflows/print_docs_path.js
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@releases/v3
@@ -30,4 +43,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: gh-pages
           CLEAN: true
-          FOLDER: _esy/default/store/b/reason_native_web__s__jose-*/default/_doc/_html
+          FOLDER: ${{ steps.print_docs_path.outputs.docs_path }}

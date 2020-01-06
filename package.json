@@ -10,7 +10,7 @@
     "test": "dune exec test/test_exe/RunTests.exe",
     "fmt": "dune build @fmt --auto-promote --root .",
     "docs": "dune build @doc --root .",
-    "docs-path": "esy echo #{self.target_dir}/default/_doc/_html"
+    "docs-path": "esy echo #{self.target_dir / 'default' / '_doc' / '_html'}"
   },
   "dependencies": {
     "@esy-ocaml/reason": "<4.0.0",
