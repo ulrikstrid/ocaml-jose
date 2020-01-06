@@ -33,7 +33,7 @@ jobs:
       - name: Build docs
         run: esy docs
 
-      - name: Print esy cache
+      - name: Print docs path
         id: print_docs_path
         run: node .github/workflows/print_docs_path.js
 
