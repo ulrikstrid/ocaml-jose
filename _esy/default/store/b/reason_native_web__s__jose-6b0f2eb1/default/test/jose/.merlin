@@ -1,4 +1,0 @@
-EXCLUDE_QUERY_DIR
-B /Users/ulrik.strid/Projects/reason-native-web/reason-jose/_esy/default/store/b/reason_native_web__s__jose-6b0f2eb1/default/test/jose/.jose_test.objs/byte
-S .
-FLG -open Jose_test -linkall -g -w -9

@@ -1,6 +1,0 @@
-description = ""
-requires = "base64 containers hex nocrypto x509 yojson zarith"
-archive(byte) = "Jose.cma"
-archive(native) = "Jose.cmxa"
-plugin(byte) = "Jose.cma"
-plugin(native) = "Jose.cmxs"

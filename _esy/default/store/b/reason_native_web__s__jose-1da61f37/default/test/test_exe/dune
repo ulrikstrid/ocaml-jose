@@ -1,5 +1,0 @@
-(executable
- (name RunTests)
- (package jose)
- (public_name RunTests.exe)
- (libraries TestFramework jose_test))

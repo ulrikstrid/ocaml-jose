@@ -1,4 +1,0 @@
-(library
- (name Jose)
- (public_name jose)
- (libraries containers yojson nocrypto x509 base64 zarith hex))
