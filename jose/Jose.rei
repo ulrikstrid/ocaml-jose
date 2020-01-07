@@ -191,6 +191,9 @@ module Header: {
     cty: option(string),
   };
 
+  /**
+  [make_header jwk] creates a header with [typ], [kid] and [alg] set based on the public JWK
+  */
   let make_header: (~typ: string=?, Jwk.Pub.t) => t;
 
   let of_string: string => result(t, [ | `Msg(string)]);
@@ -214,8 +217,16 @@ module Jws: {
     signature,
   };
 
+  /**
+  [validate jwks t] validates the signature
+  */
   let validate: (~jwks: Jwks.t, t) => result(t, [ | `Msg(string)]);
 
+  /**
+  [sign header payload priv] creates a signed JWT from [header] and [payload]
+
+  We will start using a private JWK instead of a Nocrypto.Rsa.priv soon
+  */
   let sign:
     (~header: Header.t, ~payload: string, Nocrypto.Rsa.priv) =>
     result(t, [ | `Msg(string)]);
@@ -232,7 +243,11 @@ module Jwt: {
 
   let empty_payload: payload;
 
-  type t;
+  type t = {
+    header: Header.t,
+    payload,
+    signature: Jws.signature,
+  };
 
   let add_claim: (string, Yojson.Safe.t, payload) => payload;
 
@@ -242,7 +257,16 @@ module Jwt: {
   let to_jws: t => result(Jws.t, [ | `Msg(string)]);
   let of_jws: Jws.t => result(t, [ | `Msg(string)]);
 
+  /**
+  [validate jwks t] checks if the JWT is valid and then calls Jws.validate to validate the signature
+  */
   let validate: (~jwks: Jwks.t, t) => result(t, [ | `Msg(string)]);
+
+  /**
+  [sign header payload priv] creates a signed JWT from [header] and [payload]
+
+  We will start using a private JWK instead of a Nocrypto.Rsa.priv soon
+  */
   let sign:
     (~header: Header.t, ~payload: payload, Nocrypto.Rsa.priv) =>
     result(t, [ | `Msg(string)]);
