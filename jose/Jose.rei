@@ -178,7 +178,7 @@ module Header: {
    - [x5c] X.509 Certficate Chain
    - [crit] Critical
 
-  {{: RFC }  https://tools.ietf.org/html/rfc7515#section-4.1 }
+  {{: https://tools.ietf.org/html/rfc7515#section-4.1 } Link to RFC }
   */
   type t = {
     alg: [ | `RS256 | `none | `Unknown],
@@ -206,7 +206,7 @@ module Header: {
 /**
   {1 JSON Web Signature}
 
-  {{: RFC }  https://tools.ietf.org/html/rfc7515 }
+  {{: https://tools.ietf.org/html/rfc7515 } Link to RFC }
 */
 module Jws: {
   type signature = string;
