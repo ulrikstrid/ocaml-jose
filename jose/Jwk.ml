@@ -33,9 +33,9 @@ end
 
 module Pub = struct
   type t = {
+    (* TODO: Change to Header.algorithm *)
     alg : (string option[@default None]);
     kty : string;
-    (* `RSA ? *)
     use : (string option[@default None]);
     n : string;
     e : string;
@@ -120,6 +120,7 @@ module Priv = struct
     dp : string;
     dq : string;
     qi : string;
+    (* TODO: Change to Header.algorithm *)
     alg : (string option[@default None]);
     kid : string;
   }

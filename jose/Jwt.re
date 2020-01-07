@@ -28,7 +28,7 @@ let add_claim =
   ]);
 
 let to_string = t => {
-  let header_str = Header.header_to_string(t.header);
+  let header_str = Header.to_string(t.header);
   let payload_str = payload_to_string(t.payload);
 
   RResult.both(header_str, payload_str)
@@ -42,7 +42,7 @@ let of_string = token => {
   |> (
     fun
     | [header_str, payload_str, signature] => {
-        let header = Header.string_to_header(header_str);
+        let header = Header.of_string(header_str);
         let payload = payload_of_string(payload_str);
         RResult.both(header, payload)
         |> RResult.flat_map(((header, payload)) =>

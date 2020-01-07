@@ -162,11 +162,49 @@ module Jwks: {
 };
 
 module Header: {
-  type t;
+  /**
+   The [header] has the following properties:
+   - [alg] Algorithm - RS256 and none is currently the only supported algs
+   - [jku] JWK Set URL
+   - [jwk] JSON Web Key
+   - [kid] Key ID - We currently always expect this to be there, this can change in the future
+   - [x5t] X.509 Certificate SHA-1 Thumbprint
+   - [x5t#S256] X.509 Certificate SHA-256 Thumbprint
+   - [typ] Type
+   - [cty] Content Type
 
-  let make_header: Jwk.Pub.t => t;
+   Not implemented:
+   - [x5u] X.509 URL
+   - [x5c] X.509 Certficate Chain
+   - [crit] Critical
+
+  {{: RFC }  https://tools.ietf.org/html/rfc7515#section-4.1 }
+  */
+  type t = {
+    alg: [ | `RS256 | `none | `Unknown],
+    jku: option(string),
+    jwk: option(Jwk.Pub.t),
+    kid: option(string),
+    x5t: option(string),
+    x5t256: option(string),
+    typ: option(string),
+    cty: option(string),
+  };
+
+  let make_header: (~typ: string=?, Jwk.Pub.t) => t;
+
+  let of_string: string => result(t, [ | `Msg(string)]);
+  let to_string: t => result(string, [ | `Msg(string)]);
+
+  let to_json: t => Yojson.Safe.t;
+  let of_json: Yojson.Safe.t => result(t, [ | `Msg(string)]);
 };
 
+/**
+  {1 JSON Web Signature}
+
+  {{: RFC }  https://tools.ietf.org/html/rfc7515 }
+*/
 module Jws: {
   type signature = string;
 

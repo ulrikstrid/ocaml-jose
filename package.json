@@ -23,7 +23,7 @@
     "@opam/ppx_deriving": "*",
     "@opam/x509": "*",
     "@opam/yojson": "*",
-    "ocaml": ">=4.9.0"
+    "ocaml": ">=4.6.0"
   },
   "devDependencies": {
     "@opam/lwt": "*",

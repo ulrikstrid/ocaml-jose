@@ -28,7 +28,18 @@ describe("JWT", ({test}) => {
   });
 
   test("Can create a JWT", ({expect}) => {
-    let header = Header.make_header(Fixtures.public_jwk);
+    let header = Header.make_header(~typ="JWT", Fixtures.public_jwk);
+    expect.string(Header.to_json(header) |> Yojson.Safe.to_string).toEqual(
+      {|{"typ":"JWT","alg":"RS256","kid":"0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik"}|},
+    );
+    expect.string(
+      Header.to_json(header)
+      |> Yojson.Safe.Util.member("alg")
+      |> Yojson.Safe.Util.to_string,
+    ).
+      toEqual(
+      "RS256",
+    );
     let payload =
       Jwt.empty_payload |> Jwt.add_claim("sub", `String("tester"));
     let jwt =

@@ -9,7 +9,7 @@ type t = {
 };
 
 let verify_internal = (~pub_key, t) => {
-  Header.header_to_string(t.header)
+  Header.to_string(t.header)
   |> RResult.flat_map(header_str => {
        let input_str = header_str ++ "." ++ t.payload;
 
@@ -33,18 +33,16 @@ let validate = (~jwks: Jwks.t, t) => {
 
   (
     switch (header.alg) {
-    | `RSA => Ok(header.alg)
+    | `RS256 => Ok(header.alg)
     | _ => Error(`Msg("alg must be RS256"))
     }
   )
   |> RResult.flat_map(_ =>
-       switch (header.typ) {
-       | `JWT => Ok(header.typ)
-       | _ => Error(`Msg("typ must be JWT"))
-       }
-     )
-  |> RResult.flat_map(_ =>
-       RList.find_opt((jwk: Jwk.Pub.t) => jwk.kid == header.kid, jwks.keys)
+       RList.find_opt(
+         (jwk: Jwk.Pub.t) =>
+           jwk.kid == CCOpt.get_or(~default="", header.kid),
+         jwks.keys,
+       )
        |> (
          fun
          | Some(jwk) => Ok(jwk)
@@ -57,7 +55,7 @@ let validate = (~jwks: Jwks.t, t) => {
 };
 
 let sign = (~header, ~payload, key) => {
-  Header.header_to_string(header)
+  Header.to_string(header)
   |> RResult.flat_map(header_str => {
        let input_str = header_str ++ "." ++ payload;
 
