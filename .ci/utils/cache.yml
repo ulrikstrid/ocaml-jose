@@ -20,14 +20,14 @@ steps:
       NUM_UNDERS=$(echo "$(($DESIRED_LEN-$HOME_ESY3_LEN))")
       UNDERS=$(printf "%-${NUM_UNDERS}s" "_")
       UNDERS="${UNDERS// /_}"
-      THE_ESY__CACHE_INSTALL_PATH=${HOME_ESY3}${UNDERS}/i
+      THE_esy__cache_install_path=${HOME_ESY3}${UNDERS}/i
       if [ "$AGENT_OS" == "Windows_NT" ]; then
-        THE_ESY__CACHE_INSTALL_PATH=$( cygpath --mixed --absolute "$THE_ESY__CACHE_INSTALL_PATH")
+        THE_esy__cache_install_path=$( cygpath --mixed --absolute "$THE_esy__cache_install_path")
       fi
-      echo "THE_ESY__CACHE_INSTALL_PATH: $THE_ESY__CACHE_INSTALL_PATH"
-      # This will be exposed as an env var ESY__CACHE_INSTALL_PATH, or an
+      echo "THE_esy__cache_install_path: $THE_esy__cache_install_path"
+      # This will be exposed as an env var esy__cache_install_path, or an
       # Azure var esy__cache_install_path
-      echo "##vso[task.setvariable variable=esy__cache_install_path]$THE_ESY__CACHE_INSTALL_PATH"
+      echo "##vso[task.setvariable variable=esy__cache_install_path]$THE_esy__cache_install_path"
     displayName: '[Cache] calculate esy store path'
       
   - task: CacheBeta@1
@@ -37,10 +37,10 @@ steps:
       cacheHitVar: CACHE_RESTORED
     displayName: '[Cache] esy packages'
 
-  - script: 'mkdir -p $(ESY__CACHE_INSTALL_PATH)'
+  - script: 'mkdir -p $(esy__cache_install_path)'
     condition: eq(variables.CACHE_RESTORED, 'true')
     displayName: '[Cache][Restore] Create esy cache directory'
 
-  - pwsh: Move-Item -Path $(CACHE_FOLDER)/* -Destination $(ESY__CACHE_INSTALL_PATH)
+  - pwsh: Move-Item -Path $(CACHE_FOLDER)/* -Destination $(esy__cache_install_path)
     displayName: '[Cache][Restore] Move downloaded cache in place'
     condition: eq(variables.CACHE_RESTORED, 'true')

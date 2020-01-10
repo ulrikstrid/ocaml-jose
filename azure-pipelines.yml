@@ -13,12 +13,8 @@ stages:
       vmImage: ubuntu-latest
     variables:
       CACHE_FOLDER: $(Pipeline.Workspace)/cache
-      ESY__CACHE_INSTALL_PATH: /home/vsts/.esy/3_____________________________________________________________________/i
     steps:
     - template: .ci/build-platform.yml
-      parameters:
-        installFolderPath: "/3______________________________________________________________/i"
-    - template: .ci/build-docs.yml
     - template: .ci/utils/prepare-cache.yml
 
   - job: macOS
@@ -26,12 +22,9 @@ stages:
       vmImage: macOS-latest
     variables:
       CACHE_FOLDER: $(Pipeline.Workspace)/cache
-      ESY__CACHE_INSTALL_PATH: /Users/vsts/.esy/3____________________________________________________________________/i
     steps:
     - template: .ci/build-platform.yml
     - template: .ci/utils/prepare-cache.yml
-      parameters:
-        installFolderPath: "/3_______________________________________________/i"
 
   # - job: Windows
   #   pool:
