@@ -13,7 +13,6 @@
     "docs-path": "esy echo #{self.target_dir / 'default' / '_doc' / '_html'}"
   },
   "dependencies": {
-    "@esy-ocaml/reason": "<4.0.0",
     "@opam/base64": "*",
     "@opam/containers": "*",
     "@opam/dune": ">1.11.0",
@@ -26,6 +25,7 @@
     "ocaml": ">=4.6.0"
   },
   "devDependencies": {
+    "@esy-ocaml/reason": "<4.0.0",
     "@opam/lwt": "*",
     "@opam/merlin": "*",
     "@opam/ocamlformat": "*",
@@ -34,7 +34,6 @@
     "refmterr": "*"
   },
   "resolutions": {
-    "@esy-ocaml/reason": "facebook/reason:reason.json#ede1f25c895ac9c6a93f7d3c87a19eaa8de366f0",
     "@opam/nocrypto": "mirleft/ocaml-nocrypto:nocrypto.opam#80b7b4b9bd1ccfba3ec93d85cd82bfb3dc10f887"
   }
 }

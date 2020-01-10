@@ -30,6 +30,9 @@ jobs:
       - name: Build
         run: esy build
 
+      - name: Test
+        run: esy test
+
       - name: Build docs
         run: esy docs
 
