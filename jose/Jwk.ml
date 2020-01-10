@@ -33,16 +33,14 @@ end
 
 module Pub = struct
   type t = {
-    (* TODO: Change to Header.algorithm *)
-    alg : (string option[@default None]);
+    alg : Algorithm.t;
     kty : string;
-    use : (string option[@default None]);
+    use : string option;
     n : string;
     e : string;
     kid : string;
-    x5t : (string option[@default None]);
+    x5t : string option;
   }
-  [@@deriving yojson]
 
   let to_pub (t : t) : (Nocrypto.Rsa.pub, [ `Msg of string ]) result =
     let n = Util.get_modulus t.n in
@@ -61,7 +59,7 @@ module Pub = struct
     | Ok n, Ok e, Ok x5t ->
         Ok
           {
-            alg = Some "RS256";
+            alg = `RS256;
             kty = "RSA";
             use = Some "sig";
             n;
@@ -71,15 +69,7 @@ module Pub = struct
           }
     | Ok n, Ok e, _ ->
         Ok
-          {
-            alg = Some "RS256";
-            kty = "RSA";
-            use = Some "sig";
-            n;
-            e;
-            kid;
-            x5t = None;
-          }
+          { alg = `RS256; kty = "RSA"; use = Some "sig"; n; e; kid; x5t = None }
     | Error (`Msg m), _, _ -> Error (`Msg ("n " ^ m))
     | _, Error (`Msg m), _ -> Error (`Msg ("e " ^ m))
 
@@ -95,22 +85,46 @@ module Pub = struct
     |> RResult.map (fun p -> X509.Public_key.encode_pem (`RSA p))
     |> RResult.map Cstruct.to_string
 
+  module Json = Yojson.Safe.Util
+
   let to_json_from_opt = CCOpt.map_or ~default:`Null Yojson.Safe.from_string
 
-  let of_string str =
-    Yojson.Safe.from_string str
-    |> of_yojson
-    |> RResult.map_error (fun e -> `Msg e)
+  let to_json t =
+    let values =
+      [
+        Some ("alg", Algorithm.to_json t.alg);
+        Some ("kty", `String t.kty);
+        RJson.to_json_string_opt "use" t.use;
+        Some ("n", `String t.n);
+        Some ("e", `String t.e);
+        Some ("kid", `String t.kid);
+        RJson.to_json_string_opt "x5t" t.x5t;
+      ]
+    in
+    `Assoc (CCList.filter_map (fun x -> x) values)
 
-  let to_string t = to_yojson t |> Yojson.Safe.to_string
+  let of_json json =
+    try
+      Ok
+        {
+          alg = json |> Json.member "alg" |> Algorithm.of_json;
+          kty = json |> Json.member "kty" |> Json.to_string;
+          use = json |> Json.member "use" |> Json.to_string_option;
+          n = json |> Json.member "n" |> Json.to_string;
+          e = json |> Json.member "e" |> Json.to_string;
+          kid = json |> Json.member "kid" |> Json.to_string;
+          x5t = json |> Json.member "x5t" |> Json.to_string_option;
+        }
+    with Json.Type_error (s, _) -> Error (`Msg s)
 
-  let to_json = to_yojson
+  let of_string str = Yojson.Safe.from_string str |> of_json
 
-  let of_json json = of_yojson json |> RResult.map_error (fun e -> `Msg e)
+  let to_string t = to_json t |> Yojson.Safe.to_string
 end
 
 module Priv = struct
   type t = {
+    alg : Algorithm.t;
     kty : string;
     n : string;
     e : string;
@@ -120,11 +134,8 @@ module Priv = struct
     dp : string;
     dq : string;
     qi : string;
-    (* TODO: Change to Header.algorithm *)
-    alg : (string option[@default None]);
     kid : string;
   }
-  [@@deriving yojson]
 
   let of_priv (rsa_priv : Nocrypto.Rsa.priv) =
     let n = Util.get_JWK_modulus rsa_priv.n in
@@ -140,7 +151,7 @@ module Priv = struct
     | Ok n, Ok e, Ok d, Ok p, Ok q, Ok dp, Ok dq, Ok qi ->
         Ok
           {
-            alg = Some "RS256";
+            alg = `RS256;
             kty = "RSA";
             n;
             e;
@@ -178,14 +189,43 @@ module Priv = struct
     |> RResult.map (fun p -> X509.Private_key.encode_pem (`RSA p))
     |> RResult.map Cstruct.to_string
 
-  let of_string str =
-    Yojson.Safe.from_string str
-    |> of_yojson
-    |> RResult.map_error (fun e -> `Msg e)
+  module Json = Yojson.Safe.Util
 
-  let to_string t = to_yojson t |> Yojson.Safe.to_string
+  let to_json t =
+    `Assoc
+      [
+        ("alg", Algorithm.to_json t.alg);
+        ("kty", `String t.kty);
+        ("n", `String t.n);
+        ("e", `String t.e);
+        ("d", `String t.n);
+        ("p", `String t.e);
+        ("q", `String t.n);
+        ("dp", `String t.e);
+        ("dq", `String t.n);
+        ("qi", `String t.e);
+        ("kid", `String t.kid);
+      ]
 
-  let to_json = to_yojson
+  let of_json json =
+    try
+      Ok
+        {
+          alg = json |> Json.member "alg" |> Algorithm.of_json;
+          kty = json |> Json.member "kty" |> Json.to_string;
+          n = json |> Json.member "n" |> Json.to_string;
+          e = json |> Json.member "e" |> Json.to_string;
+          d = json |> Json.member "d" |> Json.to_string;
+          p = json |> Json.member "p" |> Json.to_string;
+          q = json |> Json.member "q" |> Json.to_string;
+          dp = json |> Json.member "dp" |> Json.to_string;
+          dq = json |> Json.member "dq" |> Json.to_string;
+          qi = json |> Json.member "qi" |> Json.to_string;
+          kid = json |> Json.member "kid" |> Json.to_string;
+        }
+    with Json.Type_error (s, _) -> Error (`Msg s)
 
-  let of_json json = of_yojson json |> RResult.map_error (fun e -> `Msg e)
+  let of_string str = Yojson.Safe.from_string str |> of_json
+
+  let to_string t = to_json t |> Yojson.Safe.to_string
 end

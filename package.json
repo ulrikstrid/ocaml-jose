@@ -18,8 +18,6 @@
     "@opam/dune": ">1.11.0",
     "@opam/hex": "*",
     "@opam/nocrypto": "*",
-    "@opam/ppx_deriving_yojson": "*",
-    "@opam/ppx_deriving": "*",
     "@opam/x509": "*",
     "@opam/yojson": "*",
     "ocaml": ">=4.6.0"

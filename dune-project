@@ -12,14 +12,11 @@
  (synopsis "JOSE implementation for OCaml and ReasonML")
  (depends
    (ocaml (>= 4.06.0))
-   reason
    base64
    containers
    (dune (>= 1.11))
    hex
    nocrypto
-   ppx_deriving
-   ppx_deriving_yojson
    x509
    ppx_deriving_yojson)
 )

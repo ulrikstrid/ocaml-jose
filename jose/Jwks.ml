@@ -1,7 +1,7 @@
 type t = { keys : Jwk.Pub.t list }
 
 let to_json t =
-  let keys_json = List.map Jwk.Pub.to_yojson t.keys in
+  let keys_json = List.map Jwk.Pub.to_json t.keys in
   `Assoc [ ("keys", `List keys_json) ]
 
 let of_json json =
@@ -9,7 +9,7 @@ let of_json json =
     keys =
       json
       |> Yojson.Safe.Util.member "keys"
-      |> Yojson.Safe.Util.to_list |> List.map Jwk.Pub.of_yojson
+      |> Yojson.Safe.Util.to_list |> List.map Jwk.Pub.of_json
       |> List.filter_map CCResult.to_opt;
   }
 

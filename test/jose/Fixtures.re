@@ -39,7 +39,7 @@ let private_jwk: Jose.Jwk.Priv.t = {
   qi: "he-6Edm5Olb5LteixSjc4sSLdejdlLg0dWIqEUxBNCAq2g7crjJaAFOHeq7anwSFq9mllBYO7YsYhKM-lbW8pgWkTYrJqFImZ9nbVTOyvChoy67LfWSCBF5O3XIQmb8KdMMaKGAIuooCLfz0YboRAFoxIVc44OJ6X7kx1ByPjVs",
   kty: "RSA",
   kid: "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik",
-  alg: Some("RSA256"),
+  alg: `RS256,
 };
 
 let rsa_test_pub = {|-----BEGIN PUBLIC KEY-----
@@ -54,7 +54,7 @@ JQIDAQAB
 |};
 
 let public_jwk: Jose.Jwk.Pub.t = {
-  alg: Some("RS256"),
+  alg: `RS256,
   e: "AQAB",
   n: "6Po23xJipEyBfVwrBq68rID8NISgv3RkLRtwz6YmddIvzt4KR7kQbRekTvgZ7YDnCDKtr-lwbivX6_tR_9klp8BKCtk7rWuouNhaOA5mtfwp80ztfdqqGy250KMqyO1fD7mKMfQfR7WMe-W1ygNOG2YlSzhGODGpE2FSz6dcHlOTa5AJHEvor1723EkvD8FjqolJTOtlvbUg9D9HWYHTtMOtiiKST9rRFacB7A-ppzzn8heiB_qc5UQ4gbw1i7pqcKzwqzaEaHwBrv3CDZ28wwZNxytr97u3hGaRH2NSwB6Ohf7moj0-fQ0uY9UZcaFKr3vGqFH_Noo5kVm5zFtdJQ==",
   kty: "RSA",

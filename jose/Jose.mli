@@ -6,7 +6,7 @@ module Jwk : sig
   *)
   module Pub : sig
     type t = {
-      alg : string option;
+      alg : Algorithm.t;
       kty : string;
       use : string option;
       n : string;
@@ -66,6 +66,7 @@ module Jwk : sig
   *)
   module Priv : sig
     type t = {
+      alg : Algorithm.t;
       kty : string;
       n : string;
       e : string;
@@ -75,7 +76,6 @@ module Jwk : sig
       dp : string;
       dq : string;
       qi : string;
-      alg : string option;
       kid : string;
     }
     (**
@@ -154,9 +154,20 @@ module Jwks : sig
   *)
 end
 
+module Algorithm : sig
+  type t = [ `RS256 | `none | `Unknown ]
+  (**
+  RS256 and none is currently the only supported algs
+  *)
+
+  val to_json : t -> Yojson.Safe.t
+
+  val of_json : Yojson.Safe.t -> t
+end
+
 module Header : sig
   type t = {
-    alg : [ `RS256 | `none | `Unknown ];
+    alg : Algorithm.t;
     jku : string option;
     jwk : Jwk.Pub.t option;
     kid : string option;
@@ -258,7 +269,7 @@ module Jwt : sig
     (t, [ `Msg of string ]) result
   (**
   [sign header payload priv] creates a signed JWT from [header] and [payload]
-  
+
   We will start using a private JWK instead of a Nocrypto.Rsa.priv soon
   *)
 end

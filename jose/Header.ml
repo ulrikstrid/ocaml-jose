@@ -1,9 +1,7 @@
 open Utils
 
-type algorithm = [ `RS256 | `none | `Unknown ]
-
 type t = {
-  alg : algorithm;
+  alg : Algorithm.t;
   jku : string option;
   jwk : Jwk.Pub.t option;
   kid : string option;
@@ -30,21 +28,11 @@ let make_header ?typ (jwk : Jwk.Pub.t) =
 
 module Json = Yojson.Safe.Util
 
-let alg_to_yojson alg =
-  (match alg with `RS256 -> "RS256" | `none -> "none" | _ -> "unknown")
-  |> fun a -> `String a
-
-let alg_of_yojson alg =
-  Yojson.Safe.Util.to_string alg |> function
-  | "RS256" -> `RS256
-  | "none" -> `none
-  | _ -> `Unknown
-
 let of_json json =
   try
     Ok
       {
-        alg = json |> Json.member "alg" |> alg_of_yojson;
+        alg = json |> Json.member "alg" |> Algorithm.of_json;
         jku = json |> Json.member "jku" |> Json.to_string_option;
         jwk = json |> Json.member "jwk" |> Jwk.Pub.of_json |> CCResult.to_opt;
         kid = json |> Json.member "kid" |> Json.to_string_option;
@@ -55,20 +43,17 @@ let of_json json =
       }
   with Json.Type_error (s, _) -> Error (`Msg s)
 
-let to_yojson_string_opt key value =
-  match value with Some s -> Some (key, `String s) | None -> None
-
 let to_json t =
   let values =
     [
-      to_yojson_string_opt "typ" t.typ;
-      Some ("alg", alg_to_yojson t.alg);
-      to_yojson_string_opt "jku" t.jku;
+      RJson.to_json_string_opt "typ" t.typ;
+      Some ("alg", Algorithm.to_json t.alg);
+      RJson.to_json_string_opt "jku" t.jku;
       CCOpt.map Jwk.Pub.to_json t.jwk |> CCOpt.map (fun jwk -> ("jwk", jwk));
-      to_yojson_string_opt "kid" t.kid;
-      to_yojson_string_opt "x5t" t.x5t;
-      to_yojson_string_opt "x5t#256" t.x5t256;
-      to_yojson_string_opt "cty" t.cty;
+      RJson.to_json_string_opt "kid" t.kid;
+      RJson.to_json_string_opt "x5t" t.x5t;
+      RJson.to_json_string_opt "x5t#256" t.x5t256;
+      RJson.to_json_string_opt "cty" t.cty;
     ]
   in
   `Assoc (CCList.filter_map (fun x -> x) values)

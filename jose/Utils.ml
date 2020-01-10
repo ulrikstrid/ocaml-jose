@@ -25,3 +25,8 @@ module RBase64 = struct
   let base64_url_decode =
     Base64.decode ~pad:false ~alphabet:Base64.uri_safe_alphabet
 end
+
+module RJson = struct
+  let to_json_string_opt key value =
+    match value with Some s -> Some (key, `String s) | None -> None
+end
