@@ -32,10 +32,8 @@ let of_string token =
       let payload = payload_of_string payload_str in
       RResult.both header payload
       |> RResult.flat_map (fun (header, payload) ->
-             (Ok { header; payload; signature } [@explicit_arity]))
-  | _ -> (
-      Error (`Msg "token didn't include header, payload or signature") [@explicit_arity
-                                                                         ] )
+             Ok { header; payload; signature })
+  | _ -> Error (`Msg "token didn't include header, payload or signature")
 
 let to_jws t =
   payload_to_string t.payload
@@ -51,11 +49,9 @@ let of_jws (jws : Jws.t) =
 let check_exp t =
   let module Json = Yojson.Safe.Util in
   match Json.member "exp" t.payload |> Json.to_int_option with
-  | ((Some exp)[@explicit_arity]) when exp > int_of_float (Unix.time ()) -> (
-      Ok t [@explicit_arity] )
-  | ((Some _exp)[@explicit_arity]) -> (
-      Error (`Msg "Token expired") [@explicit_arity] )
-  | None -> ( Ok t [@explicit_arity] )
+  | Some exp when exp > int_of_float (Unix.time ()) -> Ok t
+  | Some _exp -> Error (`Msg "Token expired")
+  | None -> Ok t
 
 let validate ~jwks t =
   check_exp t |> RResult.flat_map to_jws

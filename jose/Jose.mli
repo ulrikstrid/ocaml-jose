@@ -155,10 +155,14 @@ module Jwks : sig
 end
 
 module Algorithm : sig
-  type t = [ `RS256 | `none | `Unknown ]
+  type t = [ `RS256 | `HS256 | `none | `Unknown ]
   (**
   RS256 and none is currently the only supported algs
   *)
+
+  val to_string : t -> string
+
+  val of_string : string -> t
 
   val to_json : t -> Yojson.Safe.t
 
