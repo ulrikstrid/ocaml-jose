@@ -1,7 +1,7 @@
 open TestFramework;
 
 describe("JWK.Pub", ({test}) => {
-  test("Creates a correct jwt from pem", ({expect}) => {
+  test("Creates a correct JWK from pem", ({expect}) => {
     Jose.Jwk.Pub.of_pub_pem(Fixtures.rsa_test_pub)
     |> (
       r => {
@@ -54,7 +54,7 @@ describe("JWK.Pub", ({test}) => {
 });
 
 describe("JWK.Priv", ({test}) => {
-  test("Creates a correct jwt from pem", ({expect}) => {
+  test("Creates a correct JWK from pem", ({expect}) => {
     Jose.Jwk.Priv.of_priv_pem(Fixtures.rsa_test_priv)
     |> (
       r => {
