@@ -4,13 +4,14 @@ module Util = struct
   let trim_leading_null s =
     Astring.String.trim ~drop:(function '\000' -> true | _ -> false) s
 
-  let get_JWK_modulus n =
-    Z.to_bits n |> CCString.rev |> trim_leading_null
-    |> Base64.encode ~pad:true ~alphabet:Base64.uri_safe_alphabet
-
-  let get_JWK_component e =
+  let get_JWK_component ?(pad = false) e =
     Z.to_bits e |> CCString.rev |> trim_leading_null
-    |> Base64.encode ~pad:false ~alphabet:Base64.uri_safe_alphabet
+    |> Base64.encode ~pad ~alphabet:Base64.uri_safe_alphabet
+
+  let get_component ?(pad = false) e =
+    Base64.decode ~pad ~alphabet:Base64.uri_safe_alphabet e
+    |> RResult.map (fun x ->
+           CCString.pad 8 ~c:'\000' x |> CCString.rev |> Z.of_bits)
 
   let get_JWK_kid id =
     id |> Cstruct.to_string
@@ -19,16 +20,6 @@ module Util = struct
   let get_JWK_x5t fingerprint =
     fingerprint |> Hex.of_cstruct |> Hex.to_bytes |> Bytes.to_string
     |> Base64.encode ~pad:false ~alphabet:Base64.uri_safe_alphabet ~len:20
-
-  let get_modulus n =
-    Base64.decode ~pad:true ~alphabet:Base64.uri_safe_alphabet n
-    |> RResult.map (fun x ->
-           CCString.pad 128 ~c:'\000' x |> CCString.rev |> Z.of_bits)
-
-  let get_component e =
-    Base64.decode ~pad:false ~alphabet:Base64.uri_safe_alphabet e
-    |> RResult.map (fun x ->
-           CCString.pad 8 ~c:'\000' x |> CCString.rev |> Z.of_bits)
 end
 
 module Pub = struct
@@ -43,7 +34,7 @@ module Pub = struct
   }
 
   let to_pub (t : t) : (Nocrypto.Rsa.pub, [ `Msg of string ]) result =
-    let n = Util.get_modulus t.n in
+    let n = Util.get_component ~pad:true t.n in
     let e = Util.get_component t.e in
     match (e, n) with
     | Ok e, Ok n -> Ok { e; n }
@@ -51,7 +42,7 @@ module Pub = struct
 
   let of_pub (rsa_pub : Nocrypto.Rsa.pub) : (t, [ `Msg of string ]) result =
     let public_key : X509.Public_key.t = `RSA rsa_pub in
-    let n = Util.get_JWK_modulus rsa_pub.n in
+    let n = Util.get_JWK_component ~pad:true rsa_pub.n in
     let e = Util.get_JWK_component rsa_pub.e in
     let kid = Util.get_JWK_kid (X509.Public_key.id public_key) in
     let x5t = Util.get_JWK_x5t (X509.Public_key.fingerprint public_key) in
@@ -138,7 +129,7 @@ module Priv = struct
   }
 
   let of_priv (rsa_priv : Nocrypto.Rsa.priv) =
-    let n = Util.get_JWK_modulus rsa_priv.n in
+    let n = Util.get_JWK_component ~pad:true rsa_priv.n in
     let e = Util.get_JWK_component rsa_priv.e in
     let d = Util.get_JWK_component rsa_priv.d in
     let p = Util.get_JWK_component rsa_priv.p in
@@ -166,7 +157,7 @@ module Priv = struct
     | _ -> Error (`Msg "Something failed")
 
   let to_priv (t : t) : (Nocrypto.Rsa.priv, [ `Msg of string ]) result =
-    let n = Util.get_modulus t.n in
+    let n = Util.get_component ~pad:true t.n in
     let e = Util.get_component t.e in
     let d = Util.get_component t.d in
     let p = Util.get_component t.p in
