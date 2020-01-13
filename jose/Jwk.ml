@@ -23,9 +23,36 @@ module Util = struct
 end
 
 module Pub = struct
-  type t = {
-    alg : Algorithm.t;
-    kty : string;
+  (*
+  TODO: Implement EC
+  {
+    "kty":"EC",
+    "crv":"P-256",
+    "x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+    "y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
+    "d":"jpsQnnGQmL-YBIffH1136cspYG6-0iY7X1fCE9-E9LI"
+  }
+  *)
+
+  type oct = {
+    kty : Jwa.kty;
+    (* `oct *)
+    alg : Jwa.alg;
+    (* `HS256 *)
+    kid : string;
+    k : string;
+  }
+
+  let oct_of_string str =
+    let key = Cstruct.of_string str in
+    let k = Cstruct.to_string key |> Base64.encode_exn in
+    { kty = `oct; alg = `HS256; kid = str; k }
+
+  type rsa = {
+    alg : Jwa.alg;
+    (* `RSA *)
+    kty : Jwa.kty;
+    (* `RS256 *)
     use : string option;
     n : string;
     e : string;
@@ -33,14 +60,23 @@ module Pub = struct
     x5t : string option;
   }
 
-  let to_pub (t : t) : (Nocrypto.Rsa.pub, [ `Msg of string ]) result =
-    let n = Util.get_component ~pad:true t.n in
-    let e = Util.get_component t.e in
+  type t = RSA of rsa | OCT of oct
+
+  let get_kid t = match t with RSA rsa -> rsa.kid | OCT oct -> oct.kid
+
+  let get_alg t = match t with RSA rsa -> rsa.alg | OCT oct -> oct.alg
+
+  let get_kty t = match t with RSA _ -> `RSA | OCT _ -> `oct
+
+  let rsa_to_pub (rsa : rsa) : (Nocrypto.Rsa.pub, [ `Msg of string ]) result =
+    let n = Util.get_component ~pad:true rsa.n in
+    let e = Util.get_component rsa.e in
     match (e, n) with
     | Ok e, Ok n -> Ok { e; n }
     | _ -> Error (`Msg "Could not decode JWK")
 
-  let of_pub (rsa_pub : Nocrypto.Rsa.pub) : (t, [ `Msg of string ]) result =
+  let rsa_of_pub (rsa_pub : Nocrypto.Rsa.pub) : (rsa, [ `Msg of string ]) result
+      =
     let public_key : X509.Public_key.t = `RSA rsa_pub in
     let n = Util.get_JWK_component ~pad:true rsa_pub.n in
     let e = Util.get_JWK_component rsa_pub.e in
@@ -51,7 +87,7 @@ module Pub = struct
         Ok
           {
             alg = `RS256;
-            kty = "RSA";
+            kty = `RSA;
             use = Some "sig";
             n;
             e;
@@ -59,54 +95,91 @@ module Pub = struct
             x5t = Some x5t;
           }
     | Ok n, Ok e, _ ->
-        Ok
-          { alg = `RS256; kty = "RSA"; use = Some "sig"; n; e; kid; x5t = None }
+        Ok { alg = `RS256; kty = `RSA; use = Some "sig"; n; e; kid; x5t = None }
     | Error (`Msg m), _, _ -> Error (`Msg ("n " ^ m))
     | _, Error (`Msg m), _ -> Error (`Msg ("e " ^ m))
 
-  let of_pub_pem pem : (t, [ `Msg of string ]) result =
+  let rsa_of_pub_pem pem : (rsa, [ `Msg of string ]) result =
     Cstruct.of_string pem |> X509.Public_key.decode_pem
     |> RResult.flat_map (function
          | `RSA pub_key -> Ok pub_key
          | _ -> Error (`Msg "Only RSA supported"))
-    |> RResult.flat_map of_pub
+    |> RResult.flat_map rsa_of_pub
 
-  let to_pub_pem t =
-    to_pub t
+  let rsa_to_pub_pem rsa =
+    rsa_to_pub rsa
     |> RResult.map (fun p -> X509.Public_key.encode_pem (`RSA p))
     |> RResult.map Cstruct.to_string
+
+  let oct_to_key oct = Cstruct.of_string oct.k
 
   module Json = Yojson.Safe.Util
 
   let to_json_from_opt = CCOpt.map_or ~default:`Null Yojson.Safe.from_string
 
-  let to_json t =
+  let rsa_to_json rsa =
     let values =
       [
-        Some ("alg", Algorithm.to_json t.alg);
-        Some ("kty", `String t.kty);
-        RJson.to_json_string_opt "use" t.use;
-        Some ("n", `String t.n);
-        Some ("e", `String t.e);
-        Some ("kid", `String t.kid);
-        RJson.to_json_string_opt "x5t" t.x5t;
+        Some ("alg", Jwa.alg_to_json rsa.alg);
+        Some ("kty", `String (Jwa.kty_to_string rsa.kty));
+        RJson.to_json_string_opt "use" rsa.use;
+        Some ("n", `String rsa.n);
+        Some ("e", `String rsa.e);
+        Some ("kid", `String rsa.kid);
+        RJson.to_json_string_opt "x5t" rsa.x5t;
       ]
     in
     `Assoc (CCList.filter_map (fun x -> x) values)
 
-  let of_json json =
+  let oct_to_json (oct : oct) =
+    `Assoc
+      [
+        ("alg", Jwa.alg_to_json oct.alg);
+        ("kty", `String (Jwa.kty_to_string oct.kty));
+        ("k", `String oct.k);
+        ("kid", `String oct.kid);
+      ]
+
+  let to_json t =
+    match t with RSA rsa -> rsa_to_json rsa | OCT oct -> oct_to_json oct
+
+  let rsa_of_json json =
     try
       Ok
-        {
-          alg = json |> Json.member "alg" |> Algorithm.of_json;
-          kty = json |> Json.member "kty" |> Json.to_string;
-          use = json |> Json.member "use" |> Json.to_string_option;
-          n = json |> Json.member "n" |> Json.to_string;
-          e = json |> Json.member "e" |> Json.to_string;
-          kid = json |> Json.member "kid" |> Json.to_string;
-          x5t = json |> Json.member "x5t" |> Json.to_string_option;
-        }
+        (RSA
+           {
+             alg = json |> Json.member "alg" |> Jwa.alg_of_json;
+             kty =
+               json |> Json.member "kty" |> Json.to_string |> Jwa.kty_of_string;
+             use = json |> Json.member "use" |> Json.to_string_option;
+             n = json |> Json.member "n" |> Json.to_string;
+             e = json |> Json.member "e" |> Json.to_string;
+             kid = json |> Json.member "kid" |> Json.to_string;
+             x5t = json |> Json.member "x5t" |> Json.to_string_option;
+           })
     with Json.Type_error (s, _) -> Error (`Msg s)
+
+  let oct_of_json json =
+    try
+      Ok
+        (OCT
+           {
+             alg = json |> Json.member "alg" |> Jwa.alg_of_json;
+             kty =
+               json |> Json.member "kty" |> Json.to_string |> Jwa.kty_of_string;
+             k = json |> Json.member "k" |> Json.to_string;
+             kid = json |> Json.member "kid" |> Json.to_string;
+           })
+    with Json.Type_error (s, _) -> Error (`Msg s)
+
+  let of_json json =
+    let kty =
+      json |> Json.member "kty" |> Json.to_string |> Jwa.kty_of_string
+    in
+    match kty with
+    | `RSA -> rsa_of_json json
+    | `oct -> oct_of_json json
+    | _ -> Error (`Msg "kty not supported")
 
   let of_string str = Yojson.Safe.from_string str |> of_json
 
@@ -115,8 +188,8 @@ end
 
 module Priv = struct
   type t = {
-    alg : Algorithm.t;
-    kty : string;
+    alg : Jwa.alg;
+    kty : Jwa.kty;
     n : string;
     e : string;
     d : string;
@@ -143,7 +216,7 @@ module Priv = struct
         Ok
           {
             alg = `RS256;
-            kty = "RSA";
+            kty = `RSA;
             n;
             e;
             d;
@@ -185,8 +258,8 @@ module Priv = struct
   let to_json t =
     `Assoc
       [
-        ("alg", Algorithm.to_json t.alg);
-        ("kty", `String t.kty);
+        ("alg", Jwa.alg_to_json t.alg);
+        ("kty", `String (t.kty |> Jwa.kty_to_string));
         ("n", `String t.n);
         ("e", `String t.e);
         ("d", `String t.n);
@@ -202,8 +275,8 @@ module Priv = struct
     try
       Ok
         {
-          alg = json |> Json.member "alg" |> Algorithm.of_json;
-          kty = json |> Json.member "kty" |> Json.to_string;
+          alg = json |> Json.member "alg" |> Jwa.alg_of_json;
+          kty = json |> Json.member "kty" |> Json.to_string |> Jwa.kty_of_string;
           n = json |> Json.member "n" |> Json.to_string;
           e = json |> Json.member "e" |> Json.to_string;
           d = json |> Json.member "d" |> Json.to_string;

@@ -139,7 +139,7 @@
         "@opam/x509@opam:0.8.1@9fe96f81",
         "@opam/nocrypto@github:mirleft/ocaml-nocrypto:nocrypto.opam#80b7b4b9bd1ccfba3ec93d85cd82bfb3dc10f887@d41d8cd9",
         "@opam/hex@opam:1.4.0@96b78cfa", "@opam/dune@opam:2.1.2@94bd8c1b",
-        "@opam/containers@opam:2.8@3813dd99",
+        "@opam/containers@opam:2.8.1@2a391688",
         "@opam/base64@opam:3.2.0@6303aa3a"
       ],
       "devDependencies": [
@@ -1412,20 +1412,20 @@
         "@opam/base-unix@opam:base@87d0b2eb"
       ]
     },
-    "@opam/containers@opam:2.8@3813dd99": {
-      "id": "@opam/containers@opam:2.8@3813dd99",
+    "@opam/containers@opam:2.8.1@2a391688": {
+      "id": "@opam/containers@opam:2.8.1@2a391688",
       "name": "@opam/containers",
-      "version": "opam:2.8",
+      "version": "opam:2.8.1",
       "source": {
         "type": "install",
         "source": [
-          "archive:https://opam.ocaml.org/cache/md5/03/03b80e963186e91ddac62ef645bf7fb2#md5:03b80e963186e91ddac62ef645bf7fb2",
-          "archive:https://github.com/c-cube/ocaml-containers/archive/v2.8.tar.gz#md5:03b80e963186e91ddac62ef645bf7fb2"
+          "archive:https://opam.ocaml.org/cache/md5/d8/d84e09c5d0abc501aa17cd502e31a038#md5:d84e09c5d0abc501aa17cd502e31a038",
+          "archive:https://github.com/c-cube/ocaml-containers/archive/v2.8.1.tar.gz#md5:d84e09c5d0abc501aa17cd502e31a038"
         ],
         "opam": {
           "name": "containers",
-          "version": "2.8",
-          "path": "esy.lock/opam/containers.2.8"
+          "version": "2.8.1",
+          "path": "esy.lock/opam/containers.2.8.1"
         }
       },
       "overrides": [],

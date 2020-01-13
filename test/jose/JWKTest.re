@@ -2,7 +2,7 @@ open TestFramework;
 
 describe("JWK.Pub", ({test}) => {
   test("Creates a correct JWK from pem", ({expect}) => {
-    Jose.Jwk.Pub.of_pub_pem(Fixtures.rsa_test_pub)
+    Jose.Jwk.Pub.rsa_of_pub_pem(Fixtures.rsa_test_pub)
     |> (
       r => {
         open Jose.Jwk.Pub;
@@ -11,7 +11,9 @@ describe("JWK.Pub", ({test}) => {
         CCResult.get_exn(r)
         |> (
           jwk => {
-            expect.string(jwk.kty).toEqual(Fixtures.private_jwk.kty);
+            expect.string(jwk.kty |> Jose.Jwa.kty_to_string).toEqual(
+              Fixtures.private_jwk.kty |> Jose.Jwa.kty_to_string,
+            );
             expect.string(jwk.e).toEqual(Fixtures.private_jwk.e);
             expect.string(jwk.n).toEqual(Fixtures.private_jwk.n);
             // TODO: Figure if we want to do the same as Panva with kid
@@ -23,8 +25,8 @@ describe("JWK.Pub", ({test}) => {
   });
 
   test("Roundtrip", ({expect}) => {
-    Jose.Jwk.Pub.of_pub_pem(Fixtures.rsa_test_pub)
-    |> CCResult.flat_map(Jose.Jwk.Pub.to_pub_pem)
+    Jose.Jwk.Pub.rsa_of_pub_pem(Fixtures.rsa_test_pub)
+    |> CCResult.flat_map(Jose.Jwk.Pub.rsa_to_pub_pem)
     |> CCResult.get_exn
     |> (
       pub_cert => {
@@ -40,8 +42,10 @@ describe("JWK.Pub", ({test}) => {
 
     CCResult.get_exn(jwk)
     |> (
-      jwk => {
-        expect.string(jwk.kty).toEqual(Fixtures.private_jwk.kty);
+      (RSA(jwk)) => {
+        expect.string(jwk.kty |> Jose.Jwa.kty_to_string).toEqual(
+          Fixtures.private_jwk.kty |> Jose.Jwa.kty_to_string,
+        );
         expect.string(jwk.e).toEqual(Fixtures.private_jwk.e);
         expect.string(jwk.n).toEqual(Fixtures.private_jwk.n);
         // TODO: Figure if we want to do the same as Panva with kid
@@ -51,6 +55,18 @@ describe("JWK.Pub", ({test}) => {
       }
     );
   });
+  /*
+   test("oct_of_string", ({expect}) => {
+     let oct: Jose.Jwk.Pub.oct =
+       Jose.Jwk.Pub.oct_of_string(
+         "Thus from my lips, by yours, my sin is purged.",
+       );
+
+     expect.string(oct.k).toEqual(
+       "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow",
+     );
+   });
+   */
 });
 
 describe("JWK.Priv", ({test}) => {
@@ -64,7 +80,9 @@ describe("JWK.Priv", ({test}) => {
         CCResult.get_exn(r)
         |> (
           jwk => {
-            expect.string(jwk.kty).toEqual(Fixtures.private_jwk.kty);
+            expect.string(jwk.kty |> Jose.Jwa.kty_to_string).toEqual(
+              Fixtures.private_jwk.kty |> Jose.Jwa.kty_to_string,
+            );
             expect.string(jwk.e).toEqual(Fixtures.private_jwk.e);
             expect.string(jwk.n).toEqual(Fixtures.private_jwk.n);
             expect.string(jwk.d).toEqual(Fixtures.private_jwk.d);

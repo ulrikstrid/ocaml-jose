@@ -1,7 +1,7 @@
 open Utils
 
 type t = {
-  alg : Algorithm.t;
+  alg : Jwa.alg;
   jku : string option;
   jwk : Jwk.Pub.t option;
   kid : string option;
@@ -24,7 +24,7 @@ let empty_header =
   }
 
 let make_header ?typ (jwk : Jwk.Pub.t) =
-  { empty_header with alg = `RS256; typ; kid = Some jwk.kid }
+  { empty_header with alg = `RS256; typ; kid = Some (Jwk.Pub.get_kid jwk) }
 
 module Json = Yojson.Safe.Util
 
@@ -32,9 +32,13 @@ let of_json json =
   try
     Ok
       {
-        alg = json |> Json.member "alg" |> Algorithm.of_json;
+        alg = json |> Json.member "alg" |> Jwa.alg_of_json;
         jku = json |> Json.member "jku" |> Json.to_string_option;
-        jwk = json |> Json.member "jwk" |> Jwk.Pub.of_json |> CCResult.to_opt;
+        jwk =
+          json |> Json.member "jwk"
+          |> Json.to_option (fun jwk_json ->
+                 Jwk.Pub.of_json jwk_json |> CCResult.to_opt)
+          |> CCOpt.flatten;
         kid = json |> Json.member "kid" |> Json.to_string_option;
         x5t = json |> Json.member "x5t" |> Json.to_string_option;
         x5t256 = json |> Json.member "x5t#256" |> Json.to_string_option;
@@ -47,7 +51,7 @@ let to_json t =
   let values =
     [
       RJson.to_json_string_opt "typ" t.typ;
-      Some ("alg", Algorithm.to_json t.alg);
+      Some ("alg", Jwa.alg_to_json t.alg);
       RJson.to_json_string_opt "jku" t.jku;
       CCOpt.map Jwk.Pub.to_json t.jwk |> CCOpt.map (fun jwk -> ("jwk", jwk));
       RJson.to_json_string_opt "kid" t.kid;
