@@ -29,11 +29,11 @@ module Jwk : sig
       x5t : string option;
     }
     (** [rsa] represents a JWK with [kty] [`RSA] *)
-    
-    type t = RSA of rsa | OCT of oct
+
     (**
     [t] describes a Public JSON Web Key
     *)
+    type t = RSA of rsa | OCT of oct
 
     val get_kid : t -> string
     (** [get_kid jwk] is a convencience function to get the kid string *)
