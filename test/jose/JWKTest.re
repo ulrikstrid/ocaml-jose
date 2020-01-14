@@ -12,10 +12,10 @@ describe("JWK.Pub", ({test}) => {
         |> (
           jwk => {
             expect.string(jwk.kty |> Jose.Jwa.kty_to_string).toEqual(
-              Fixtures.private_jwk.kty |> Jose.Jwa.kty_to_string,
+              Fixtures.public_jwk.kty |> Jose.Jwa.kty_to_string,
             );
-            expect.string(jwk.e).toEqual(Fixtures.private_jwk.e);
-            expect.string(jwk.n).toEqual(Fixtures.private_jwk.n);
+            expect.string(jwk.e).toEqual(Fixtures.public_jwk.e);
+            expect.string(jwk.n).toEqual(Fixtures.public_jwk.n);
             // TODO: Figure if we want to do the same as Panva with kid
             expect.string(jwk.kid).toEqual("Yivu3QTFD7-Dkkd6dlKdhOCpfWg=");
           }
@@ -40,20 +40,19 @@ describe("JWK.Pub", ({test}) => {
 
     expect.result(jwk).toBeOk();
 
-    CCResult.get_exn(jwk)
-    |> (
-      (RSA(jwk)) => {
-        expect.string(jwk.kty |> Jose.Jwa.kty_to_string).toEqual(
-          Fixtures.private_jwk.kty |> Jose.Jwa.kty_to_string,
-        );
-        expect.string(jwk.e).toEqual(Fixtures.private_jwk.e);
-        expect.string(jwk.n).toEqual(Fixtures.private_jwk.n);
-        // TODO: Figure if we want to do the same as Panva with kid
-        expect.string(jwk.kid).toEqual(
-          "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik",
-        );
-      }
-    );
+    switch (jwk) {
+    | Ok(RSA(jwk)) =>
+      expect.string(jwk.kty |> Jose.Jwa.kty_to_string).toEqual(
+        Fixtures.private_jwk.kty |> Jose.Jwa.kty_to_string,
+      );
+      expect.string(jwk.e).toEqual(Fixtures.private_jwk.e);
+      expect.string(jwk.n).toEqual(Fixtures.private_jwk.n);
+      // TODO: Figure if we want to do the same as Panva with kid
+      expect.string(jwk.kid).toEqual(
+        "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik",
+      );
+    | _ => ()
+    };
   });
   /*
    test("oct_of_string", ({expect}) => {
@@ -71,7 +70,7 @@ describe("JWK.Pub", ({test}) => {
 
 describe("JWK.Priv", ({test}) => {
   test("Creates a correct JWK from pem", ({expect}) => {
-    Jose.Jwk.Priv.of_priv_pem(Fixtures.rsa_test_priv)
+    Jose.Jwk.Priv.rsa_of_priv_pem(Fixtures.rsa_test_priv)
     |> (
       r => {
         open Jose.Jwk.Priv;
@@ -98,8 +97,8 @@ describe("JWK.Priv", ({test}) => {
   });
 
   test("Roundtrip", ({expect}) => {
-    Jose.Jwk.Priv.of_priv_pem(Fixtures.rsa_test_priv)
-    |> CCResult.flat_map(Jose.Jwk.Priv.to_priv_pem)
+    Jose.Jwk.Priv.rsa_of_priv_pem(Fixtures.rsa_test_priv)
+    |> CCResult.flat_map(Jose.Jwk.Priv.rsa_to_priv_pem)
     |> CCResult.get_exn
     |> (
       pub_cert => {
@@ -109,7 +108,7 @@ describe("JWK.Priv", ({test}) => {
   });
 
   test("Creates well formed rsa", ({expect}) => {
-    Jose.Jwk.Priv.to_priv(Fixtures.private_jwk)
+    Jose.Jwk.Priv.rsa_to_priv(Fixtures.private_jwk)
     |> CCResult.get_exn
     |> (rsa => Nocrypto.Rsa.well_formed(~e=rsa.e, ~p=rsa.p, ~q=rsa.q))
     |> (a => expect.bool(a).toBeTrue())

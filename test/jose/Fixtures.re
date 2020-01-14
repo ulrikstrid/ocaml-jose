@@ -28,7 +28,7 @@ EQBaMSFXOODiel+5MdQcj41b
 -----END PRIVATE KEY-----
 |};
 
-let private_jwk: Jose.Jwk.Priv.t = {
+let private_jwk: Jose.Jwk.Priv.rsa = {
   e: "AQAB",
   n: "6Po23xJipEyBfVwrBq68rID8NISgv3RkLRtwz6YmddIvzt4KR7kQbRekTvgZ7YDnCDKtr-lwbivX6_tR_9klp8BKCtk7rWuouNhaOA5mtfwp80ztfdqqGy250KMqyO1fD7mKMfQfR7WMe-W1ygNOG2YlSzhGODGpE2FSz6dcHlOTa5AJHEvor1723EkvD8FjqolJTOtlvbUg9D9HWYHTtMOtiiKST9rRFacB7A-ppzzn8heiB_qc5UQ4gbw1i7pqcKzwqzaEaHwBrv3CDZ28wwZNxytr97u3hGaRH2NSwB6Ohf7moj0-fQ0uY9UZcaFKr3vGqFH_Noo5kVm5zFtdJQ==",
   d: "ELnN8KvgOw1nCnnweNVYpEXKVXbkF3qiqn5a1f2Gq1TAq-hS8p09qadV23mCWwOzEmqY_5URxkcNhFqRo32Sb32lkyvPVf7xqPuXVojqJMyKsnXmYu-s4LCis3DTZINuHLHkUvvEtyA4iriOGYetNthZexH6MJSYH9UP3eqU-XRBf3lw3oU-ZWJcnJiEvJa2H4haf70C0mFdTyKQQkops4QkgBEVIVtaVHXPgFnH1eh9uUSWlTiWqauWqe1h5jaEZbFAWPyanYAizLbGeQyOYf1N-0E4OsoRIiTQp1rRGfxUYO2mQelv2j15IXyQ8fZOCjvGEwiTQ6qn8g-UN4aFzQ",
@@ -53,16 +53,15 @@ JQIDAQAB
 -----END PUBLIC KEY-----
 |};
 
-let public_jwk: Jose.Jwk.Pub.t =
-  Jose.Jwk.Pub.RSA({
-    alg: `RS256,
-    e: "AQAB",
-    n: "6Po23xJipEyBfVwrBq68rID8NISgv3RkLRtwz6YmddIvzt4KR7kQbRekTvgZ7YDnCDKtr-lwbivX6_tR_9klp8BKCtk7rWuouNhaOA5mtfwp80ztfdqqGy250KMqyO1fD7mKMfQfR7WMe-W1ygNOG2YlSzhGODGpE2FSz6dcHlOTa5AJHEvor1723EkvD8FjqolJTOtlvbUg9D9HWYHTtMOtiiKST9rRFacB7A-ppzzn8heiB_qc5UQ4gbw1i7pqcKzwqzaEaHwBrv3CDZ28wwZNxytr97u3hGaRH2NSwB6Ohf7moj0-fQ0uY9UZcaFKr3vGqFH_Noo5kVm5zFtdJQ==",
-    kty: `RSA,
-    kid: "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik",
-    use: Some("sign"),
-    x5t: None,
-  });
+let public_jwk: Jose.Jwk.Pub.rsa = {
+  alg: `RS256,
+  e: "AQAB",
+  n: "6Po23xJipEyBfVwrBq68rID8NISgv3RkLRtwz6YmddIvzt4KR7kQbRekTvgZ7YDnCDKtr-lwbivX6_tR_9klp8BKCtk7rWuouNhaOA5mtfwp80ztfdqqGy250KMqyO1fD7mKMfQfR7WMe-W1ygNOG2YlSzhGODGpE2FSz6dcHlOTa5AJHEvor1723EkvD8FjqolJTOtlvbUg9D9HWYHTtMOtiiKST9rRFacB7A-ppzzn8heiB_qc5UQ4gbw1i7pqcKzwqzaEaHwBrv3CDZ28wwZNxytr97u3hGaRH2NSwB6Ohf7moj0-fQ0uY9UZcaFKr3vGqFH_Noo5kVm5zFtdJQ==",
+  kty: `RSA,
+  kid: "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik",
+  use: Some("sign"),
+  x5t: None,
+};
 
 let public_jwk_string = {|{"alg": "RS256",
 "e": "AQAB",

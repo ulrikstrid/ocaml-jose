@@ -42,7 +42,7 @@ describe("JWT", ({test}) => {
   });
 
   test("Can create a JWT", ({expect}) => {
-    let header = Header.make_header(~typ="JWT", Fixtures.public_jwk);
+    let header = Header.make_header(~typ="JWT", RSA(Fixtures.public_jwk));
     expect.string(Header.to_json(header) |> Yojson.Safe.to_string).toEqual(
       {|{"typ":"JWT","alg":"RS256","kid":"0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik"}|},
     );
@@ -60,7 +60,7 @@ describe("JWT", ({test}) => {
       Jwt.sign(
         ~header,
         ~payload,
-        Fixtures.private_jwk |> Jwk.Priv.to_priv |> CCResult.get_exn,
+        Fixtures.private_jwk |> Jwk.Priv.rsa_to_priv |> CCResult.get_exn,
       );
 
     expect.string(
@@ -72,19 +72,19 @@ describe("JWT", ({test}) => {
   });
 
   test("Can validate my own JWT", ({expect}) => {
-    let header = Header.make_header(Fixtures.public_jwk);
+    let header = Header.make_header(RSA(Fixtures.public_jwk));
     let payload =
       Jwt.empty_payload |> Jwt.add_claim("sub", `String("tester"));
     let jwt =
       Jwt.sign(
         ~header,
         ~payload,
-        Fixtures.private_jwk |> Jwk.Priv.to_priv |> CCResult.get_exn,
+        Fixtures.private_jwk |> Jwk.Priv.rsa_to_priv |> CCResult.get_exn,
       )
       |> CCResult.get_exn;
 
     expect.result(
-      Jwt.validate(~jwks=Jwks.{keys: [Fixtures.public_jwk]}, jwt),
+      Jwt.validate(~jwks=Jwks.{keys: [RSA(Fixtures.public_jwk)]}, jwt),
     ).
       toBeOk();
   });
