@@ -13,12 +13,20 @@ module Util = struct
     |> RResult.map (fun x ->
            CCString.pad 8 ~c:'\000' x |> CCString.rev |> Z.of_bits)
 
-  let get_JWK_kid id =
-    id |> Cstruct.to_string
-    |> Base64.encode_exn ~pad:true ~alphabet:Base64.uri_safe_alphabet
+  let kid_of_json json =
+    Yojson.Safe.to_string json |> Cstruct.of_string
+    |> Nocrypto.Hash.SHA256.digest |> Cstruct.to_bytes |> Bytes.to_string
+    |> Base64.encode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet
+
+  let get_RSA_kid ~e ~n =
+    `Assoc [ ("e", `String e); ("kty", `String "RSA"); ("n", `String n) ]
+    |> kid_of_json
+
+  let get_OCT_kid ~k =
+    `Assoc [ ("k", `String k); ("kty", `String "oct") ] |> kid_of_json
 
   let get_JWK_x5t fingerprint =
-    fingerprint |> Hex.of_cstruct |> Hex.to_bytes |> Bytes.to_string
+    fingerprint |> Cstruct.to_bytes |> Bytes.to_string
     |> Base64.encode ~pad:false ~alphabet:Base64.uri_safe_alphabet ~len:20
 end
 
@@ -45,8 +53,11 @@ module Pub = struct
 
   let oct_of_string str =
     let key = Cstruct.of_string str in
-    let k = Cstruct.to_string key |> Base64.encode_exn in
-    { kty = `oct; alg = `HS256; kid = str; k }
+    let k =
+      Cstruct.to_bytes key |> Bytes.to_string
+      |> Base64.encode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet
+    in
+    { kty = `oct; alg = `HS256; kid = Util.get_OCT_kid ~k; k }
 
   type rsa = {
     alg : Jwa.alg;
@@ -69,7 +80,7 @@ module Pub = struct
   let get_kty t = match t with RSA _ -> `RSA | OCT _ -> `oct
 
   let rsa_to_pub (rsa : rsa) : (Nocrypto.Rsa.pub, [ `Msg of string ]) result =
-    let n = Util.get_component ~pad:true rsa.n in
+    let n = Util.get_component rsa.n in
     let e = Util.get_component rsa.e in
     match (e, n) with
     | Ok e, Ok n -> Ok { e; n }
@@ -78,10 +89,11 @@ module Pub = struct
   let rsa_of_pub (rsa_pub : Nocrypto.Rsa.pub) : (rsa, [ `Msg of string ]) result
       =
     let public_key : X509.Public_key.t = `RSA rsa_pub in
-    let n = Util.get_JWK_component ~pad:true rsa_pub.n in
+    let n = Util.get_JWK_component rsa_pub.n in
     let e = Util.get_JWK_component rsa_pub.e in
-    let kid = Util.get_JWK_kid (X509.Public_key.id public_key) in
-    let x5t = Util.get_JWK_x5t (X509.Public_key.fingerprint public_key) in
+    let x5t =
+      Util.get_JWK_x5t (X509.Public_key.fingerprint ~hash:`SHA1 public_key)
+    in
     match (n, e, x5t) with
     | Ok n, Ok e, Ok x5t ->
         Ok
@@ -91,11 +103,20 @@ module Pub = struct
             use = Some "sig";
             n;
             e;
-            kid;
+            kid = Util.get_RSA_kid ~e ~n;
             x5t = Some x5t;
           }
     | Ok n, Ok e, _ ->
-        Ok { alg = `RS256; kty = `RSA; use = Some "sig"; n; e; kid; x5t = None }
+        Ok
+          {
+            alg = `RS256;
+            kty = `RSA;
+            use = Some "sig";
+            n;
+            e;
+            kid = Util.get_RSA_kid ~e ~n;
+            x5t = None;
+          }
     | Error (`Msg m), _, _ -> Error (`Msg ("n " ^ m))
     | _, Error (`Msg m), _ -> Error (`Msg ("e " ^ m))
 
@@ -219,7 +240,7 @@ module Priv = struct
   let get_kty t = match t with RSA _ -> `RSA | OCT _ -> `oct
 
   let rsa_of_priv (rsa_priv : Nocrypto.Rsa.priv) =
-    let n = Util.get_JWK_component ~pad:true rsa_priv.n in
+    let n = Util.get_JWK_component rsa_priv.n in
     let e = Util.get_JWK_component rsa_priv.e in
     let d = Util.get_JWK_component rsa_priv.d in
     let p = Util.get_JWK_component rsa_priv.p in
@@ -242,12 +263,12 @@ module Priv = struct
             dp;
             dq;
             qi;
-            kid = "unknown";
+            kid = Util.get_RSA_kid ~e ~n;
           }
     | _ -> Error (`Msg "Something failed")
 
   let rsa_to_priv (rsa : rsa) : (Nocrypto.Rsa.priv, [ `Msg of string ]) result =
-    let n = Util.get_component ~pad:true rsa.n in
+    let n = Util.get_component rsa.n in
     let e = Util.get_component rsa.e in
     let d = Util.get_component rsa.d in
     let p = Util.get_component rsa.p in

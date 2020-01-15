@@ -16,8 +16,7 @@ describe("JWK.Pub", ({test}) => {
             );
             expect.string(jwk.e).toEqual(Fixtures.public_jwk.e);
             expect.string(jwk.n).toEqual(Fixtures.public_jwk.n);
-            // TODO: Figure if we want to do the same as Panva with kid
-            expect.string(jwk.kid).toEqual("Yivu3QTFD7-Dkkd6dlKdhOCpfWg=");
+            expect.string(jwk.kid).toEqual(Fixtures.public_jwk.kid);
           }
         );
       }
@@ -47,10 +46,7 @@ describe("JWK.Pub", ({test}) => {
       );
       expect.string(jwk.e).toEqual(Fixtures.private_jwk.e);
       expect.string(jwk.n).toEqual(Fixtures.private_jwk.n);
-      // TODO: Figure if we want to do the same as Panva with kid
-      expect.string(jwk.kid).toEqual(
-        "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik",
-      );
+      expect.string(jwk.kid).toEqual(Fixtures.private_jwk.kid);
     | _ => ()
     };
   });
