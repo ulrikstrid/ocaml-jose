@@ -50,18 +50,15 @@ describe("JWK.Pub", ({test}) => {
     | _ => ()
     };
   });
-  /*
-   test("oct_of_string", ({expect}) => {
-     let oct: Jose.Jwk.Pub.oct =
-       Jose.Jwk.Pub.oct_of_string(
-         "Thus from my lips, by yours, my sin is purged.",
-       );
 
-     expect.string(oct.k).toEqual(
-       "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow",
-     );
-   });
-   */
+  test("oct_of_string", ({expect}) => {
+    let oct: Jose.Jwk.Pub.oct =
+      Jose.Jwk.Pub.oct_of_string("06c3bd5c-0f97-4b3e-bf20-eb29ae9363de");
+
+    expect.string(oct.k).toEqual(
+      "MDZjM2JkNWMtMGY5Ny00YjNlLWJmMjAtZWIyOWFlOTM2M2Rl",
+    );
+  });
 });
 
 describe("JWK.Priv", ({test}) => {
