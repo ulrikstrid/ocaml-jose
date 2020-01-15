@@ -15,10 +15,10 @@
   "dependencies": {
     "@opam/base64": "*",
     "@opam/containers": "*",
-    "@opam/dune": ">1.11.0",
+    "@opam/dune": ">=1.11.0",
     "@opam/hex": "*",
     "@opam/nocrypto": "*",
-    "@opam/x509": "*",
+    "@opam/x509": ">=0.8.0",
     "@opam/yojson": "*",
     "ocaml": ">=4.6.0"
   },

@@ -17,6 +17,5 @@
    (dune (>= 1.11))
    hex
    nocrypto
-   x509
-   ppx_deriving_yojson)
+   (x509 ( >= 0.8.0)))
 )
