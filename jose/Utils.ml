@@ -5,6 +5,10 @@ module RResult = struct
 
   let flat_map fn r = match r with Ok v -> fn v | Error e -> Error e
 
+  let to_opt = function Ok v -> Some v | Error _ -> None
+
+  let return v = Ok v
+
   let both a b =
     match (a, b) with
     | Ok a, Ok b -> Ok (a, b)
@@ -12,7 +16,23 @@ module RResult = struct
     | _, Error e -> Error e
 end
 
+module ROpt = struct
+  let flatten o = match o with Some v -> v | None -> None
+
+  let get_or ~default o = match o with Some v -> v | None -> default
+
+  let map_or ~default fn o = match o with Some v -> fn v | None -> default
+end
+
 module RList = struct
+  let filter_map f =
+    let rec aux accu = function
+      | [] -> List.rev accu
+      | x :: l -> (
+          match f x with None -> aux accu l | Some v -> aux (v :: accu) l )
+    in
+    aux []
+
   let rec find_opt p = function
     | [] -> None
     | x :: l -> if p x then Some x else find_opt p l

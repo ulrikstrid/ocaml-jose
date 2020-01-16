@@ -18,7 +18,7 @@ let verify_HS256 ~jwk str =
   match jwk with
   | Jwk.Pub.OCT jwk ->
       Jwk.Pub.oct_to_key jwk |> fun key ->
-      Nocrypto.Hash.SHA256.hmac ~key str |> CCResult.return
+      Nocrypto.Hash.SHA256.hmac ~key str |> RResult.return
   | _ -> Error (`Msg "JWK doesn't match")
 
 let verify_jwk ~(jwk : Jwk.Pub.t) str =
@@ -47,9 +47,9 @@ let validate ~(jwks : Jwks.t) t =
   ( match header.alg with
   | `RS256 -> Ok header.alg
   | `HS256 -> Ok header.alg
-  | _ -> Error (`Msg "alg must be RS256") )
+  | _ -> Error (`Msg "alg must be RS256 or HS256") )
   |> RResult.flat_map (fun _ ->
-         find_jwk (CCOpt.get_or ~default:"" header.kid) |> function
+         find_jwk (ROpt.get_or ~default:"" header.kid) |> function
          | Some jwk -> Ok jwk
          | None -> Error (`Msg "Did not find key with correct kid"))
   |> RResult.flat_map (fun jwk -> verify_internal ~jwk t)

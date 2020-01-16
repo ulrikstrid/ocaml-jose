@@ -37,8 +37,8 @@ let of_json json =
         jwk =
           json |> Json.member "jwk"
           |> Json.to_option (fun jwk_json ->
-                 Jwk.Pub.of_json jwk_json |> CCResult.to_opt)
-          |> CCOpt.flatten;
+                 Jwk.Pub.of_json jwk_json |> RResult.to_opt)
+          |> ROpt.flatten;
         kid = json |> Json.member "kid" |> Json.to_string_option;
         x5t = json |> Json.member "x5t" |> Json.to_string_option;
         x5t256 = json |> Json.member "x5t#256" |> Json.to_string_option;
@@ -53,14 +53,14 @@ let to_json t =
       RJson.to_json_string_opt "typ" t.typ;
       Some ("alg", Jwa.alg_to_json t.alg);
       RJson.to_json_string_opt "jku" t.jku;
-      CCOpt.map Jwk.Pub.to_json t.jwk |> CCOpt.map (fun jwk -> ("jwk", jwk));
+      Option.map Jwk.Pub.to_json t.jwk |> Option.map (fun jwk -> ("jwk", jwk));
       RJson.to_json_string_opt "kid" t.kid;
       RJson.to_json_string_opt "x5t" t.x5t;
       RJson.to_json_string_opt "x5t#256" t.x5t256;
       RJson.to_json_string_opt "cty" t.cty;
     ]
   in
-  `Assoc (CCList.filter_map (fun x -> x) values)
+  `Assoc (RList.filter_map (fun x -> x) values)
 
 let of_string header_str =
   RBase64.base64_url_decode header_str

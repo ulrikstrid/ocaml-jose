@@ -10,7 +10,7 @@ let of_json json =
       json
       |> Yojson.Safe.Util.member "keys"
       |> Yojson.Safe.Util.to_list |> List.map Jwk.Pub.of_json
-      |> CCList.filter_map CCResult.to_opt;
+      |> Utils.RList.filter_map Utils.RResult.to_opt;
   }
 
 let to_string t = to_json t |> Yojson.Safe.to_string

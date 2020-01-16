@@ -141,7 +141,7 @@ module Pub = struct
 
   module Json = Yojson.Safe.Util
 
-  let to_json_from_opt = CCOpt.map_or ~default:`Null Yojson.Safe.from_string
+  let to_json_from_opt = ROpt.map_or ~default:`Null Yojson.Safe.from_string
 
   let rsa_to_json rsa =
     let values =
@@ -155,7 +155,7 @@ module Pub = struct
         RJson.to_json_string_opt "x5t" rsa.x5t;
       ]
     in
-    `Assoc (CCList.filter_map (fun x -> x) values)
+    `Assoc (RList.filter_map (fun x -> x) values)
 
   let oct_to_json (oct : oct) =
     `Assoc
