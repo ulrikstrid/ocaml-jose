@@ -84,7 +84,10 @@ module Pub = struct
     let e = Util.get_component rsa.e in
     match (e, n) with
     | Ok e, Ok n -> Ok { e; n }
-    | _ -> Error (`Msg "Could not decode JWK")
+    | Error (`Msg m), _ ->
+        Error (`Msg ("Can not create pub of rsa, e failed with: " ^ m))
+    | _, Error (`Msg m) ->
+        Error (`Msg ("Can not create pub of rsa, n failed with: " ^ m))
 
   let rsa_of_pub (rsa_pub : Nocrypto.Rsa.pub) : (rsa, [ `Msg of string ]) result
       =
@@ -117,8 +120,10 @@ module Pub = struct
             kid = Util.get_RSA_kid ~e ~n;
             x5t = None;
           }
-    | Error (`Msg m), _, _ -> Error (`Msg ("n " ^ m))
-    | _, Error (`Msg m), _ -> Error (`Msg ("e " ^ m))
+    | Error (`Msg m), _, _ ->
+        Error (`Msg ("Can not create rsa of pub, n failed with: " ^ m))
+    | _, Error (`Msg m), _ ->
+        Error (`Msg ("Can not create rsa of pub, e failed with: " ^ m))
 
   let rsa_of_pub_pem pem : (rsa, [ `Msg of string ]) result =
     Cstruct.of_string pem |> X509.Public_key.decode_pem
@@ -265,7 +270,22 @@ module Priv = struct
             qi;
             kid = Util.get_RSA_kid ~e ~n;
           }
-    | _ -> Error (`Msg "Something failed")
+    | Error (`Msg m), _, _, _, _, _, _, _ ->
+        Error (`Msg ("Can not create rsa of priv, n failed with: " ^ m))
+    | _, Error (`Msg m), _, _, _, _, _, _ ->
+        Error (`Msg ("Can not create rsa of priv, e failed with: " ^ m))
+    | _, _, Error (`Msg m), _, _, _, _, _ ->
+        Error (`Msg ("Can not create rsa of priv, d failed with: " ^ m))
+    | _, _, _, Error (`Msg m), _, _, _, _ ->
+        Error (`Msg ("Can not create rsa of priv, p failed with: " ^ m))
+    | _, _, _, _, Error (`Msg m), _, _, _ ->
+        Error (`Msg ("Can not create rsa of priv, q failed with: " ^ m))
+    | _, _, _, _, _, Error (`Msg m), _, _ ->
+        Error (`Msg ("Can not create rsa of priv, dp failed with: " ^ m))
+    | _, _, _, _, _, _, Error (`Msg m), _ ->
+        Error (`Msg ("Can not create rsa of priv, dq failed with: " ^ m))
+    | _, _, _, _, _, _, _, Error (`Msg m) ->
+        Error (`Msg ("Can not create rsa of priv, qi failed with: " ^ m))
 
   let rsa_to_priv (rsa : rsa) : (Nocrypto.Rsa.priv, [ `Msg of string ]) result =
     let n = Util.get_component rsa.n in
@@ -279,7 +299,22 @@ module Priv = struct
     match (n, e, d, p, q, dp, dq, qi) with
     | Ok n, Ok e, Ok d, Ok p, Ok q, Ok dp, Ok dq, Ok qi ->
         Ok { e; n; d; p; q; dp; dq; q' = qi }
-    | _ -> Error (`Msg "Could not decode JWK")
+    | Error (`Msg m), _, _, _, _, _, _, _ ->
+        Error (`Msg ("Can not create priv of rsa, n failed with: " ^ m))
+    | _, Error (`Msg m), _, _, _, _, _, _ ->
+        Error (`Msg ("Can not create priv of rsa, e failed with: " ^ m))
+    | _, _, Error (`Msg m), _, _, _, _, _ ->
+        Error (`Msg ("Can not create priv of rsa, d failed with: " ^ m))
+    | _, _, _, Error (`Msg m), _, _, _, _ ->
+        Error (`Msg ("Can not create priv of rsa, p failed with: " ^ m))
+    | _, _, _, _, Error (`Msg m), _, _, _ ->
+        Error (`Msg ("Can not create priv of rsa, q failed with: " ^ m))
+    | _, _, _, _, _, Error (`Msg m), _, _ ->
+        Error (`Msg ("Can not create priv of rsa, dp failed with: " ^ m))
+    | _, _, _, _, _, _, Error (`Msg m), _ ->
+        Error (`Msg ("Can not create priv of rsa, dq failed with: " ^ m))
+    | _, _, _, _, _, _, _, Error (`Msg m) ->
+        Error (`Msg ("Can not create priv of rsa, qi failed with: " ^ m))
 
   let rsa_of_priv_pem pem =
     Cstruct.of_string pem |> X509.Private_key.decode_pem
