@@ -37,6 +37,24 @@ stages:
   #       esyLockPath: $(Build.SourcesDirectory)\esy.lock\index.json
   #       installFolderPath: \3_
 
+- stage: Test_versions
+  displayName: Test building with multiple OCaml versions
+  jobs:
+  - job:
+    strategy:
+      matrix: 
+        4_06_1:
+          OCAML_VERSION: 4.06.1
+        4_07_1:
+          OCAML_VERSION: 4.07.1
+        4_08_1:
+          OCAML_VERSION: 4.08.1
+        4_09_0:
+          OCAML_VERSION: 4.09.0
+    steps:
+      - bash: ./test-version $(OCAML_VERSION)
+        displayName: Test building with OCaml version $(OCAML_VERSION)
+
 - stage: Build_NPM
   displayName: Build NPM packages
   dependsOn: [build]
