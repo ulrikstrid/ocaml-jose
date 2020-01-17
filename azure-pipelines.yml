@@ -42,6 +42,8 @@ stages:
   displayName: Test building with multiple OCaml versions
   jobs:
   - job:
+    variables:
+      CACHE_FOLDER: $(Pipeline.Workspace)/cache
     strategy:
       matrix: 
         4_06_1:
