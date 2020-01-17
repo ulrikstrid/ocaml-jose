@@ -53,6 +53,8 @@ stages:
         4_09_0:
           OCAML_VERSION: 4.09.0
     steps:
+      - template: .ci/utils/use-node.yml
+      - template: .ci/utils/use-esy.yml
       - template: .ci/utils/cache.yml
         parameters:
           cache_key: esy.lock/index.json | "$(OCAML_VERSION)"
