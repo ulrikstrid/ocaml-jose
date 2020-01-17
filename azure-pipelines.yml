@@ -56,7 +56,7 @@ stages:
       - template: .ci/utils/cache.yml
         parameters:
           cache_key: esy.lock/index.json | "$(OCAML_VERSION)"
-      - bash: ./test-version $(OCAML_VERSION)
+      - bash: ./test-version.sh $(OCAML_VERSION)
         displayName: Test building with OCaml version $(OCAML_VERSION)
       - template: .ci/utils/prepare-cache.yml
 
