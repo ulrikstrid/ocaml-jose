@@ -3,7 +3,7 @@ echo '{
     "name": "test",
     "dependencies": {
         "ocaml": "~'"$1"'",
-        "@opam/dune": "^2.0.0",
+        "@opam/dune": "1.11.0",
         "@opam/jose": "*"
     },
     "resolutions": {
