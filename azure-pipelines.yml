@@ -52,8 +52,12 @@ stages:
         4_09_0:
           OCAML_VERSION: 4.09.0
     steps:
+      - template: .ci/utils/cache.yml
+        parameters:
+          cache_key: $(OCAML_VERSION) | esy.lock/index.json
       - bash: ./test-version $(OCAML_VERSION)
         displayName: Test building with OCaml version $(OCAML_VERSION)
+      - template: .ci/utils/prepare-cache.yml
 
 - stage: Build_NPM
   displayName: Build NPM packages
