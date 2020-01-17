@@ -38,6 +38,7 @@ stages:
   #       installFolderPath: \3_
 
 - stage: Test_versions
+  dependsOn: []
   displayName: Test building with multiple OCaml versions
   jobs:
   - job:
@@ -54,14 +55,14 @@ stages:
     steps:
       - template: .ci/utils/cache.yml
         parameters:
-          cache_key: $(OCAML_VERSION) | esy.lock/index.json
+          cache_key: esy.lock/index.json | "$(OCAML_VERSION)"
       - bash: ./test-version $(OCAML_VERSION)
         displayName: Test building with OCaml version $(OCAML_VERSION)
       - template: .ci/utils/prepare-cache.yml
 
 - stage: Build_NPM
   displayName: Build NPM packages
-  dependsOn: [build]
+  dependsOn: [build, Test_versions]
   jobs:
   - job:
     pool:
