@@ -13,9 +13,7 @@
  (depends
    (ocaml (>= 4.06.0))
    base64
-   containers
    (dune (>= 1.11))
-   hex
    nocrypto
    (x509 ( >= 0.8.0)))
 )
