@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@esy-ocaml/reason": "<4.0.0",
+    "@opam/bisect_ppx": "*",
     "@opam/lwt": "*",
     "@opam/merlin": "*",
     "@opam/ocamlformat": "*",

@@ -12,3 +12,9 @@ _esy
 
 deploy.sh
 junit.xml
+coverage
+
+4.06.1.*
+4.07.1.*
+4.08.1.*
+4.09.0.*
