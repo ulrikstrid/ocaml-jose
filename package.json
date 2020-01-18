@@ -14,7 +14,6 @@
   },
   "dependencies": {
     "@opam/base64": "*",
-    "@opam/containers": "*",
     "@opam/dune": ">=1.11.0",
     "@opam/hex": "*",
     "@opam/nocrypto": "*",
@@ -25,6 +24,7 @@
   "devDependencies": {
     "@esy-ocaml/reason": "<4.0.0",
     "@opam/bisect_ppx": "*",
+    "@opam/containers": "*",
     "@opam/lwt": "*",
     "@opam/merlin": "*",
     "@opam/ocamlformat": "*",

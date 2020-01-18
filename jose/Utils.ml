@@ -1,8 +1,6 @@
 module RResult = struct
   let map fn r = match r with Ok v -> Ok (fn v) | Error e -> Error e
 
-  let map_error fn r = match r with Ok r -> Ok r | Error e -> Error (fn e)
-
   let flat_map fn r = match r with Ok v -> fn v | Error e -> Error e
 
   let to_opt = function Ok v -> Some v | Error _ -> None
@@ -20,8 +18,6 @@ module ROpt = struct
   let flatten o = match o with Some v -> v | None -> None
 
   let get_or ~default o = match o with Some v -> v | None -> default
-
-  let map_or ~default fn o = match o with Some v -> fn v | None -> default
 end
 
 module RList = struct
@@ -36,6 +32,23 @@ module RList = struct
   let rec find_opt p = function
     | [] -> None
     | x :: l -> if p x then Some x else find_opt p l
+end
+
+module RString = struct
+  let rev s =
+    let len = Astring.String.length s in
+    Astring.String.mapi (fun i _ -> s.[len - (i + 1)]) s
+
+  let pad ~c length s =
+    let len = Astring.String.length s in
+    if len >= length then s
+    else
+      let diff = length - len in
+      Astring.String.v ~len:length (fun i ->
+          if i < diff then c else s.[i - diff])
+
+  let trim_leading_null s =
+    Astring.String.trim ~drop:(function '\000' -> true | _ -> false) s
 end
 
 module RBase64 = struct
