@@ -53,7 +53,7 @@ let to_json t =
       RJson.to_json_string_opt "typ" t.typ;
       Some ("alg", Jwa.alg_to_json t.alg);
       RJson.to_json_string_opt "jku" t.jku;
-      Option.map Jwk.Pub.to_json t.jwk |> Option.map (fun jwk -> ("jwk", jwk));
+      ROpt.map Jwk.Pub.to_json t.jwk |> ROpt.map (fun jwk -> ("jwk", jwk));
       RJson.to_json_string_opt "kid" t.kid;
       RJson.to_json_string_opt "x5t" t.x5t;
       RJson.to_json_string_opt "x5t#256" t.x5t256;

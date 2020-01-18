@@ -18,6 +18,8 @@ module ROpt = struct
   let flatten o = match o with Some v -> v | None -> None
 
   let get_or ~default o = match o with Some v -> v | None -> default
+
+  let map fn o = match o with Some v -> Some (fn v) | None -> None
 end
 
 module RList = struct
