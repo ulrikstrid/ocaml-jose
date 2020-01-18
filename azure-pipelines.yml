@@ -1,9 +1,9 @@
-name: Build master - $(Build.BuildId)
+name: Build - $(Build.BuildId)
 
-# trigger:
-#   branches:
-#     include:
-#     - master
+trigger:
+  branches:
+    include:
+    - master
 
 stages:
 - stage: Build
