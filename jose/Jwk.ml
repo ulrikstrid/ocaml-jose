@@ -1,17 +1,14 @@
 open Utils
 
 module Util = struct
-  let trim_leading_null s =
-    Astring.String.trim ~drop:(function '\000' -> true | _ -> false) s
-
   let get_JWK_component ?(pad = false) e =
-    Z.to_bits e |> CCString.rev |> trim_leading_null
+    Z.to_bits e |> RString.rev |> RString.trim_leading_null
     |> Base64.encode ~pad ~alphabet:Base64.uri_safe_alphabet
 
   let get_component ?(pad = false) e =
     Base64.decode ~pad ~alphabet:Base64.uri_safe_alphabet e
     |> RResult.map (fun x ->
-           CCString.pad 8 ~c:'\000' x |> CCString.rev |> Z.of_bits)
+           RString.pad 8 ~c:'\000' x |> RString.rev |> Z.of_bits)
 
   let kid_of_json json =
     Yojson.Safe.to_string json |> Cstruct.of_string
@@ -141,8 +138,6 @@ module Pub = struct
 
   module Json = Yojson.Safe.Util
 
-  let to_json_from_opt = CCOpt.map_or ~default:`Null Yojson.Safe.from_string
-
   let rsa_to_json rsa =
     let values =
       [
@@ -155,7 +150,7 @@ module Pub = struct
         RJson.to_json_string_opt "x5t" rsa.x5t;
       ]
     in
-    `Assoc (CCList.filter_map (fun x -> x) values)
+    `Assoc (RList.filter_map (fun x -> x) values)
 
   let oct_to_json (oct : oct) =
     `Assoc
