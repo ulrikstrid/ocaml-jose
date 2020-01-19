@@ -25,6 +25,18 @@ stages:
     steps:
     - template: .ci/build-platform.yml
     - template: .ci/utils/prepare-cache.yml
+    
+  - job: Linux_opam
+    pool:
+      vmImage: ubuntu-latest
+    variables:
+      CACHE_FOLDER: $(Pipeline.Workspace)/cache
+      OPAM_VERSION: 2.0.5
+      OPAM_PKG: $(OPAM_VERSION)-x86_64-linux
+      OCAML_VERSION: 4.09.0
+    steps:
+    - template: .ci/build-platform.yml
+    - template: .ci/utils/prepare-cache.yml
 
   # - job: Windows
   #   pool:

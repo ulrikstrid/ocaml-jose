@@ -1,0 +1,39 @@
+parameters:
+  cache_key: jose.opam | "$(OCAML_VERSION)"
+
+steps:
+- task: CacheBeta@1
+  inputs:
+    key: opam | $(Agent.OS) | ${{ parameters.cache_key }} 
+    path: $(CACHE_FOLDER)
+    cacheHitVar: CACHE_RESTORED
+  displayName: '[Cache] opam'
+
+- script: mkdir -p $(CACHE_FOLDER)
+  displayName: Make cache dir
+
+- script: |
+    wget https://github.com/ocaml/opam/releases/download/$(OPAM_VERSION)/$(OPAM_PKG)
+    mv $(OPAM_PKG) $(CACHE_FOLDER)/opam
+  displayName: Install opam
+  condition: ne(variables.CACHE_RESTORED, 'true')
+
+- script: |
+    sudo cp _cache/opam /usr/local/bin/opam
+    sudo chmod a+x /usr/local/bin/opam
+  displayName: Move opam in-place
+
+- script: opam init -y --bare --disable-sandboxing --disable-shell-hook
+  displayName: Init opam
+- script: opam switch create . $(OCAML_VERSION) --no-install
+  displayName: Create switch
+- script: eval `opam config env`
+  displayName: eval opam switch
+- script: |
+    ocaml -version
+    opam --version
+  displayName: Check ocaml and opam version
+
+- script: opam install -y --deps-only .
+  displayName: Install depenencies
+  condition: ne(variables.CACHE_RESTORED, 'true')
