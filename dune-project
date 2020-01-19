@@ -20,8 +20,10 @@
    (dune (>= 1.11))
    nocrypto
    (x509 ( >= 0.8.0))
+   astring
    (containers :with-test)
    (bisect_ppx :with-test)
    (reason :with-test)
-   (rely :with-test))
+   (rely :with-test)
+   (lwt :with-test))
 )
