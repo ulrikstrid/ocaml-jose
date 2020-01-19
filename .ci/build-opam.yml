@@ -37,3 +37,9 @@ steps:
 - script: opam install -y --deps-only .
   displayName: Install depenencies
   condition: ne(variables.CACHE_RESTORED, 'true')
+
+- script: dune build
+  displayName: Build
+
+- script: dune exec test/test_exe/RunTests.exe
+  displayName: Test
