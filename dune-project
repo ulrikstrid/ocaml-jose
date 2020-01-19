@@ -21,6 +21,8 @@
    nocrypto
    (x509 ( >= 0.8.0))
    astring
+   yojson
+   zarith
    (containers :with-test)
    (bisect_ppx :with-test)
    (reason :with-test)
