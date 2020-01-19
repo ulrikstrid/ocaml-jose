@@ -44,10 +44,10 @@ steps:
   displayName: Install depenencies
   condition: ne(variables.CACHE_RESTORED, 'true')
 
-# - script: dune build
-#   displayName: Build
-# - script: dune exec test/test_exe/RunTests.exe
-#   displayName: Test
+- script: opam exec -- dune build
+  displayName: Build
+- script: dopam exec -- une exec test/test_exe/RunTests.exe
+  displayName: Test
 
-- pwsh: Move-Item -Path _build -Destination $(CACHE_FOLDER)/_opam
+- pwsh: Move-Item -Path _opam -Destination $(CACHE_FOLDER)/_opam
   displayName: '[Cache][Publish] Move builds to be cached'

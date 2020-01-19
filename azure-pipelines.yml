@@ -38,21 +38,6 @@ stages:
   #       esyLockPath: $(Build.SourcesDirectory)\esy.lock\index.json
   #       installFolderPath: \3_
 
-- stage: Build_opam
-  displayName: Build with opam
-  dependsOn: []
-  jobs:
-  - job: Linux_opam
-    pool:
-      vmImage: ubuntu-latest
-    variables:
-      CACHE_FOLDER: $(Pipeline.Workspace)/cache
-      OPAM_VERSION: 2.0.6
-      OPAM_PKG: opam-$(OPAM_VERSION)-x86_64-linux
-      OCAML_VERSION: 4.09.0
-    steps:
-    - template: .ci/build-opam.yml
-
 - stage: Test_versions
   dependsOn: []
   displayName: Test building with multiple OCaml versions
@@ -91,3 +76,18 @@ stages:
     - template: .ci/create-npm-package.yml
       parameters:
         package_name: $(package_name)
+
+- stage: Build_opam
+  displayName: Build with opam
+  dependsOn: []
+  jobs:
+  - job: Linux_opam
+    pool:
+      vmImage: ubuntu-latest
+    variables:
+      CACHE_FOLDER: $(Pipeline.Workspace)/cache
+      OPAM_VERSION: 2.0.6
+      OPAM_PKG: opam-$(OPAM_VERSION)-x86_64-linux
+      OCAML_VERSION: 4.09.0
+    steps:
+    - template: .ci/build-opam.yml
