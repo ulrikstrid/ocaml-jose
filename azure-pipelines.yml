@@ -34,7 +34,6 @@ stages:
       OPAM_VERSION: 2.0.6
       OPAM_PKG: opam-$(OPAM_VERSION)-x86_64-linux
       OCAML_VERSION: 4.09.0
-      OPAMROOT: $(CACHE_FOLDER)/.opam
     steps:
     - template: .ci/build-opam.yml
 

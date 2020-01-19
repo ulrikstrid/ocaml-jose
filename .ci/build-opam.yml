@@ -9,8 +9,12 @@ steps:
     cacheHitVar: CACHE_RESTORED
   displayName: '[Cache] opam'
 
-- script: mkdir -p $(CACHE_FOLDER)
-  displayName: Make cache dir
+- script: mkdir -p _opam
+  displayName: '[Cache][Restore] Create opam dir'
+  condition: eq(variables.CACHE_RESTORED, 'true')
+- pwsh: Move-Item -Path $(CACHE_FOLDER)/_opam -Destination _opam
+  displayName: '[Cache][Restore] Move downloaded cache in place'
+  condition: eq(variables.CACHE_RESTORED, 'true')
 
 - script: |
     wget https://github.com/ocaml/opam/releases/download/$(OPAM_VERSION)/$(OPAM_PKG)
@@ -30,7 +34,7 @@ steps:
 - script: eval `opam config env`
   displayName: eval opam switch
 - script: |
-    ocaml -version
+    opam exec -- ocaml -version
     opam --version
   displayName: Check ocaml and opam version
 - script: opam install -y --deps-only .
@@ -41,3 +45,6 @@ steps:
 #   displayName: Build
 # - script: dune exec test/test_exe/RunTests.exe
 #   displayName: Test
+
+- pwsh: Move-Item -Path _build -Destination $(CACHE_FOLDER)/_opam
+  displayName: '[Cache][Publish] Move builds to be cached'
