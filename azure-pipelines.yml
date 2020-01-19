@@ -35,8 +35,7 @@ stages:
       OPAM_PKG: $(OPAM_VERSION)-x86_64-linux
       OCAML_VERSION: 4.09.0
     steps:
-    - template: .ci/build-platform.yml
-    - template: .ci/utils/prepare-cache.yml
+    - template: .ci/build-opam.yml
 
   # - job: Windows
   #   pool:
