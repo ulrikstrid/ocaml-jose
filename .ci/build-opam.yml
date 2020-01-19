@@ -16,10 +16,13 @@ steps:
   displayName: '[Cache][Restore] Move downloaded cache in place'
   condition: eq(variables.CACHE_RESTORED, 'true')
 
+- script: mkdir -p $(CACHE_FOLDER)
+  displayName: '[Cache miss] Make cache dir'
+  condition: ne(variables.CACHE_RESTORED, 'true')
 - script: |
     wget https://github.com/ocaml/opam/releases/download/$(OPAM_VERSION)/$(OPAM_PKG)
     mv $(OPAM_PKG) $(CACHE_FOLDER)/opam
-  displayName: Install opam
+  displayName: '[Cache miss] Install opam'
   condition: ne(variables.CACHE_RESTORED, 'true')
 
 - script: |
