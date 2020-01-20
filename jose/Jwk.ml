@@ -248,7 +248,6 @@ module Priv = struct
     let dp = Util.get_JWK_component rsa_priv.dp in
     let dq = Util.get_JWK_component rsa_priv.dq in
     let qi = Util.get_JWK_component rsa_priv.q' in
-
     match (n, e, d, p, q, dp, dq, qi) with
     | Ok n, Ok e, Ok d, Ok p, Ok q, Ok dp, Ok dq, Ok qi ->
         Ok

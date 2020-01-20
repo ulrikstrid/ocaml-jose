@@ -78,9 +78,7 @@ describe("JWT", ({test}) => {
       )
       |> CCResult.get_exn;
 
-    expect.result(
-      Jwt.validate(~jwk=Jwk.Pub.RSA(Fixtures.public_jwk), jwt),
-    ).
+    expect.result(Jwt.validate(~jwk=Jwk.Pub.RSA(Fixtures.public_jwk), jwt)).
       toBeOk();
   });
 });
