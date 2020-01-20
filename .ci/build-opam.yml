@@ -46,8 +46,8 @@ steps:
 
 - script: opam exec -- dune build
   displayName: Build
-- script: opam exec -- dune exec test/test_exe/RunTests.exe
-  displayName: Test
+# - script: opam exec -- dune exec test/test_exe/RunTests.exe
+#   displayName: Test
 
 - pwsh: Move-Item -Path _opam -Destination $(CACHE_FOLDER)/_opam
   displayName: '[Cache][Publish] Move builds to be cached'
