@@ -1,4 +1,4 @@
 (library
  (name Jose)
  (public_name jose)
- (libraries yojson nocrypto x509 base64 zarith))
+ (libraries astring yojson nocrypto x509 base64 zarith))

@@ -1,0 +1,17 @@
+build: [
+  ["dune" "subst"] {pinned}
+  [
+    "dune"
+    "build"
+    "-p"
+    name
+    "-j"
+    jobs
+    "@install"
+    "@doc" {with-doc}
+  ]
+  ["dune" "exec" "test/test_exe/RunTests.exe"] {with-test}
+]
+pin-depends: [
+  [ "nocrypto.dev" "git+https://github.com/mirleft/ocaml-nocrypto.git#dune" ]
+]

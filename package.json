@@ -18,11 +18,12 @@
     "@opam/nocrypto": "*",
     "@opam/x509": ">=0.8.0",
     "@opam/yojson": "*",
+    "@opam/astring": "*",
     "ocaml": ">=4.6.0"
   },
   "devDependencies": {
     "@esy-ocaml/reason": "<4.0.0",
-    "@opam/bisect_ppx": "*",
+    "@opam/bisect_ppx": "aantron/bisect_ppx:bisect_ppx.opam",
     "@opam/containers": "*",
     "@opam/lwt": "*",
     "@opam/merlin": "*",
