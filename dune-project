@@ -17,7 +17,7 @@
  (depends
    (ocaml (>= 4.06.0))
    base64
-   (dune (>= 1.11))
+   (dune (and (>= 1.11) (< 2.0)))
    nocrypto
    (x509 ( >= 0.8.0))
    astring
