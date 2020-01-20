@@ -277,9 +277,9 @@ module Jws : sig
 
   type t = { header : Header.t; payload : string; signature : signature }
 
-  val validate : jwks:Jwks.t -> t -> (t, [ `Msg of string ]) result
+  val validate : jwk:Jwk.Pub.t -> t -> (t, [ `Msg of string ]) result
   (**
-  [validate jwks t] validates the signature
+  [validate jwk t] validates the signature
   *)
 
   val sign :
@@ -316,9 +316,9 @@ module Jwt : sig
 
   val of_jws : Jws.t -> (t, [ `Msg of string ]) result
 
-  val validate : jwks:Jwks.t -> t -> (t, [ `Msg of string ]) result
+  val validate : jwk:Jwk.Pub.t -> t -> (t, [ `Msg of string ]) result
   (**
-  [validate jwks t] checks if the JWT is valid and then calls Jws.validate to validate the signature
+  [validate jwk t] checks if the JWT is valid and then calls Jws.validate to validate the signature
   *)
 
   val sign :

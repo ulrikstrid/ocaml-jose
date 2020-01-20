@@ -12,32 +12,27 @@ describe("JWT", ({test}) => {
   test("Can validate a RSA256 JWT", ({expect}) => {
     let rsa =
       Jwk.Pub.rsa_of_pub_pem(Fixtures.rsa_test_pub) |> CCResult.get_exn;
-    let jwks =
-      Jwks.{
-        keys: [
-          RSA({...rsa, kid: "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik"}),
-        ],
-      };
+    let jwk =
+      Jwk.Pub.RSA({
+        ...rsa,
+        kid: "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik",
+      });
 
     Jwt.of_string(Fixtures.external_jwt_string)
-    |> CCResult.flat_map(Jwt.validate(~jwks))
+    |> CCResult.flat_map(Jwt.validate(~jwk))
     |> (jwt_result => expect.result(jwt_result).toBeOk());
   });
 
   test("Can validate a HS256 JWT", ({expect}) => {
-    let jwks =
-      Jwks.{
-        keys: [
-          OCT(
-            {
-              Fixtures.oct_jwk;
-            },
-          ),
-        ],
-      };
+    let jwk =
+      Jwk.Pub.OCT(
+        {
+          Fixtures.oct_jwk;
+        },
+      );
 
     Jwt.of_string(Fixtures.oct_jwt_string)
-    |> CCResult.flat_map(Jwt.validate(~jwks))
+    |> CCResult.flat_map(Jwt.validate(~jwk))
     |> (jwt_result => expect.result(jwt_result).toBeOk());
   });
 
@@ -84,7 +79,7 @@ describe("JWT", ({test}) => {
       |> CCResult.get_exn;
 
     expect.result(
-      Jwt.validate(~jwks=Jwks.{keys: [RSA(Fixtures.public_jwk)]}, jwt),
+      Jwt.validate(~jwk=Jwk.Pub.RSA(Fixtures.public_jwk), jwt),
     ).
       toBeOk();
   });
