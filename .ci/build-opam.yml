@@ -9,9 +9,6 @@ steps:
     cacheHitVar: CACHE_RESTORED
   displayName: '[Cache] opam'
 
-- script: mkdir -p _opam
-  displayName: '[Cache][Restore] Create opam dir'
-  condition: eq(variables.CACHE_RESTORED, 'true')
 - pwsh: Move-Item -Path $(CACHE_FOLDER)/_opam -Destination _opam
   displayName: '[Cache][Restore] Move downloaded cache in place'
   condition: eq(variables.CACHE_RESTORED, 'true')
@@ -33,7 +30,8 @@ steps:
 - script: opam init -y --bare --disable-sandboxing --disable-shell-hook
   displayName: Init opam
 - script: opam switch create . $(OCAML_VERSION) --no-install
-  displayName: Create switch
+  displayName: '[Cache miss] Create switch'
+  condition: ne(variables.CACHE_RESTORED, 'true')
 - script: eval `opam config env`
   displayName: eval opam switch
 - script: |

@@ -53,9 +53,9 @@ let check_exp t =
   | Some _exp -> Error (`Msg "Token expired")
   | None -> Ok t
 
-let validate ~jwks t =
+let validate ~jwk t =
   check_exp t |> RResult.flat_map to_jws
-  |> RResult.flat_map (Jws.validate ~jwks)
+  |> RResult.flat_map (Jws.validate ~jwk)
   |> RResult.flat_map of_jws
 
 let sign ~header ~payload key =

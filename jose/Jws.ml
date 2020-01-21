@@ -41,18 +41,13 @@ let verify_internal ~jwk t =
                 in
                 Cstruct.equal message token_hash))
 
-let validate ~(jwks : Jwks.t) t =
-  let find_jwk = Jwks.find_key jwks in
+let validate ~(jwk : Jwk.Pub.t) t =
   let header = t.header in
   ( match header.alg with
   | `RS256 -> Ok header.alg
   | `HS256 -> Ok header.alg
   | _ -> Error (`Msg "alg must be RS256 or HS256") )
-  |> RResult.flat_map (fun _ ->
-         find_jwk (ROpt.get_or ~default:"" header.kid) |> function
-         | Some jwk -> Ok jwk
-         | None -> Error (`Msg "Did not find key with correct kid"))
-  |> RResult.flat_map (fun jwk -> verify_internal ~jwk t)
+  |> RResult.flat_map (fun _ -> verify_internal ~jwk t)
   |> RResult.map (fun _ -> t)
 
 let sign ~header ~payload key =
