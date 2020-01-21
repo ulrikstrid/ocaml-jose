@@ -9,9 +9,6 @@ steps:
     cacheHitVar: CACHE_RESTORED
   displayName: '[Cache] opam'
 
-- script: mkdir -p _opam
-  displayName: '[Cache][Restore] Create opam dir'
-  condition: eq(variables.CACHE_RESTORED, 'true')
 - pwsh: Move-Item -Path $(CACHE_FOLDER)/_opam -Destination _opam
   displayName: '[Cache][Restore] Move downloaded cache in place'
   condition: eq(variables.CACHE_RESTORED, 'true')
