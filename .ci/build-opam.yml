@@ -32,9 +32,6 @@ steps:
 - script: opam switch create . $(OCAML_VERSION) --no-install
   displayName: '[Cache miss] Create switch'
   condition: ne(variables.CACHE_RESTORED, 'true')
-- script: opam switch .
-  displayName: '[Cache hit] Set switch'
-  condition: eq(variables.CACHE_RESTORED, 'true')
 - script: eval `opam config env`
   displayName: eval opam switch
 - script: |
