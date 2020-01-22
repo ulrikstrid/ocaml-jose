@@ -14,6 +14,7 @@
 (package
  (name jose)
  (synopsis "JOSE implementation for OCaml and ReasonML")
+ (description "JavaScript Object Signing and Encryption built ontop of pure OCaml libs")
  (depends
    (ocaml (>= 4.06.0))
    base64

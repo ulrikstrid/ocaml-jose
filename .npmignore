@@ -3,7 +3,17 @@ test
 .ocamlformat
 junit.xml
 *.install
+azure-pipelines.yml
+*.opam.template
 
 .ci
-.esy.lock
+.github
+esy.lock
+*.esy.lock
+
 _esy
+_opam
+_build
+_coverage
+
+node_modules
