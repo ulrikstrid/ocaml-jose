@@ -5,6 +5,9 @@ junit.xml
 *.install
 azure-pipelines.yml
 *.opam.template
+*.sh
+4.*.*.json
+.merlin
 
 .ci
 .github

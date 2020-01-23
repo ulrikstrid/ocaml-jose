@@ -18,7 +18,7 @@
     "@opam/cstruct": ">=4.0.0",
     "@opam/dune": ">=1.11.0",
     "@opam/nocrypto": ">=0.5.4",
-    "@opam/x509": ">=0.9.0",
+    "@opam/x509": ">=0.8.0",
     "@opam/yojson": "*",
     "@opam/zarith": "*",
     "ocaml": ">=4.6.0"

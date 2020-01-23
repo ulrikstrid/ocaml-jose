@@ -1,5 +1,5 @@
 {
-  "checksum": "19496a9375f23936089b9d46e1723cf9",
+  "checksum": "a14cbd75507c8c178000701c2865b945",
   "root": "@reason-native-web/jose@link-dev:./package.json",
   "node": {
     "refmterr@3.3.0@d41d8cd9": {
