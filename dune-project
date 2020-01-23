@@ -17,10 +17,11 @@
  (description "JavaScript Object Signing and Encryption built ontop of pure OCaml libs")
  (depends
    (ocaml (>= 4.06.0))
-   base64
+   (base64 (>= 3.0.0))
    (dune (and (>= 1.11) (< 2.0)))
-   nocrypto
-   (x509 ( >= 0.8.0))
+   (nocrypto (>= 0.5.4 ))
+   (x509 (>= 0.8.0))
+   (cstruct (>= 4.0.0))
    astring
    yojson
    zarith
