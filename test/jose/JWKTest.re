@@ -40,13 +40,25 @@ describe("JWK.Pub", ({test}) => {
     expect.result(jwk).toBeOk();
 
     switch (jwk) {
-    | Ok(RSA(jwk)) =>
-      expect.string(jwk.kty |> Jose.Jwa.kty_to_string).toEqual(
-        Fixtures.private_jwk.kty |> Jose.Jwa.kty_to_string,
+    | Ok(jwk) =>
+      expect.string(jwk |> Jose.Jwk.Pub.get_kid).toEqual(
+        Fixtures.public_jwk.kid,
       );
-      expect.string(jwk.e).toEqual(Fixtures.private_jwk.e);
-      expect.string(jwk.n).toEqual(Fixtures.private_jwk.n);
-      expect.string(jwk.kid).toEqual(Fixtures.private_jwk.kid);
+      expect.string(jwk |> Jose.Jwk.Pub.get_kty |> Jose.Jwa.kty_to_string).
+        toEqual(
+        Fixtures.public_jwk.kty |> Jose.Jwa.kty_to_string,
+      );
+      expect.string(jwk |> Jose.Jwk.Pub.get_alg |> Jose.Jwa.alg_to_string).
+        toEqual(
+        Fixtures.public_jwk.alg |> Jose.Jwa.alg_to_string,
+      );
+    | _ => ()
+    };
+
+    switch (jwk) {
+    | Ok(RSA(jwk)) =>
+      expect.string(jwk.e).toEqual(Fixtures.public_jwk.e);
+      expect.string(jwk.n).toEqual(Fixtures.public_jwk.n);
     | _ => ()
     };
   });
@@ -69,22 +81,22 @@ describe("JWK.Priv", ({test}) => {
         open Jose.Jwk.Priv;
         expect.result(r).toBeOk();
 
-        CCResult.get_exn(r)
-        |> (
-          jwk => {
-            expect.string(jwk.kty |> Jose.Jwa.kty_to_string).toEqual(
-              Fixtures.private_jwk.kty |> Jose.Jwa.kty_to_string,
-            );
-            expect.string(jwk.e).toEqual(Fixtures.private_jwk.e);
-            expect.string(jwk.n).toEqual(Fixtures.private_jwk.n);
-            expect.string(jwk.d).toEqual(Fixtures.private_jwk.d);
-            expect.string(jwk.p).toEqual(Fixtures.private_jwk.p);
-            expect.string(jwk.q).toEqual(Fixtures.private_jwk.q);
-            expect.string(jwk.dp).toEqual(Fixtures.private_jwk.dp);
-            expect.string(jwk.dq).toEqual(Fixtures.private_jwk.dq);
-            expect.string(jwk.qi).toEqual(Fixtures.private_jwk.qi);
-          }
+        CCResult.get_exn(r);
+      }
+    )
+    |> (
+      jwk => {
+        expect.string(jwk.kty |> Jose.Jwa.kty_to_string).toEqual(
+          Fixtures.private_jwk.kty |> Jose.Jwa.kty_to_string,
         );
+        expect.string(jwk.e).toEqual(Fixtures.private_jwk.e);
+        expect.string(jwk.n).toEqual(Fixtures.private_jwk.n);
+        expect.string(jwk.d).toEqual(Fixtures.private_jwk.d);
+        expect.string(jwk.p).toEqual(Fixtures.private_jwk.p);
+        expect.string(jwk.q).toEqual(Fixtures.private_jwk.q);
+        expect.string(jwk.dp).toEqual(Fixtures.private_jwk.dp);
+        expect.string(jwk.dq).toEqual(Fixtures.private_jwk.dq);
+        expect.string(jwk.qi).toEqual(Fixtures.private_jwk.qi);
       }
     )
   });
@@ -105,5 +117,38 @@ describe("JWK.Priv", ({test}) => {
     |> CCResult.get_exn
     |> (rsa => Nocrypto.Rsa.well_formed(~e=rsa.e, ~p=rsa.p, ~q=rsa.q))
     |> (a => expect.bool(a).toBeTrue())
+  });
+
+  test("of_json", ({expect}) => {
+    let jwk = Jose.Jwk.Priv.of_string(Fixtures.private_jwk_string);
+
+    expect.result(jwk).toBeOk();
+
+    switch (jwk) {
+    | Ok(jwk) =>
+      expect.string(jwk |> Jose.Jwk.Priv.get_kid).toEqual(
+        Fixtures.private_jwk.kid,
+      );
+      expect.string(jwk |> Jose.Jwk.Priv.get_kty |> Jose.Jwa.kty_to_string).
+        toEqual(
+        Fixtures.private_jwk.kty |> Jose.Jwa.kty_to_string,
+      );
+      expect.string(jwk |> Jose.Jwk.Priv.get_alg |> Jose.Jwa.alg_to_string).
+        toEqual(
+        Fixtures.private_jwk.alg |> Jose.Jwa.alg_to_string,
+      );
+    | _ => ()
+    };
+  });
+
+  test("to_string", ({expect}) => {
+    let expected_string =
+      Fixtures.private_jwk_string
+      |> CCString.replace(~sub=" ", ~by="")
+      |> CCString.replace(~sub="\n", ~by="");
+    let jwk_string =
+      Jose.Jwk.Priv.to_string(Jose.Jwk.Priv.RSA(Fixtures.private_jwk));
+
+    expect.string(jwk_string).toEqual(expected_string);
   });
 });

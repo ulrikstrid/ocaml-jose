@@ -142,11 +142,11 @@ module Pub = struct
     let values =
       [
         Some ("alg", Jwa.alg_to_json rsa.alg);
-        Some ("kty", `String (Jwa.kty_to_string rsa.kty));
-        RJson.to_json_string_opt "use" rsa.use;
-        Some ("n", `String rsa.n);
         Some ("e", `String rsa.e);
+        Some ("n", `String rsa.n);
+        Some ("kty", `String (Jwa.kty_to_string rsa.kty));
         Some ("kid", `String rsa.kid);
+        RJson.to_json_string_opt "use" rsa.use;
         RJson.to_json_string_opt "x5t" rsa.x5t;
       ]
     in
@@ -326,15 +326,15 @@ module Priv = struct
     `Assoc
       [
         ("alg", Jwa.alg_to_json rsa.alg);
-        ("kty", `String (rsa.kty |> Jwa.kty_to_string));
-        ("n", `String rsa.n);
         ("e", `String rsa.e);
-        ("d", `String rsa.n);
-        ("p", `String rsa.e);
-        ("q", `String rsa.n);
-        ("dp", `String rsa.e);
-        ("dq", `String rsa.n);
-        ("qi", `String rsa.e);
+        ("n", `String rsa.n);
+        ("d", `String rsa.d);
+        ("p", `String rsa.p);
+        ("q", `String rsa.q);
+        ("dp", `String rsa.dp);
+        ("dq", `String rsa.dq);
+        ("qi", `String rsa.qi);
+        ("kty", `String (rsa.kty |> Jwa.kty_to_string));
         ("kid", `String rsa.kid);
       ]
 
