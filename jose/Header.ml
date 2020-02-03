@@ -24,7 +24,8 @@ let empty_header =
   }
 
 let make_header ?typ (jwk : Jwk.Pub.t) =
-  { empty_header with alg = `RS256; typ; kid = Some (Jwk.Pub.get_kid jwk) }
+  let alg = match jwk with Jwk.Pub.RSA _ -> `RS256 | OCT _ -> `HS256 in
+  { empty_header with alg; typ; kid = Some (Jwk.Pub.get_kid jwk) }
 
 module Json = Yojson.Safe.Util
 
