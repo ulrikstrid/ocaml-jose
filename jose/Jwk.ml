@@ -38,10 +38,8 @@ module Oct = struct
   }
 
   let oct_of_string str =
-    let key = Cstruct.of_string str in
     let k =
-      Cstruct.to_bytes key |> Bytes.to_string
-      |> Base64.encode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet
+      Base64.encode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet str
     in
     { kty = `oct; alg = `HS256; kid = Util.get_OCT_kid ~k; k }
 end
