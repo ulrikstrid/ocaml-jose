@@ -52,11 +52,7 @@ describe("JWT", ({test}) => {
     let payload =
       Jwt.empty_payload |> Jwt.add_claim("sub", `String("tester"));
     let jwt =
-      Jwt.sign(
-        ~header,
-        ~payload,
-        Fixtures.private_jwk |> Jwk.Priv.rsa_to_priv |> CCResult.get_exn,
-      );
+      Jwt.sign(~header, ~payload, Fixtures.private_jwk) |> CCResult.get_exn;
 
     expect.string(
       jwt |> CCResult.flat_map(Jwt.to_string) |> CCResult.get_exn,
@@ -71,12 +67,7 @@ describe("JWT", ({test}) => {
     let payload =
       Jwt.empty_payload |> Jwt.add_claim("sub", `String("tester"));
     let jwt =
-      Jwt.sign(
-        ~header,
-        ~payload,
-        Fixtures.private_jwk |> Jwk.Priv.rsa_to_priv |> CCResult.get_exn,
-      )
-      |> CCResult.get_exn;
+      Jwt.sign(~header, ~payload, Fixtures.private_jwk) |> CCResult.get_exn;
 
     expect.result(Jwt.validate(~jwk=Jwk.Pub.RSA(Fixtures.public_jwk), jwt)).
       toBeOk();

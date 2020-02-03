@@ -55,7 +55,7 @@ module Jwk : sig
     *)
 
     val rsa_of_pub_pem : string -> (rsa, [ `Msg of string ]) result
-    (** 
+    (**
     [rsa_of_pub_pem pem] takes a public PEM as a string and returns a result a result t or a message of what went wrong.
     *)
 
@@ -151,6 +151,11 @@ module Jwk : sig
     val rsa_to_priv_pem : rsa -> (string, [ `Msg of string ]) result
     (**
     [to_priv_pem t] takes a private JWK and returns a result PEM string or a message of what went wrong.
+    *)
+
+    val oct_of_string : string -> oct
+    (**
+    [oct_of_string secret] creates a [oct] from a shared secret
     *)
 
     val to_json : t -> Yojson.Safe.t
@@ -296,7 +301,7 @@ module Jws : sig
   val sign :
     header:Header.t ->
     payload:string ->
-    Nocrypto.Rsa.priv ->
+    Jwk.Priv.t ->
     (t, [ `Msg of string ]) result
   (**
   [sign header payload priv] creates a signed JWT from [header] and [payload]
@@ -335,7 +340,7 @@ module Jwt : sig
   val sign :
     header:Header.t ->
     payload:payload ->
-    Nocrypto.Rsa.priv ->
+    Jwk.Priv.t ->
     (t, [ `Msg of string ]) result
   (**
   [sign header payload priv] creates a signed JWT from [header] and [payload]

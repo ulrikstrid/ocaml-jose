@@ -27,18 +27,7 @@ module Util = struct
     |> Base64.encode ~pad:false ~alphabet:Base64.uri_safe_alphabet ~len:20
 end
 
-module Pub = struct
-  (*
-  TODO: Implement EC
-  {
-    "kty":"EC",
-    "crv":"P-256",
-    "x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
-    "y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
-    "d":"jpsQnnGQmL-YBIffH1136cspYG6-0iY7X1fCE9-E9LI"
-  }
-  *)
-
+module Oct = struct
   type oct = {
     kty : Jwa.kty;
     (* `oct *)
@@ -55,6 +44,21 @@ module Pub = struct
       |> Base64.encode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet
     in
     { kty = `oct; alg = `HS256; kid = Util.get_OCT_kid ~k; k }
+end
+
+module Pub = struct
+  include Oct
+
+  (*
+  TODO: Implement EC
+  {
+    "kty":"EC",
+    "crv":"P-256",
+    "x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+    "y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
+    "d":"jpsQnnGQmL-YBIffH1136cspYG6-0iY7X1fCE9-E9LI"
+  }
+  *)
 
   type rsa = {
     alg : Jwa.alg;
@@ -208,14 +212,7 @@ module Pub = struct
 end
 
 module Priv = struct
-  type oct = {
-    kty : Jwa.kty;
-    (* `oct *)
-    alg : Jwa.alg;
-    (* `HS256 *)
-    kid : string;
-    k : string;
-  }
+  include Oct
 
   type rsa = {
     alg : Jwa.alg;

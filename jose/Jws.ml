@@ -50,13 +50,27 @@ let validate ~(jwk : Jwk.Pub.t) t =
   |> RResult.flat_map (fun _ -> verify_internal ~jwk t)
   |> RResult.map (fun _ -> t)
 
-let sign ~header ~payload key =
-  Header.to_string header
-  |> RResult.flat_map (fun header_str ->
-         let input_str = header_str ^ "." ^ payload in
-         `Message (Cstruct.of_string input_str)
-         |> Nocrypto.Rsa.PKCS1.sign ~hash:`SHA256 ~key
-         |> Cstruct.to_string |> RBase64.base64_url_encode
-         |> RResult.map (fun sign -> (header, payload, sign)))
-  |> RResult.map (fun (header, payload, signature) ->
-         { header; payload; signature })
+(* Assumes a well formed header. *)
+let sign ~header ~payload (key : Jwk.Priv.t) =
+  let sign_f =
+    match key with
+    | Jwk.Priv.RSA k -> (
+        match Jwk.Priv.rsa_to_priv k with
+        | Ok key -> Ok (fun x -> Nocrypto.Rsa.PKCS1.sign ~hash:`SHA256 ~key x)
+        | Error e -> Error e )
+    | OCT oct ->
+        Ok
+          (fun [@ocaml.warning "-8"] (`Message x) ->
+            Nocrypto.Hash.SHA256.hmac ~key:(Cstruct.of_string oct.k) x)
+  in
+  match sign_f with
+  | Ok sign_f ->
+      Header.to_string header
+      |> RResult.flat_map (fun header_str ->
+             let input_str = header_str ^ "." ^ payload in
+             `Message (Cstruct.of_string input_str)
+             |> sign_f |> Cstruct.to_string |> RBase64.base64_url_encode
+             |> RResult.map (fun sign -> (header, payload, sign)))
+      |> RResult.map (fun (header, payload, signature) ->
+             { header; payload; signature })
+  | Error e -> Error e
