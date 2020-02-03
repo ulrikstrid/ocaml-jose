@@ -61,7 +61,7 @@ let sign ~header ~payload (key : Jwk.Priv.t) =
     | OCT oct ->
         Ok
           (fun [@ocaml.warning "-8"] (`Message x) ->
-            Nocrypto.Hash.SHA256.hmac ~key:(Cstruct.of_string oct.k) x)
+            Nocrypto.Hash.SHA256.hmac ~key:(Jwk.Oct.oct_to_key oct) x)
   in
   match sign_f with
   | Ok sign_f ->

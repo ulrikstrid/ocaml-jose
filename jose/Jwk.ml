@@ -42,6 +42,10 @@ module Oct = struct
       Base64.encode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet str
     in
     { kty = `oct; alg = `HS256; kid = Util.get_OCT_kid ~k; k }
+
+  let oct_to_key oct =
+    Cstruct.of_string
+      (Base64.decode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet oct.k)
 end
 
 module Pub = struct
@@ -135,8 +139,6 @@ module Pub = struct
     rsa_to_pub rsa
     |> RResult.map (fun p -> X509.Public_key.encode_pem (`RSA p))
     |> RResult.map Cstruct.to_string
-
-  let oct_to_key oct = Cstruct.of_string oct.k
 
   module Json = Yojson.Safe.Util
 
