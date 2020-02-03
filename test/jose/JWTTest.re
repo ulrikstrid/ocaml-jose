@@ -55,10 +55,7 @@ describe("JWT", ({test}) => {
       Jwt.sign(~header, ~payload, Jwk.Priv.RSA(Fixtures.private_jwk))
       |> CCResult.get_exn;
 
-    expect.string(
-      jwt |> CCResult.flat_map(Jwt.to_string) |> CCResult.get_exn,
-    ).
-      toEqual(
+    expect.string(jwt |> Jwt.to_string |> CCResult.get_exn).toEqual(
       Fixtures.external_jwt_string,
     );
   });
