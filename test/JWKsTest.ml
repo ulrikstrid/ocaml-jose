@@ -23,6 +23,12 @@ let jwks_suite, _ =
               let jwk = Jose.Jwks.find_key jwks Fixtures.public_jwk.kid in
               check_option_string "correct kid" (Some Fixtures.public_jwk.kid)
                 (CCOpt.map Jose.Jwk.Pub.get_kid jwk));
+          Alcotest.test_case "Parses without alg" `Quick (fun () ->
+              let jwks =
+                Jose.Jwks.of_string Fixtures.jwks_string_from_oidc_validation
+              in
+              check_int "Should have 2 JWKs since we don't handle EC" 2
+                (List.length jwks.keys));
         ] );
     ]
 

@@ -9,3 +9,5 @@ let check_result_string = Alcotest.(check (result string result_t))
 let check_result_bool = Alcotest.(check (result bool result_t))
 
 let check_option_string = Alcotest.(check (option string))
+
+let check_int = Alcotest.(check int)

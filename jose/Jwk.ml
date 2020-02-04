@@ -171,9 +171,9 @@ module Pub = struct
       Ok
         (RSA
            {
-             alg = json |> Json.member "alg" |> Jwa.alg_of_json;
-             kty =
-               json |> Json.member "kty" |> Json.to_string |> Jwa.kty_of_string;
+             alg = `RS256;
+             kty = `RSA;
+             (* Shortcut since that is the only thing we handle *)
              use = json |> Json.member "use" |> Json.to_string_option;
              n = json |> Json.member "n" |> Json.to_string;
              e = json |> Json.member "e" |> Json.to_string;
@@ -187,9 +187,9 @@ module Pub = struct
       Ok
         (OCT
            {
-             alg = json |> Json.member "alg" |> Jwa.alg_of_json;
-             kty =
-               json |> Json.member "kty" |> Json.to_string |> Jwa.kty_of_string;
+             alg = `HS256;
+             kty = `oct;
+             (* Shortcut since that is the only thing we handle *)
              k = json |> Json.member "k" |> Json.to_string;
              kid = json |> Json.member "kid" |> Json.to_string;
            })
@@ -350,7 +350,8 @@ module Priv = struct
       Ok
         (RSA
            {
-             alg = json |> Json.member "alg" |> Jwa.alg_of_json;
+             alg = `RS256;
+             (* Shortcut since that is the only thing we handle *)
              kty =
                json |> Json.member "kty" |> Json.to_string |> Jwa.kty_of_string;
              n = json |> Json.member "n" |> Json.to_string;
@@ -370,9 +371,9 @@ module Priv = struct
       Ok
         (OCT
            {
-             alg = json |> Json.member "alg" |> Jwa.alg_of_json;
-             kty =
-               json |> Json.member "kty" |> Json.to_string |> Jwa.kty_of_string;
+             alg = `HS256;
+             kty = `oct;
+             (* Shortcut since that is the only thing we handle *)
              k = json |> Json.member "k" |> Json.to_string;
              kid = json |> Json.member "kid" |> Json.to_string;
            })
