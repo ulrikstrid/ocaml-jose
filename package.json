@@ -1,13 +1,14 @@
 {
   "name": "@reason-native-web/jose",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "JOSE implementation in native Reason",
   "esy": {
     "build": "dune build -p jose",
-    "buildDev": "refmterr dune build --root ."
+    "buildDev": "dune build --root ."
   },
   "scripts": {
-    "test": "dune exec test/test_exe/RunTests.exe",
+    "test": "dune runtest --no-buffer",
+    "test:watch": "dune runtest --no-buffer --watch",
     "fmt": "dune build @fmt --auto-promote --root .",
     "docs": "dune build @doc --root .",
     "docs-path": "esy echo #{self.target_dir / 'default' / '_doc' / '_html'}"
@@ -24,15 +25,16 @@
     "ocaml": ">=4.6.0"
   },
   "devDependencies": {
-    "@esy-ocaml/reason": "<4.0.0",
-    "@opam/bisect_ppx": "aantron/bisect_ppx:bisect_ppx.opam",
+    "fswatch": "ulrikstrid/esy-fswatch:esy.json",
+    "@opam/alcotest": "*",
+    "@opam/bisect_ppx": "aantron/bisect_ppx:bisect_ppx.opam#61399f61ea830425adaca039eb827447258f1365",
     "@opam/containers": "*",
     "@opam/lwt": "*",
     "@opam/merlin": "*",
     "@opam/ocamlformat": "*",
     "@opam/odoc": "*",
-    "@reason-native/rely": "*",
-    "refmterr": "*"
+    "@opam/junit": "*",
+    "@opam/junit_alcotest": "*"
   },
   "resolutions": {
     "@opam/nocrypto": "mirleft/ocaml-nocrypto:nocrypto.opam#80b7b4b9bd1ccfba3ec93d85cd82bfb3dc10f887"

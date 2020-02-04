@@ -1,6 +1,6 @@
 steps:
-  - script: "esy test"
-    displayName: "esy test"
+  - script: ./test-coverage.sh
+    displayName: "Run tests"
 
   - task: PublishTestResults@2
     inputs:

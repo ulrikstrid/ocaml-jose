@@ -1,0 +1,4 @@
+(tests
+ (names test)
+ (libraries alcotest junit junit_alcotest jose nocrypto nocrypto.unix
+   containers))

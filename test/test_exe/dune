@@ -1,3 +1,0 @@
-(executable
- (name RunTests)
- (libraries TestFramework jose_test))

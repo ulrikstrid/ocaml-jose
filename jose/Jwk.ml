@@ -30,10 +30,8 @@ end
 module Oct = struct
   type oct = {
     kty : Jwa.kty;
-    (* `oct *)
-    alg : Jwa.alg;
-    (* `HS256 *)
-    kid : string;
+    (* `oct *) alg : Jwa.alg;
+    (* `HS256 *) kid : string;
     k : string;
   }
 

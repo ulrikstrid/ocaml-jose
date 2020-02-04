@@ -1,4 +1,0 @@
-(library
- (name TestFramework)
- (libraries rely.lib)
- (flags -linkall -g -w -9))
