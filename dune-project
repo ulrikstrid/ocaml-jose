@@ -27,7 +27,8 @@
    zarith
    (containers :with-test)
    (bisect_ppx :with-test)
-   (reason :with-test)
-   (rely :with-test)
+   (alcotest :with-test)
+   (junit :with-test)
+   (junit_alcotest :with-test)
    (lwt :with-test))
 )

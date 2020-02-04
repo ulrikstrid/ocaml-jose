@@ -131,7 +131,9 @@ module Jwk : sig
     (** [get_kty jwk] is a convencience function to get the key type *)
 
     val get_alg : t -> Jwa.alg
-    (** [get_alg jwk] is a convencience function to get the algorithm *)
+    (**
+    [get_alg jwk] is a convencience function to get the algorithm
+    *)
 
     val rsa_of_priv : Nocrypto.Rsa.priv -> (rsa, [ `Msg of string ]) result
     (**
