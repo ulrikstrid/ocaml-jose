@@ -338,7 +338,7 @@ module Jwt : sig
 
   val of_jws : Jws.t -> t
 
-  val validate : jwk:Jwk.Pub.t -> t -> (t, [ `Msg of string ]) result
+  val validate : jwk:Jwk.Pub.t -> t -> (t, [ `Expired | `Msg of string ]) result
   (**
   [validate jwk t] checks if the JWT is valid and then calls Jws.validate to validate the signature
   *)
