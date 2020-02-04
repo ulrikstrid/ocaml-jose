@@ -99,16 +99,26 @@ let public_jwk_string =
 let external_jwt_string =
   {|eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IjBJUkZOX1JVSFVRY1hjZHBfN1BMQnhvR185YjZiSHJ2R0gwcDhxUm90aWsifQ.eyJzdWIiOiJ0ZXN0ZXIifQ.Jl9BJyYkLW5sHXpmxM4VNA9IEVFxTKkqWw4TkXBfj02xuLGY4cYKz_IlLEBeUN-mHGEJ8hiJMhaybBI2OM2FBahK-csLgjVuPBAznsGVsW6wAWZR47AeoBLr8uh09IYbEpHvqA_aIBdM5pvgM9_t3VtC9L50944HmTcmOkGR9BzaINk33ubYIgkXfClVNzTXc5PiD6haJqhPRb6XS5UZQOHIhyTtJ3gl1NX0LEBRH5ZsgEe_5L8ZNSoAcBFnuS-XMTy7Z4PacBtZG9Y8NHh90K45WTeS7pQw6GR-AQsrrkW-xkDMF_79qJkvVPU6UneaJjMtQctki1RDRZWF32I5mQ|}
 
-let oct_jwk : Jose.Jwk.Pub.oct =
+let oct_jwt_string = {|eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6Iko0eFFoN3otRWFKSTdQeTFQNHJGZjJTMHJwcFAybTR5S3JaVzRYNFlmdWsifQ.eyJzdWIiOiJ0ZXN0ZXIifQ.VSzni5ed3P9_vimTe9Weu56vTlMsSGHZY-WjnUo7S0A|}
+
+let oct_jwk_pub : Jose.Jwk.Pub.oct =
   {
-    k = "zcV8pU9H7ZwDGq8YaZH1mGbPfoUoIwxA9DqD75eeGOY";
+    k = "MDZjM2JkNWMtMGY5Ny00YjNlLWJmMjAtZWIyOWFlOTM2M2Rl";
     kty = `oct;
-    kid = "CTaD1aQDcGaJBrevMlJMLdn-zoVwtPbkZ7NtmwqAcdE";
+    kid = "J4xQh7z-EaJI7Py1P4rFf2S0rppP2m4yKrZW4X4Yfuk";
     alg = `HS256;
   }
 
-let oct_jwt_string =
-  {|eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6IkNUYUQxYVFEY0dhSkJyZXZNbEpNTGRuLXpvVnd0UGJrWjdOdG13cUFjZEUifQ.eyJzdWIiOiJ0ZXN0ZXIifQ.oRmSOJvLKmccSQY0XIZm1bfzwZmjMYaYxoqXUFq8Ci8|}
+let oct_jwk_priv : Jose.Jwk.Priv.oct =
+  {
+    k = "MDZjM2JkNWMtMGY5Ny00YjNlLWJmMjAtZWIyOWFlOTM2M2Rl";
+    kty = `oct;
+    kid = "J4xQh7z-EaJI7Py1P4rFf2S0rppP2m4yKrZW4X4Yfuk";
+    alg = `HS256;
+  }
+
+let oct_jwk_string =
+  {|{"alg":"HS256","kty":"oct","k":"MDZjM2JkNWMtMGY5Ny00YjNlLWJmMjAtZWIyOWFlOTM2M2Rl","kid":"J4xQh7z-EaJI7Py1P4rFf2S0rppP2m4yKrZW4X4Yfuk"}|}
 
 let jwks_string_from_oidc_validation =
   {|{"keys": [{"kty": "RSA", "use": "enc", "kid": "ip69fvSevxvcFHy8FSHY7zUOULQ_ceCmkn4U1nhPS3k", "n": "vsOB2NSSR1HbK3MGelDc6mKJN5QbnxJ_VBFPd3S47TbFAhAiescxcG27KHvZDsapauqLC1RwL27XLbKO5u8wY32u3JOFEUtGSObEbUYylhB-eTqpqotqa8Du5k39XyOB6QU5cmzDRyLl8PUWri5KUgmPQaFa-m556yj5ydGatacxWio5fQe55Mx3guzHQShcmOZcFzKkw23B7Jbx-15qL2CEZ2E5iweNvRTeDfp1P7Q1pn4Ir9ANYEJSpCktoK4B6LEsfPzohUj7urVIHRpgUjaTUGFkbHGjcE3EvbKO70Ha_YFqslettb88nkbkQRVZ-NPaSL6ewqaXYhYb2Qt80w", "e": "AQAB"}, {"kty": "RSA", "use": "sig", "kid": "_Zn6QEz3Dn6RnW7hopaAc46VFepZQkLyFO2pNt3Us4Y", "n": "y9tjZ4zSfvwfFulZFrLOpq1zzM4a6SrWLBxB3KdM78FoVsIq-HiqByW1Kt4kkUDEtl02OB-C3ZU7Ku3UAWbnwZlkAybCRgOmnnp3EynIT-skUcXWrx93MLBPSMaGG4WRIGadTaMck6SlHwN6Fyw5n8KGgovaI47V1vdGVh6_tkvjXq3eppYd-u2-7S1PU2ccDVFtWyunqGTuYUJzBrToz2ms4ffNUZ2oc5ZWNZbo40M2OsRPAJqCNSr0XwG76kCi7ACQh1OR_6k2YUfbME8zeOvibTEaAUpI1tmcNEGf1ZyYI_ONUI0mv4xAjUkFgxJ2hGaEkgJ1-6Ag_pFOZfa3cw", "e": "AQAB"}, {"kty": "EC", "use": "sig", "kid": "mk3JmWss9URzc7SC9wpGRLto-56kg_YjUhS18JCm6mM", "crv": "P-256", "x": "dAZGr9AkcVx0Sf0f3OsbgXx9fxBZ5uz0uTx2oVbDaSs", "y": "8uZL-bviipURsp4ug3-nbU7UhdfMTgBEEW-bL7Gx180"}, {"kty": "EC", "use": "enc", "kid": "OXMZf-IGfQ5UEQG1zANT6NBS_cR8Zqzil01kH_mUquA", "crv": "P-256", "x": "OXVW1Z-nBZFfJfoavnaEamnx_Z5oSBWDX2WuBbXVd-o", "y": "yXxr5Tx0h5jiZM7rYbZVo9Qoz4hIcLwSNvQioSIFYQ8"}]}|}
