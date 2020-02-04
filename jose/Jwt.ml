@@ -23,8 +23,12 @@ let add_claim (claim_name : string) (claim_value : Yojson.Safe.t)
   `Assoc ((claim_name, claim_value) :: Yojson.Safe.Util.to_assoc payload)
 
 let to_string t =
-  let header_str = Header.to_string t.header in
-  let payload_str = payload_to_string t.payload in
+  let header_str =
+    (Header.to_string t.header :> (string, [> `Msg of string ]) result)
+  in
+  let payload_str =
+    (payload_to_string t.payload :> (string, [> `Msg of string ]) result)
+  in
   RResult.both header_str payload_str
   |> RResult.map (fun (header_str, payload_str) ->
          header_str ^ "." ^ payload_str ^ "." ^ t.signature)
