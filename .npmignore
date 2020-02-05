@@ -8,6 +8,7 @@ azure-pipelines.yml
 *.sh
 4.*.*.json
 .merlin
+.DS_Store
 
 .ci
 .github

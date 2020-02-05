@@ -36,15 +36,12 @@ let of_string token =
   | _ -> Error (`Msg "token didn't include header, payload or signature")
 
 let to_jws t =
-  payload_to_string t.payload
-  |> RResult.map (fun (payload : string) ->
-         let open Jws in
-         { header = t.header; signature = t.signature; payload })
+  let payload = Yojson.Safe.to_string t.payload in
+  Jws.{ header = t.header; signature = t.signature; payload }
 
 let of_jws (jws : Jws.t) =
-  payload_of_string jws.payload
-  |> RResult.map (fun payload ->
-         { header = jws.header; signature = jws.signature; payload })
+  let payload = jws.payload |> Yojson.Safe.from_string in
+  { header = jws.header; signature = jws.signature; payload }
 
 let check_exp t =
   let module Json = Yojson.Safe.Util in
@@ -54,11 +51,10 @@ let check_exp t =
   | None -> Ok t
 
 let validate ~jwk t =
-  check_exp t |> RResult.flat_map to_jws
+  check_exp t |> RResult.map to_jws
   |> RResult.flat_map (Jws.validate ~jwk)
-  |> RResult.flat_map of_jws
+  |> RResult.map of_jws
 
 let sign ~header ~payload key =
-  payload_to_string payload
-  |> RResult.flat_map (fun payload -> Jws.sign ~header ~payload key)
-  |> RResult.flat_map of_jws
+  Jws.sign ~header ~payload:(Yojson.Safe.to_string payload) key
+  |> RResult.map of_jws
