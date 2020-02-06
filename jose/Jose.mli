@@ -295,6 +295,10 @@ module Jws : sig
 
   type t = { header : Header.t; payload : string; signature : signature }
 
+  val of_string : string -> (t, [ `Msg of string ]) result
+
+  val to_string : t -> (string, [ `Msg of string ]) result
+
   val validate : jwk:Jwk.Pub.t -> t -> (t, [ `Msg of string ]) result
   (**
   [validate jwk t] validates the signature
@@ -330,9 +334,9 @@ module Jwt : sig
 
   val of_string : string -> (t, [ `Msg of string ]) result
 
-  val to_jws : t -> (Jws.t, [ `Msg of string ]) result
+  val to_jws : t -> Jws.t
 
-  val of_jws : Jws.t -> (t, [ `Msg of string ]) result
+  val of_jws : Jws.t -> t
 
   val validate : jwk:Jwk.Pub.t -> t -> (t, [ `Msg of string ]) result
   (**
