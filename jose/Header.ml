@@ -64,9 +64,9 @@ let to_json t =
   `Assoc (RList.filter_map (fun x -> x) values)
 
 let of_string header_str =
-  RBase64.base64_url_decode header_str
+  RBase64.url_decode header_str
   |> RResult.flat_map (fun decoded_header ->
          Yojson.Safe.from_string decoded_header |> of_json)
 
 let to_string header =
-  to_json header |> Yojson.Safe.to_string |> RBase64.base64_url_encode
+  to_json header |> Yojson.Safe.to_string |> RBase64.url_encode

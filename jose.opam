@@ -11,7 +11,7 @@ doc: "https://ulrikstrid.github.io/reason-jose"
 bug-reports: "https://github.com/ulrikstrid/reason-jose/issues"
 depends: [
   "ocaml" {>= "4.06.0"}
-  "base64" {>= "3.3.0"}
+  "base64" {>= "3.0.0"}
   "dune" {>= "1.11" & < "2.0"}
   "nocrypto" {>= "0.5.4"}
   "x509" {>= "0.8.0"}

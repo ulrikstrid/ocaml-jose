@@ -3,10 +3,10 @@ open Utils
 module Util = struct
   let get_JWK_component ?(pad = false) e =
     Z.to_bits e |> RString.rev |> RString.trim_leading_null
-    |> Base64.encode ~pad ~alphabet:Base64.uri_safe_alphabet
+    |> RBase64.url_encode ~pad
 
   let get_component ?(pad = false) e =
-    Base64.decode ~pad ~alphabet:Base64.uri_safe_alphabet e
+    RBase64.url_decode ~pad e
     |> RResult.map (fun x ->
            RString.pad 8 ~c:'\000' x |> RString.rev |> Z.of_bits)
 
@@ -24,7 +24,7 @@ module Util = struct
 
   let get_JWK_x5t fingerprint =
     fingerprint |> Cstruct.to_bytes |> Bytes.to_string
-    |> Base64.encode ~pad:false ~alphabet:Base64.uri_safe_alphabet ~len:20
+    |> RBase64.url_encode ~len:20
 end
 
 module Oct = struct

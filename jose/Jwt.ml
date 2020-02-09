@@ -10,10 +10,10 @@ let empty_payload = `Assoc []
 
 let payload_to_string payload =
   let serialized_payload = Yojson.Safe.to_string payload in
-  RBase64.base64_url_encode serialized_payload
+  RBase64.url_encode serialized_payload
 
 let payload_of_string payload_str =
-  let payload = RBase64.base64_url_decode payload_str in
+  let payload = RBase64.url_decode payload_str in
   RResult.map Yojson.Safe.from_string payload
 
 type t = { header : Header.t; payload : payload; signature : Jws.signature }

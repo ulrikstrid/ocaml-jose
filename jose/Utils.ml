@@ -52,11 +52,13 @@ module RString = struct
 end
 
 module RBase64 = struct
-  let base64_url_encode =
-    Base64.encode ~pad:false ~alphabet:Base64.uri_safe_alphabet
+  let url_encode ?(pad = false) ?off ?len payload =
+    ( Base64.encode ~pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
+      :> (string, [> `Msg of string ]) result )
 
-  let base64_url_decode =
-    Base64.decode ~pad:false ~alphabet:Base64.uri_safe_alphabet
+  let url_decode ?(pad = false) ?off ?len payload =
+    ( Base64.decode ~pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
+      :> (string, [> `Msg of string ]) result )
 end
 
 module RJson = struct
