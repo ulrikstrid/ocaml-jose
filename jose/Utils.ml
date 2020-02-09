@@ -3,6 +3,8 @@ module RResult = struct
 
   let flat_map fn r = match r with Ok v -> fn v | Error e -> Error e
 
+  let map_error fn r = match r with Ok v -> Ok v | Error e -> Error (fn e)
+
   let to_opt = function Ok v -> Some v | Error _ -> None
 
   let return v = Ok v
@@ -53,12 +55,16 @@ end
 
 module RBase64 = struct
   let url_encode ?(pad = false) ?off ?len payload =
-    ( Base64.encode ~pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
-      :> (string, [> `Msg of string ]) result )
+    let encoded =
+      Base64.encode ~pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
+    in
+    RResult.map_error (function `Msg s -> `Msg s) encoded
 
   let url_decode ?(pad = false) ?off ?len payload =
-    ( Base64.decode ~pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
-      :> (string, [> `Msg of string ]) result )
+    let decoded =
+      Base64.decode ~pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
+    in
+    RResult.map_error (function `Msg s -> `Msg s) decoded
 end
 
 module RJson = struct
