@@ -57,7 +57,8 @@ let check_exp t =
 let validate ~jwk t =
   (check_exp t :> (t, [> error ]) result)
   |> RResult.map (fun jwt -> to_jws jwt)
-  |> RResult.flat_map (fun jws -> Jws.validate ~jwk jws)
+  |> RResult.flat_map (fun jws ->
+         (Jws.validate ~jwk jws :> (Jws.t, [> error ]) result))
   |> RResult.map (fun jws -> of_jws jws)
 
 let sign ~header ~payload key =
