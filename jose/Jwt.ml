@@ -23,12 +23,8 @@ let add_claim (claim_name : string) (claim_value : Yojson.Safe.t)
   `Assoc ((claim_name, claim_value) :: Yojson.Safe.Util.to_assoc payload)
 
 let to_string t =
-  let header_str =
-    (Header.to_string t.header :> (string, [> `Msg of string ]) result)
-  in
-  let payload_str =
-    (payload_to_string t.payload :> (string, [> `Msg of string ]) result)
-  in
+  let header_str = Header.to_string t.header in
+  let payload_str = payload_to_string t.payload in
   RResult.both header_str payload_str
   |> RResult.map (fun (header_str, payload_str) ->
          header_str ^ "." ^ payload_str ^ "." ^ t.signature)
@@ -61,8 +57,7 @@ let check_exp t =
 let validate ~jwk t =
   check_exp t
   |> RResult.map (fun jwt -> to_jws jwt)
-  |> RResult.flat_map (fun jws ->
-         (Jws.validate ~jwk jws :> (Jws.t, error) result))
+  |> RResult.flat_map (fun jws -> Jws.validate ~jwk jws)
   |> RResult.map (fun jws -> of_jws jws)
 
 let sign ~header ~payload key =
