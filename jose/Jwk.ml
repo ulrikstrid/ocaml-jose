@@ -3,10 +3,10 @@ open Utils
 module Util = struct
   let get_JWK_component ?(pad = false) e =
     Z.to_bits e |> RString.rev |> RString.trim_leading_null
-    |> Base64.encode ~pad ~alphabet:Base64.uri_safe_alphabet
+    |> RBase64.url_encode ~pad
 
   let get_component ?(pad = false) e =
-    Base64.decode ~pad ~alphabet:Base64.uri_safe_alphabet e
+    RBase64.url_decode ~pad e
     |> RResult.map (fun x ->
            RString.pad 8 ~c:'\000' x |> RString.rev |> Z.of_bits)
 
@@ -24,7 +24,7 @@ module Util = struct
 
   let get_JWK_x5t fingerprint =
     fingerprint |> Cstruct.to_bytes |> Bytes.to_string
-    |> Base64.encode ~pad:false ~alphabet:Base64.uri_safe_alphabet ~len:20
+    |> RBase64.url_encode ~len:20
 end
 
 module Oct = struct
@@ -80,7 +80,7 @@ module Pub = struct
 
   let get_kty t = match t with RSA _ -> `RSA | OCT _ -> `oct
 
-  let rsa_to_pub (rsa : rsa) : (Nocrypto.Rsa.pub, [ `Msg of string ]) result =
+  let rsa_to_pub (rsa : rsa) : (Nocrypto.Rsa.pub, [> `Msg of string ]) result =
     let n = Util.get_component rsa.n in
     let e = Util.get_component rsa.e in
     match (e, n) with
@@ -90,8 +90,8 @@ module Pub = struct
     | _, Error (`Msg m) ->
         Error (`Msg ("Can not create pub of rsa, n failed with: " ^ m))
 
-  let rsa_of_pub (rsa_pub : Nocrypto.Rsa.pub) : (rsa, [ `Msg of string ]) result
-      =
+  let rsa_of_pub (rsa_pub : Nocrypto.Rsa.pub) :
+      (rsa, [> `Msg of string ]) result =
     let public_key : X509.Public_key.t = `RSA rsa_pub in
     let n = Util.get_JWK_component rsa_pub.n in
     let e = Util.get_JWK_component rsa_pub.e in
@@ -126,7 +126,7 @@ module Pub = struct
     | _, Error (`Msg m), _ ->
         Error (`Msg ("Can not create rsa of pub, e failed with: " ^ m))
 
-  let rsa_of_pub_pem pem : (rsa, [ `Msg of string ]) result =
+  let rsa_of_pub_pem pem : (rsa, [> `Msg of string ]) result =
     Cstruct.of_string pem |> X509.Public_key.decode_pem
     |> RResult.flat_map (function
          | `RSA pub_key -> Ok pub_key
@@ -276,7 +276,8 @@ module Priv = struct
     | _, _, _, _, _, _, _, Error (`Msg m) ->
         Error (`Msg ("Can not create rsa of priv, qi failed with: " ^ m))
 
-  let rsa_to_priv (rsa : rsa) : (Nocrypto.Rsa.priv, [ `Msg of string ]) result =
+  let rsa_to_priv (rsa : rsa) : (Nocrypto.Rsa.priv, [> `Msg of string ]) result
+      =
     let n = Util.get_component rsa.n in
     let e = Util.get_component rsa.e in
     let d = Util.get_component rsa.d in

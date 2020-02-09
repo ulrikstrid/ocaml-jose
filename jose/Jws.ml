@@ -8,14 +8,14 @@ let of_string token =
   String.split_on_char '.' token |> function
   | [ header_str; payload_str; signature ] ->
       let header = Header.of_string header_str in
-      let payload = payload_str |> RBase64.base64_url_decode in
+      let payload = payload_str |> RBase64.url_decode in
       RResult.both header payload
       |> RResult.map (fun (header, payload) -> { header; payload; signature })
   | _ -> Error (`Msg "token didn't include header, payload or signature")
 
 let to_string t =
   let header_str = Header.to_string t.header in
-  let payload_str = t.payload |> RBase64.base64_url_encode in
+  let payload_str = t.payload |> RBase64.url_encode in
   RResult.both header_str payload_str
   |> RResult.map (fun (header_str, payload_str) ->
          header_str ^ "." ^ payload_str ^ "." ^ t.signature)
@@ -48,7 +48,7 @@ let verify_internal ~jwk t =
   Header.to_string t.header
   |> RResult.flat_map (fun header_str ->
          let input_str = header_str ^ "." ^ t.payload in
-         t.signature |> RBase64.base64_url_decode
+         t.signature |> RBase64.url_decode
          |> RResult.map Cstruct.of_string
          |> RResult.flat_map (verify_jwk ~jwk)
          |> RResult.map (fun message ->
@@ -81,10 +81,10 @@ let sign ~header ~payload (key : Jwk.Priv.t) =
   in
   match sign_f with
   | Ok sign_f ->
-      RResult.both (Header.to_string header) (RBase64.base64_url_encode payload)
+      RResult.both (Header.to_string header) (RBase64.url_encode payload)
       |> RResult.flat_map (fun (header_str, payload_str) ->
              let input_str = header_str ^ "." ^ payload_str in
              `Message (Cstruct.of_string input_str)
-             |> sign_f |> Cstruct.to_string |> RBase64.base64_url_encode)
+             |> sign_f |> Cstruct.to_string |> RBase64.url_encode)
       |> RResult.map (fun signature -> { header; payload; signature })
   | Error e -> Error e

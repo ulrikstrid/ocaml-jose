@@ -4,13 +4,17 @@ type payload = Yojson.Safe.t
 
 type claim = string * Yojson.Safe.t
 
+type error = [ `Msg of string | `Expired ]
+
 let empty_payload = `Assoc []
 
 let payload_to_string payload =
-  payload |> Yojson.Safe.to_string |> RBase64.base64_url_encode
+  let serialized_payload = Yojson.Safe.to_string payload in
+  RBase64.url_encode serialized_payload
 
 let payload_of_string payload_str =
-  RBase64.base64_url_decode payload_str |> RResult.map Yojson.Safe.from_string
+  let payload = RBase64.url_decode payload_str in
+  RResult.map Yojson.Safe.from_string payload
 
 type t = { header : Header.t; payload : payload; signature : Jws.signature }
 
@@ -47,13 +51,14 @@ let check_exp t =
   let module Json = Yojson.Safe.Util in
   match Json.member "exp" t.payload |> Json.to_int_option with
   | Some exp when exp > int_of_float (Unix.time ()) -> Ok t
-  | Some _exp -> Error (`Msg "Token expired")
+  | Some _exp -> Error `Expired
   | None -> Ok t
 
 let validate ~jwk t =
-  check_exp t |> RResult.map to_jws
-  |> RResult.flat_map (Jws.validate ~jwk)
-  |> RResult.map of_jws
+  check_exp t
+  |> RResult.map (fun jwt -> to_jws jwt)
+  |> RResult.flat_map (fun jws -> Jws.validate ~jwk jws)
+  |> RResult.map (fun jws -> of_jws jws)
 
 let sign ~header ~payload key =
   Jws.sign ~header ~payload:(Yojson.Safe.to_string payload) key

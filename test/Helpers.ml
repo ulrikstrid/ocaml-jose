@@ -1,5 +1,8 @@
-let result_t : [ `Msg of string ] Alcotest.testable =
-  let pp ppf = function `Msg e -> Fmt.string ppf e in
+let result_t : [> `Msg of string | `Expired ] Alcotest.testable =
+  let pp ppf = function
+    | `Msg e -> Fmt.string ppf e
+    | `Expired -> Fmt.string ppf "expired"
+  in
   Alcotest.testable pp ( = )
 
 let check_string = Alcotest.(check string)
