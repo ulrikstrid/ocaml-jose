@@ -1,5 +1,4 @@
-;;
-Nocrypto_entropy_unix.initialize ()
+let () = Mirage_crypto_rng_unix.initialize ()
 
 open Helpers
 

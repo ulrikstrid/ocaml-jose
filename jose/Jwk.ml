@@ -12,7 +12,7 @@ module Util = struct
 
   let kid_of_json json =
     Yojson.Safe.to_string json |> Cstruct.of_string
-    |> Nocrypto.Hash.SHA256.digest |> Cstruct.to_bytes |> Bytes.to_string
+    |> Mirage_crypto.Hash.SHA256.digest |> Cstruct.to_bytes |> Bytes.to_string
     |> Base64.encode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet
 
   let get_RSA_kid ~e ~n =
@@ -80,17 +80,17 @@ module Pub = struct
 
   let get_kty t = match t with RSA _ -> `RSA | OCT _ -> `oct
 
-  let rsa_to_pub (rsa : rsa) : (Nocrypto.Rsa.pub, [> `Msg of string ]) result =
+  let rsa_to_pub (rsa : rsa) : (Mirage_crypto_pk.Rsa.pub, [> `Msg of string ]) result =
     let n = Util.get_component rsa.n in
     let e = Util.get_component rsa.e in
     match (e, n) with
-    | Ok e, Ok n -> Ok { e; n }
+    | Ok e, Ok n -> Mirage_crypto_pk.Rsa.pub ~e ~n
     | Error (`Msg m), _ ->
         Error (`Msg ("Can not create pub of rsa, e failed with: " ^ m))
     | _, Error (`Msg m) ->
         Error (`Msg ("Can not create pub of rsa, n failed with: " ^ m))
 
-  let rsa_of_pub (rsa_pub : Nocrypto.Rsa.pub) :
+  let rsa_of_pub (rsa_pub : Mirage_crypto_pk.Rsa.pub) :
       (rsa, [> `Msg of string ]) result =
     let public_key : X509.Public_key.t = `RSA rsa_pub in
     let n = Util.get_JWK_component rsa_pub.n in
@@ -234,7 +234,7 @@ module Priv = struct
 
   let get_kty t = match t with RSA _ -> `RSA | OCT _ -> `oct
 
-  let rsa_of_priv (rsa_priv : Nocrypto.Rsa.priv) =
+  let rsa_of_priv (rsa_priv : Mirage_crypto_pk.Rsa.priv) =
     let n = Util.get_JWK_component rsa_priv.n in
     let e = Util.get_JWK_component rsa_priv.e in
     let d = Util.get_JWK_component rsa_priv.d in
@@ -276,7 +276,7 @@ module Priv = struct
     | _, _, _, _, _, _, _, Error (`Msg m) ->
         Error (`Msg ("Can not create rsa of priv, qi failed with: " ^ m))
 
-  let rsa_to_priv (rsa : rsa) : (Nocrypto.Rsa.priv, [> `Msg of string ]) result
+  let rsa_to_priv (rsa : rsa) : (Mirage_crypto_pk.Rsa.priv, [> `Msg of string ]) result
       =
     let n = Util.get_component rsa.n in
     let e = Util.get_component rsa.e in
@@ -288,7 +288,7 @@ module Priv = struct
     let qi = Util.get_component rsa.qi in
     match (n, e, d, p, q, dp, dq, qi) with
     | Ok n, Ok e, Ok d, Ok p, Ok q, Ok dp, Ok dq, Ok qi ->
-        Ok { e; n; d; p; q; dp; dq; q' = qi }
+        Mirage_crypto_pk.Rsa.priv ~e ~n ~d ~p ~q ~dp ~dq ~q':qi
     | Error (`Msg m), _, _, _, _, _, _, _ ->
         Error (`Msg ("Can not create priv of rsa, n failed with: " ^ m))
     | _, Error (`Msg m), _, _, _, _, _, _ ->

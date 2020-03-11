@@ -24,7 +24,7 @@ let verify_RS256 ~jwk str =
   match jwk with
   | Jwk.Pub.RSA jwk ->
       Jwk.Pub.rsa_to_pub jwk
-      |> RResult.map (fun key -> Nocrypto.Rsa.PKCS1.sig_decode ~key str)
+      |> RResult.map (fun key -> Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key str)
       |> RResult.flat_map (function
            | None -> Error (`Msg "Could not decode signature")
            | Some message -> Ok message)
@@ -34,7 +34,7 @@ let verify_HS256 ~jwk str =
   match jwk with
   | Jwk.Pub.OCT jwk ->
       Jwk.Pub.oct_to_key jwk |> fun key ->
-      Nocrypto.Hash.SHA256.hmac ~key str |> RResult.return
+      Mirage_crypto.Hash.SHA256.hmac ~key str |> RResult.return
   | _ -> Error (`Msg "JWK doesn't match")
 
 let verify_jwk ~(jwk : Jwk.Pub.t) str =
@@ -53,7 +53,7 @@ let verify_internal ~jwk t =
          |> RResult.flat_map (verify_jwk ~jwk)
          |> RResult.map (fun message ->
                 let token_hash =
-                  input_str |> Cstruct.of_string |> Nocrypto.Hash.SHA256.digest
+                  input_str |> Cstruct.of_string |> Mirage_crypto.Hash.SHA256.digest
                 in
                 Cstruct.equal message token_hash))
 
@@ -72,12 +72,12 @@ let sign ~header ~payload (key : Jwk.Priv.t) =
     match key with
     | Jwk.Priv.RSA k -> (
         match Jwk.Priv.rsa_to_priv k with
-        | Ok key -> Ok (fun x -> Nocrypto.Rsa.PKCS1.sign ~hash:`SHA256 ~key x)
+        | Ok key -> Ok (fun x -> Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key x)
         | Error e -> Error e )
     | OCT oct ->
         Ok
           (fun [@ocaml.warning "-8"] (`Message x) ->
-            Nocrypto.Hash.SHA256.hmac ~key:(Jwk.Oct.oct_to_key oct) x)
+            Mirage_crypto.Hash.SHA256.hmac ~key:(Jwk.Oct.oct_to_key oct) x)
   in
   match sign_f with
   | Ok sign_f ->

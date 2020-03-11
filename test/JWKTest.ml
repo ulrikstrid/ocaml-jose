@@ -127,13 +127,6 @@ let jwk_suite, _ =
               in
               check_string "matches private_jwk_string" trimed_json
                 (to_string (RSA Fixtures.private_jwk)));
-          Alcotest.test_case "Crates rsa" `Quick (fun () ->
-              let open Jose.Jwk.Priv in
-              check_result_bool "is well formed" (Ok true)
-                (CCResult.map
-                   (fun Nocrypto.Rsa.{ e; p; q; _ } ->
-                     Nocrypto.Rsa.well_formed ~e ~p ~q)
-                   (rsa_to_priv Fixtures.private_jwk)));
           Alcotest.test_case "oct_of_string" `Quick (fun () ->
               let open Jose.Jwk.Priv in
               let oct = oct_of_string "06c3bd5c-0f97-4b3e-bf20-eb29ae9363de" in
