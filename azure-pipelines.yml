@@ -46,15 +46,15 @@ stages:
     variables:
       CACHE_FOLDER: $(Pipeline.Workspace)/cache
     strategy:
-      matrix: 
-        4_06_1:
-          OCAML_VERSION: 4.06.1
+      matrix:
         4_07_1:
           OCAML_VERSION: 4.07.1
         4_08_1:
           OCAML_VERSION: 4.08.1
         4_09_0:
           OCAML_VERSION: 4.09.0
+        4_10_0:
+          OCAML_VERSION: 4.10.0
     steps:
       - template: .ci/utils/use-node.yml
       - template: .ci/utils/use-esy.yml
