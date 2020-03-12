@@ -80,7 +80,8 @@ module Pub = struct
 
   let get_kty t = match t with RSA _ -> `RSA | OCT _ -> `oct
 
-  let rsa_to_pub (rsa : rsa) : (Mirage_crypto_pk.Rsa.pub, [> `Msg of string ]) result =
+  let rsa_to_pub (rsa : rsa) :
+      (Mirage_crypto_pk.Rsa.pub, [> `Msg of string ]) result =
     let n = Util.get_component rsa.n in
     let e = Util.get_component rsa.e in
     match (e, n) with
@@ -276,8 +277,8 @@ module Priv = struct
     | _, _, _, _, _, _, _, Error (`Msg m) ->
         Error (`Msg ("Can not create rsa of priv, qi failed with: " ^ m))
 
-  let rsa_to_priv (rsa : rsa) : (Mirage_crypto_pk.Rsa.priv, [> `Msg of string ]) result
-      =
+  let rsa_to_priv (rsa : rsa) :
+      (Mirage_crypto_pk.Rsa.priv, [> `Msg of string ]) result =
     let n = Util.get_component rsa.n in
     let e = Util.get_component rsa.e in
     let d = Util.get_component rsa.d in

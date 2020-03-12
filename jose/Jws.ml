@@ -53,7 +53,8 @@ let verify_internal ~jwk t =
          |> RResult.flat_map (verify_jwk ~jwk)
          |> RResult.map (fun message ->
                 let token_hash =
-                  input_str |> Cstruct.of_string |> Mirage_crypto.Hash.SHA256.digest
+                  input_str |> Cstruct.of_string
+                  |> Mirage_crypto.Hash.SHA256.digest
                 in
                 Cstruct.equal message token_hash))
 
@@ -72,7 +73,8 @@ let sign ~header ~payload (key : Jwk.Priv.t) =
     match key with
     | Jwk.Priv.RSA k -> (
         match Jwk.Priv.rsa_to_priv k with
-        | Ok key -> Ok (fun x -> Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key x)
+        | Ok key ->
+            Ok (fun x -> Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key x)
         | Error e -> Error e )
     | OCT oct ->
         Ok
