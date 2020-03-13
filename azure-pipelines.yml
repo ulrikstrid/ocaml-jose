@@ -53,8 +53,6 @@ stages:
           OCAML_VERSION: 4.08.1
         4_09_0:
           OCAML_VERSION: 4.09.0
-        4_10_0:
-          OCAML_VERSION: 4.10.0
     steps:
       - template: .ci/utils/use-node.yml
       - template: .ci/utils/use-esy.yml
