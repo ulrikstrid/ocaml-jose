@@ -228,6 +228,7 @@ end
 module Jwa : sig
   type alg = [ `RS256 | `HS256 | `none | `Unknown ]
   (**
+  {{: https://tools.ietf.org/html/rfc7518#section-3.1 } Link to RFC}
   RS256 and HS256 and none is currently the only supported algs
   *)
 
@@ -240,6 +241,7 @@ module Jwa : sig
   val alg_of_json : Yojson.Safe.t -> alg
 
   type kty = [ `oct | `RSA | `EC ]
+  (** {{: https://tools.ietf.org/html/rfc7518#section-6.1 } Link to RFC } *)
 
   val kty_to_string : kty -> string
 

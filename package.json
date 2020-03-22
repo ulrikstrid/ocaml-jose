@@ -11,7 +11,8 @@
     "test:watch": "dune runtest --no-buffer --watch",
     "fmt": "dune build @fmt --auto-promote --root .",
     "docs": "dune build @doc --root .",
-    "docs-path": "esy echo #{self.target_dir / 'default' / '_doc' / '_html'}"
+    "docs:path": "esy echo #{self.target_dir / 'default' / '_doc' / '_html'}",
+    "docs:open": "open #{self.target_dir / 'default' / '_doc' / '_html' / 'index.html'}"
   },
   "dependencies": {
     "@opam/astring": "*",
