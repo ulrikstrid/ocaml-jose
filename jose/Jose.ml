@@ -1,3 +1,4 @@
+module JwkT = JwkT
 module Jwk = Jwk
 module Jwks = Jwks
 module Jws = Jws

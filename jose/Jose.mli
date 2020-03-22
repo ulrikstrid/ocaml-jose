@@ -1,8 +1,10 @@
+module JwkT = JwkT
 (**
 {1 JSON Web Key}
 
 {{: https://tools.ietf.org/html/rfc7517 } Link to RFC }
 *)
+
 module Jwk : sig
   (**
   {1 Public keys}
