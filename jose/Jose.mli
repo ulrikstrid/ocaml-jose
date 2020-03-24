@@ -3,6 +3,11 @@
 
 {{: https://tools.ietf.org/html/rfc7517 } Link to RFC }
 *)
+
+module JwkP = JwkP
+module JwsP = JwsP
+module JwtP = JwtP
+
 module Jwk : sig
   (**
   {1 Public keys}
