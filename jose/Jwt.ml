@@ -60,11 +60,11 @@ let check_exp t =
   | Some _exp -> Error `Expired
   | None -> Ok t
 
-let validate (type a) ~(jwk : a JwkP.t) (t : t) : (t, 'error) result =
+let validate (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
   check_exp t |> RResult.map to_jws
   |> RResult.flat_map (Jws.validate ~jwk)
   |> RResult.map of_jws
 
-let sign ~(header : Header.t) ~payload (jwk : JwkP.priv JwkP.t) =
+let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
   Jws.sign ~header ~payload:(Yojson.Safe.to_string payload) jwk
   |> RResult.map of_jws

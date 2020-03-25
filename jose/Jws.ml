@@ -20,32 +20,32 @@ let to_string t =
   |> RResult.map (fun (header_str, payload_str) ->
          header_str ^ "." ^ payload_str ^ "." ^ t.signature)
 
-let verify_RS256 (type a) ~(jwk : a JwkP.t) str =
+let verify_RS256 (type a) ~(jwk : a Jwk.t) str =
   ( match jwk with
-  | JwkP.Rsa_priv jwk ->
-      JwkP.pub_of_priv_rsa jwk |> fun jwk ->
+  | Jwk.Rsa_priv jwk ->
+      Jwk.pub_of_priv_rsa jwk |> fun jwk ->
       Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:jwk.key str
-  | JwkP.Rsa_pub jwk -> Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:jwk.key str
+  | Jwk.Rsa_pub jwk -> Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:jwk.key str
   | _ -> None )
   |> function
   | None -> Error `Invalid_signature
   | Some message -> Ok message
 
-let verify_HS256 (type a) ~(jwk : a JwkP.t) str =
+let verify_HS256 (type a) ~(jwk : a Jwk.t) str =
   match jwk with
-  | JwkP.Oct jwk ->
+  | Jwk.Oct jwk ->
       Mirage_crypto.Hash.SHA256.hmac ~key:(Cstruct.of_string jwk.key) str
       |> RResult.return
   | _ -> Error (`Msg "JWK doesn't match")
 
-let verify_jwk (type a) ~(jwk : a JwkP.t) str =
-  match JwkP.get_alg jwk with
+let verify_jwk (type a) ~(jwk : a Jwk.t) str =
+  match Jwk.get_alg jwk with
   | `RS256 -> verify_RS256 ~jwk str
   | `HS256 -> verify_HS256 ~jwk str
   | `none -> Ok str
   | _ -> Error (`Msg "alg not supported")
 
-let verify_internal (type a) ~(jwk : a JwkP.t) t =
+let verify_internal (type a) ~(jwk : a Jwk.t) t =
   Header.to_string t.header
   |> RResult.flat_map (fun header_str ->
          let input_str = header_str ^ "." ^ t.payload in
@@ -59,7 +59,7 @@ let verify_internal (type a) ~(jwk : a JwkP.t) t =
                 in
                 Cstruct.equal message token_hash))
 
-let validate (type a) ~(jwk : a JwkP.t) t =
+let validate (type a) ~(jwk : a Jwk.t) t =
   let header = t.header in
   ( match header.alg with
   | `RS256 -> Ok header.alg
@@ -69,15 +69,15 @@ let validate (type a) ~(jwk : a JwkP.t) t =
   |> RResult.map (fun _ -> t)
 
 (* Assumes a well formed header. *)
-let sign ~(header : Header.t) ~payload (jwk : JwkP.priv JwkP.t) =
+let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
   let sign_f =
     match jwk with
-    | JwkP.Rsa_priv { key; _ } ->
+    | Jwk.Rsa_priv { key; _ } ->
         Ok (fun x -> Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key x)
-    | JwkP.Oct oct ->
+    | Jwk.Oct oct ->
         Ok
           (fun [@ocaml.warning "-8"] (`Message x) ->
-            Mirage_crypto.Hash.SHA256.hmac ~key:(JwkP.oct_to_sign_key oct) x)
+            Mirage_crypto.Hash.SHA256.hmac ~key:(Jwk.oct_to_sign_key oct) x)
   in
   match sign_f with
   | Ok sign_f ->

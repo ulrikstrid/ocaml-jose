@@ -65,7 +65,7 @@ let jws_rsa_tests =
     [
       Alcotest.test_case "Can verify jws" `Quick (fun () ->
           let jwk =
-            Jose.JwkP.of_pub_json_string rsa_pub_json |> CCResult.get_exn
+            Jose.Jwk.of_pub_json_string rsa_pub_json |> CCResult.get_exn
           in
           let jws = Jose.Jws.of_string rsa_jws in
           let validated_jws = CCResult.flat_map (Jose.Jws.validate ~jwk) jws in
@@ -80,7 +80,7 @@ let jws_rsa_tests =
                  |> Jose.Header.to_json |> Yojson.Safe.to_string)
                validated_jws));
       Alcotest.test_case "Generates the same JWS" `Quick (fun () ->
-          let jwk = Jose.JwkP.of_priv_json_string rsa_priv_sig_json in
+          let jwk = Jose.Jwk.of_priv_json_string rsa_priv_sig_json in
           let header =
             Jose.Header.of_json @@ Yojson.Safe.from_string rsa_jws_header
             |> CCResult.map_err (fun (`Msg e) -> `Msg ("header: " ^ e))
@@ -108,7 +108,7 @@ let jws_oct_tests =
     [
       Alcotest.test_case "Can verify jws" `Quick (fun () ->
           let jwk =
-            Jose.JwkP.of_pub_json_string oct_sig_json |> CCResult.get_exn
+            Jose.Jwk.of_pub_json_string oct_sig_json |> CCResult.get_exn
           in
           let jws = Jose.Jws.of_string oct_jws in
           let validated_jws = CCResult.flat_map (Jose.Jws.validate ~jwk) jws in
@@ -123,7 +123,7 @@ let jws_oct_tests =
                  |> Jose.Header.to_json |> Yojson.Safe.to_string)
                validated_jws));
       Alcotest.test_case "Generates the same JWS" `Quick (fun () ->
-          let jwk = Jose.JwkP.of_priv_json_string oct_sig_json in
+          let jwk = Jose.Jwk.of_priv_json_string oct_sig_json in
           let header =
             Jose.Header.of_json @@ Yojson.Safe.from_string oct_jws_header
             |> CCResult.map_err (fun (`Msg e) -> `Msg ("header: " ^ e))
@@ -137,12 +137,37 @@ let jws_oct_tests =
             (CCResult.flat_map Jose.Jws.to_string jws));
     ] )
 
-          let jwk =
-            Jose.Jwk.Priv.of_string oct_sig_json
-            |> CCResult.map_err (fun (`Msg e) -> `Msg ("JWK: " ^ e))
-          in
+let rsa_priv_enc_json =
+  {|{"kty": "RSA",
+"kid": "frodo.baggins@hobbiton.example",
+"use": "enc",
+"n": "maxhbsmBtdQ3CNrKvprUE6n9lYcregDMLYNeTAWcLj8NnPU9XIYegTHVHQjxKDSHP2l-F5jS7sppG1wgdAqZyhnWvXhYNvcM7RfgKxqNx_xAHx6f3yy7s-M9PSNCwPC2lh6UAkR4I00EhV9lrypM9Pi4lBUop9t5fS9W5UNwaAllhrd-osQGPjIeI1deHTwx-ZTHu3C60Pu_LJIl6hKn9wbwaUmA4cR5Bd2pgbaY7ASgsjCUbtYJaNIHSoHXprUdJZKUMAzV0WOKPfA6OPI4oypBadjvMZ4ZAj3BnXaSYsEZhaueTXvZB4eZOAjIyh2e_VOIKVMsnDrJYAVotGlvMQ",
+"e": "AQAB",
+"d": "Kn9tgoHfiTVi8uPu5b9TnwyHwG5dK6RE0uFdlpCGnJN7ZEi963R7wybQ1PLAHmpIbNTztfrheoAniRV1NCIqXaW_qS461xiDTp4ntEPnqcKsyO5jMAji7-CL8vhpYYowNFvIesgMoVaPRYMYT9TW63hNM0aWs7USZ_hLg6Oe1mY0vHTI3FucjSM86Nff4oIENt43r2fspgEPGRrdE6fpLc9Oaq-qeP1GFULimrRdndm-P8q8kvN3KHlNAtEgrQAgTTgz80S-3VD0FgWfgnb1PNmiuPUxO8OpI9KDIfu_acc6fg14nsNaJqXe6RESvhGPH2afjHqSy_Fd2vpzj85bQQ",
+"p": "2DwQmZ43FoTnQ8IkUj3BmKRf5Eh2mizZA5xEJ2MinUE3sdTYKSLtaEoekX9vbBZuWxHdVhM6UnKCJ_2iNk8Z0ayLYHL0_G21aXf9-unynEpUsH7HHTklLpYAzOOx1ZgVljoxAdWNn3hiEFrjZLZGS7lOH-a3QQlDDQoJOJ2VFmU",
+"q": "te8LY4-W7IyaqH1ExujjMqkTAlTeRbv0VLQnfLY2xINnrWdwiQ93_VF099aP1ESeLja2nw-6iKIe-qT7mtCPozKfVtUYfz5HrJ_XY2kfexJINb9lhZHMv5p1skZpeIS-GPHCC6gRlKo1q-idn_qxyusfWv7WAxlSVfQfk8d6Et0",
+"dp": "UfYKcL_or492vVc0PzwLSplbg4L3-Z5wL48mwiswbpzOyIgd2xHTHQmjJpFAIZ8q-zf9RmgJXkDrFs9rkdxPtAsL1WYdeCT5c125Fkdg317JVRDo1inX7x2Kdh8ERCreW8_4zXItuTl_KiXZNU5lvMQjWbIw2eTx1lpsflo0rYU",
+"dq": "iEgcO-QfpepdH8FWd7mUFyrXdnOkXJBCogChY6YKuIHGc_p8Le9MbpFKESzEaLlN1Ehf3B6oGBl5Iz_ayUlZj2IoQZ82znoUrpa9fVYNot87ACfzIG7q9Mv7RiPAderZi03tkVXAdaBau_9vs5rS-7HMtxkVrxSUvJY14TkXlHE",
+"qi": "kC-lzZOqoFaZCr5l0tOVtREKoVqaAYhQiqIRGL-MzS4sCmRkxm5vZlXYx6RtE1n_AagjqajlkjieGlxTTThHD8Iga6foGBMaAr5uR1hGQpSc7Gl7CF1DZkBJMTQN6EshYzZfxW08mIO8M6Rzuh0beL6fG9mkDcIyPrBXx2bQ_mM"}|}
+
+let oct_enc_A256GCMKW =
+  {|{"kty": "oct",
+"kid": "18ec08e1-bfa9-4d95-b205-2b4dd1d4321d",
+"use": "enc",
+"alg": "A256GCMKW",
+"k": "qC57l_uxcm7Nm3K-ct4GFjx8tM1U8CZ0NLBvdQstiS8"}|}
+
+let initialization_vector = "3qyTVhIWt5juqZUCpfRqpvauwB956MEJL2Rt-8qXKSo"
+
+let content_encryption_key = "bbd5sTkYwhAIqfHsx8DayA"
+
+let jwe_rsa_tests =
+  ( "JWE RSA",
+    [
+      Alcotest.test_case "Generates the same JWE" `Quick (fun () ->
+          let jwk = Jose.Jwk.of_priv_json_string rsa_priv_enc_json in
           let header =
-            Jose.Header.of_json @@ Yojson.Safe.from_string oct_jws_header
+            Jose.Header.of_json @@ Yojson.Safe.from_string rsa_jws_header
             |> CCResult.map_err (fun (`Msg e) -> `Msg ("header: " ^ e))
           in
           let jws =
@@ -150,7 +175,7 @@ let jws_oct_tests =
             |> CCResult.flat_map (fun (jwk, header) ->
                    Jose.Jws.sign ~header ~payload:jws_payload jwk)
           in
-          check_result_string "correct jws string" (Ok oct_jws)
+          check_result_string "correct jws string" (Ok rsa_jws)
             (CCResult.flat_map Jose.Jws.to_string jws));
     ] )
 

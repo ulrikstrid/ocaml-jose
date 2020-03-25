@@ -12,17 +12,29 @@ let jwks_suite, _ =
     [
       ( "JWKs",
         [
-          (*Alcotest.test_case "Creates a correct JSON form a JWKs" `Quick
+          Alcotest.test_case "Creates a correct JSON from a JWKs" `Quick
             (fun () ->
               check_string "to_string works" expected_jwks_string
                 (Jose.Jwks.to_string
-                   { keys = [ Jose.Jwk.Pub.RSA Fixtures.public_jwk ] }));*)
+                   {
+                     keys =
+                       [
+                         Jose.Jwk.of_pub_pem ~use:"sign" Fixtures.rsa_test_pub
+                         |> CCResult.get_exn;
+                       ];
+                   }));
           Alcotest.test_case "Creates a correct JWKs from JSON" `Quick
             (fun () ->
               let jwks = Jose.Jwks.of_string expected_jwks_string in
-              let jwk = Jose.Jwks.find_key jwks Fixtures.public_jwk.kid in
-              check_option_string "correct kid" (Some Fixtures.public_jwk.kid)
-                (CCOpt.map Jose.Jwk.Pub.get_kid jwk));
+              let jwk =
+                Jose.Jwks.find_key jwks Fixtures.public_jwk_kid
+                |> CCResult.of_opt
+                |> function
+                | Ok a -> Ok a
+                | Error s -> Error (`Msg s)
+              in
+              check_result_string "correct kid" (Ok Fixtures.public_jwk_kid)
+                (CCResult.flat_map Jose.Jwk.get_kid jwk));
           Alcotest.test_case "Parses without alg" `Quick (fun () ->
               let jwks =
                 Jose.Jwks.of_string Fixtures.jwks_string_from_oidc_validation
