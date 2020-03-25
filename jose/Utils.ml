@@ -14,12 +14,20 @@ module RResult = struct
     | Ok a, Ok b -> Ok (a, b)
     | Error e, _ -> Error e
     | _, Error e -> Error e
+
+  let all8 a b c d e f g h =
+    match (a, b, c, d, e, f, g, h) with
+    | Ok a, Ok b, Ok c, Ok d, Ok e, Ok f, Ok g, Ok h ->
+        Ok (a, b, c, d, e, f, g, h)
+    | _ -> Error (`Msg "all 8 was not Ok")
 end
 
 module ROpt = struct
   let flatten o = match o with Some v -> v | None -> None
 
   let map fn o = match o with Some v -> Some (fn v) | None -> None
+
+  let both a b = match (a, b) with Some a, Some b -> Some (a, b) | _ -> None
 end
 
 module RList = struct

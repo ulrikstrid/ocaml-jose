@@ -61,6 +61,20 @@ let get_alg (type a) (t : a t) =
 let get_kty (type a) (t : a t) =
   match t with Rsa_priv _ -> `RSA | Rsa_pub _ -> `RSA | Oct _ -> `oct
 
+let get_kid (type a) (t : a t) =
+  match t with
+  | Rsa_priv rsa ->
+      RResult.both
+        (Util.get_JWK_component rsa.key.e)
+        (Util.get_JWK_component rsa.key.n)
+      |> RResult.map (fun (e, n) -> Util.get_RSA_kid ~e ~n)
+  | Rsa_pub rsa ->
+      RResult.both
+        (Util.get_JWK_component rsa.key.e)
+        (Util.get_JWK_component rsa.key.n)
+      |> RResult.map (fun (e, n) -> Util.get_RSA_kid ~e ~n)
+  | Oct oct -> Ok (Util.get_OCT_kid oct.key)
+
 let make_oct ?(use : string option) (str : string) : priv t =
   let key =
     Base64.encode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet str
@@ -268,3 +282,7 @@ let of_priv_json json : (priv t, 'error) result =
 
 let of_priv_json_string str : (priv t, 'error) result =
   Yojson.Safe.from_string str |> of_priv_json
+
+let oct_to_sign_key (oct : oct) =
+  Cstruct.of_string
+    (Base64.decode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet oct.key)

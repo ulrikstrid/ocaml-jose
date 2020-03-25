@@ -10,7 +10,7 @@ let rsa_pub_json =
 "e": "AQAB"}|}
 
 (* https://tools.ietf.org/html/rfc7520#section-3.4 *)
-let rsa_priv_json =
+let rsa_priv_sig_json =
   {|{"kty": "RSA",
 "kid": "bilbo.baggins@hobbiton.example",
 "use": "sig",
@@ -50,6 +50,13 @@ let jws_payload =
    onto the road, and if you don't keep your feet, there\xe2\x80\x99s no \
    knowing where you might be swept off to."
 
+let jwe_payload =
+  "You can trust us to stick with you through thick and thin\xe2\x80\x93to the \
+   bitter end. And you can trust us to keep any secret of \
+   yours\xe2\x80\x93closer than you keep it yourself. But you cannot trust us \
+   to let you face trouble alone, and go off without a word. We are your \
+   friends, Frodo."
+
 let rsa_jws_signature =
   "MRjdkly7_-oTPTS3AXP41iQIGKa80A0ZmTuV5MEaHoxnW2e5CZ5NlKtainoFmKZopdHM1O2U4mwzJdQx996ivp83xuglII7PNDi84wnB-BDkoBwA78185hX-Es4JIwmDLJK3lfWRa-XtL0RnltuYv746iYTh_qHRD68BNt1uSNCrUCTJDt5aAE6x8wW1Kt9eRo4QPocSadnHXFxnt8Is9UzpERV0ePPQdLuW3IS_de3xyIrDaLGdjluPxUAhb6L2aXic1U12podGU0KLUQSE_oI-ZnmKJ3F4uOZDnd6QZWJushZ41Axf_fcIe8u9ipH84ogoree7vjbU5y18kDquDg"
 
@@ -57,7 +64,9 @@ let jws_rsa_tests =
   ( "JWS RSA",
     [
       Alcotest.test_case "Can verify jws" `Quick (fun () ->
-          let jwk = Jose.Jwk.Pub.of_string rsa_pub_json |> CCResult.get_exn in
+          let jwk =
+            Jose.JwkP.of_pub_json_string rsa_pub_json |> CCResult.get_exn
+          in
           let jws = Jose.Jws.of_string rsa_jws in
           let validated_jws = CCResult.flat_map (Jose.Jws.validate ~jwk) jws in
           check_result_string "correct payload" (Ok jws_payload)
@@ -71,10 +80,7 @@ let jws_rsa_tests =
                  |> Jose.Header.to_json |> Yojson.Safe.to_string)
                validated_jws));
       Alcotest.test_case "Generates the same JWS" `Quick (fun () ->
-          let jwk =
-            Jose.Jwk.Priv.of_string rsa_priv_json
-            |> CCResult.map_err (fun (`Msg e) -> `Msg ("JWK: " ^ e))
-          in
+          let jwk = Jose.JwkP.of_priv_json_string rsa_priv_sig_json in
           let header =
             Jose.Header.of_json @@ Yojson.Safe.from_string rsa_jws_header
             |> CCResult.map_err (fun (`Msg e) -> `Msg ("header: " ^ e))
@@ -101,7 +107,9 @@ let jws_oct_tests =
   ( "JWS oct",
     [
       Alcotest.test_case "Can verify jws" `Quick (fun () ->
-          let jwk = Jose.Jwk.Pub.of_string oct_sig_json |> CCResult.get_exn in
+          let jwk =
+            Jose.JwkP.of_pub_json_string oct_sig_json |> CCResult.get_exn
+          in
           let jws = Jose.Jws.of_string oct_jws in
           let validated_jws = CCResult.flat_map (Jose.Jws.validate ~jwk) jws in
           check_result_string "correct payload" (Ok jws_payload)
@@ -115,6 +123,20 @@ let jws_oct_tests =
                  |> Jose.Header.to_json |> Yojson.Safe.to_string)
                validated_jws));
       Alcotest.test_case "Generates the same JWS" `Quick (fun () ->
+          let jwk = Jose.JwkP.of_priv_json_string oct_sig_json in
+          let header =
+            Jose.Header.of_json @@ Yojson.Safe.from_string oct_jws_header
+            |> CCResult.map_err (fun (`Msg e) -> `Msg ("header: " ^ e))
+          in
+          let jws =
+            CCResult.both jwk header
+            |> CCResult.flat_map (fun (jwk, header) ->
+                   Jose.Jws.sign ~header ~payload:jws_payload jwk)
+          in
+          check_result_string "correct jws string" (Ok oct_jws)
+            (CCResult.flat_map Jose.Jws.to_string jws));
+    ] )
+
           let jwk =
             Jose.Jwk.Priv.of_string oct_sig_json
             |> CCResult.map_err (fun (`Msg e) -> `Msg ("JWK: " ^ e))
@@ -135,6 +157,6 @@ let jws_oct_tests =
 (* Begin tests *)
 let rfc_suite, _ =
   Junit_alcotest.run_and_report ~package:"jose" "RFC7520"
-    [ jws_rsa_tests; jws_oct_tests ]
+    [ jws_rsa_tests; jws_oct_tests (* jwe_rsa_tests *) ]
 
 let suite = rfc_suite

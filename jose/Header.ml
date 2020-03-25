@@ -3,7 +3,7 @@ open Utils
 type t = {
   alg : Jwa.alg;
   jku : string option;
-  jwk : Jwk.Pub.t option;
+  jwk : JwkP.public JwkP.t option;
   kid : string option;
   x5t : string option;
   x5t256 : string option;
@@ -23,9 +23,14 @@ let empty_header =
     cty = None;
   }
 
-let make_header ?typ (jwk : Jwk.Pub.t) =
-  let alg = match jwk with Jwk.Pub.RSA _ -> `RS256 | OCT _ -> `HS256 in
-  { empty_header with alg; typ; kid = Some (Jwk.Pub.get_kid jwk) }
+let make_header (type a) ?typ (jwk : a JwkP.t) =
+  let alg =
+    match jwk with
+    | JwkP.Rsa_pub _ -> `RS256
+    | JwkP.Rsa_priv _ -> `RS256
+    | JwkP.Oct _ -> `HS256
+  in
+  { empty_header with alg; typ; kid = JwkP.get_kid jwk |> RResult.to_opt }
 
 module Json = Yojson.Safe.Util
 
@@ -54,7 +59,7 @@ let to_json t =
       RJson.to_json_string_opt "typ" t.typ;
       Some ("alg", Jwa.alg_to_json t.alg);
       RJson.to_json_string_opt "jku" t.jku;
-      ROpt.map Jwk.Pub.to_json t.jwk |> ROpt.map (fun jwk -> ("jwk", jwk));
+      ROpt.map JwkP.to_pub_json t.jwk |> ROpt.map (fun jwk -> ("jwk", jwk));
       RJson.to_json_string_opt "kid" t.kid;
       RJson.to_json_string_opt "x5t" t.x5t;
       RJson.to_json_string_opt "x5t#256" t.x5t256;

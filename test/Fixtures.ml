@@ -29,27 +29,11 @@ EQBaMSFXOODiel+5MdQcj41b
 -----END PRIVATE KEY-----
 |}
 
-let private_jwk : Jose.Jwk.Priv.rsa =
-  {
-    e = "AQAB";
-    n =
-      "6Po23xJipEyBfVwrBq68rID8NISgv3RkLRtwz6YmddIvzt4KR7kQbRekTvgZ7YDnCDKtr-lwbivX6_tR_9klp8BKCtk7rWuouNhaOA5mtfwp80ztfdqqGy250KMqyO1fD7mKMfQfR7WMe-W1ygNOG2YlSzhGODGpE2FSz6dcHlOTa5AJHEvor1723EkvD8FjqolJTOtlvbUg9D9HWYHTtMOtiiKST9rRFacB7A-ppzzn8heiB_qc5UQ4gbw1i7pqcKzwqzaEaHwBrv3CDZ28wwZNxytr97u3hGaRH2NSwB6Ohf7moj0-fQ0uY9UZcaFKr3vGqFH_Noo5kVm5zFtdJQ";
-    d =
-      "ELnN8KvgOw1nCnnweNVYpEXKVXbkF3qiqn5a1f2Gq1TAq-hS8p09qadV23mCWwOzEmqY_5URxkcNhFqRo32Sb32lkyvPVf7xqPuXVojqJMyKsnXmYu-s4LCis3DTZINuHLHkUvvEtyA4iriOGYetNthZexH6MJSYH9UP3eqU-XRBf3lw3oU-ZWJcnJiEvJa2H4haf70C0mFdTyKQQkops4QkgBEVIVtaVHXPgFnH1eh9uUSWlTiWqauWqe1h5jaEZbFAWPyanYAizLbGeQyOYf1N-0E4OsoRIiTQp1rRGfxUYO2mQelv2j15IXyQ8fZOCjvGEwiTQ6qn8g-UN4aFzQ";
-    p =
-      "-2qHZDGEvKfmuTednVYQtN7WTHEamChLrbE8AxuRXY6F6LvwzCR30e6MG-9YAaUmbX5gNeQbhYBxL13PjvLJGtig3AVCHzjtz77A92qeNc8AjGdgzMp4EpcnIJJx3c7EeAoge_w_85pCwVmDTr2VUSsQWIBB3H8ZIllazyo9EBs";
-    q =
-      "7TmfqxFLVsLtD0m-YIhewbeYiusvnAyPZBvKOSZ3LoIz-Vq0Sx_FYys7i-3092jZ1LtNqDgoOZqRZhlrtUF7lqRq3G34HecYN6jf2UhZY6psKC3U_N7lvIeA5_jCNDSUV2GWUB6-Bro8xqf2W_MmJVe0YKxacZkjvZDti2jkm78";
-    dp =
-      "g2kgEWesmKst9puyP32vx8o9usDXhLZzL_tWgc1UAtGu_oHVj-5zzn_gLe3BU0LOPibzBNgQ5ovHHVnsVixinyyhj78T25v2-UIcPHY28asb_0c9mm0tq5Hj-qtw5t3fZVrttcCYcKytvcAa2PpQ5JccuRV411Z7fa-0vlm2hwc";
-    dq =
-      "EJXkyesNn2VFebooK0udhGG3so6652ghZlhjDRfZYVENHTPwQwhXnpVZNnFOnTWhdTQbO9WhSlW6MK86TpPjdibMqdiubjjIAqw16lUamtNBeJWrvHpBCatXoeBMg6XhcTKLddKQapv-v8zido9LbXTyUYf7UtHoI8rMMOEGirU";
-    qi =
-      "he-6Edm5Olb5LteixSjc4sSLdejdlLg0dWIqEUxBNCAq2g7crjJaAFOHeq7anwSFq9mllBYO7YsYhKM-lbW8pgWkTYrJqFImZ9nbVTOyvChoy67LfWSCBF5O3XIQmb8KdMMaKGAIuooCLfz0YboRAFoxIVc44OJ6X7kx1ByPjVs";
-    kty = `RSA;
-    kid = "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik";
-    alg = `RS256;
-  }
+let private_jwk_kty = `RSA
+
+let private_jwk_alg = `RS256
+
+let private_jwk_kid = "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik"
 
 let private_jwk_string =
   {|{"alg": "RS256",
@@ -77,17 +61,11 @@ JQIDAQAB
 -----END PUBLIC KEY-----
 |}
 
-let public_jwk : Jose.Jwk.Pub.rsa =
-  {
-    alg = `RS256;
-    e = "AQAB";
-    n =
-      "6Po23xJipEyBfVwrBq68rID8NISgv3RkLRtwz6YmddIvzt4KR7kQbRekTvgZ7YDnCDKtr-lwbivX6_tR_9klp8BKCtk7rWuouNhaOA5mtfwp80ztfdqqGy250KMqyO1fD7mKMfQfR7WMe-W1ygNOG2YlSzhGODGpE2FSz6dcHlOTa5AJHEvor1723EkvD8FjqolJTOtlvbUg9D9HWYHTtMOtiiKST9rRFacB7A-ppzzn8heiB_qc5UQ4gbw1i7pqcKzwqzaEaHwBrv3CDZ28wwZNxytr97u3hGaRH2NSwB6Ohf7moj0-fQ0uY9UZcaFKr3vGqFH_Noo5kVm5zFtdJQ";
-    kty = `RSA;
-    kid = "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik";
-    use = (Some "sign" [@explicit_arity]);
-    x5t = None;
-  }
+let public_jwk_alg = `RS256
+
+let public_jwk_kty = `RSA
+
+let public_jwk_kid = "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik"
 
 let public_jwk_string =
   {|{"alg": "RS256",
@@ -100,6 +78,8 @@ let public_jwk_string =
 
 let external_jwt_string =
   {|eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IjBJUkZOX1JVSFVRY1hjZHBfN1BMQnhvR185YjZiSHJ2R0gwcDhxUm90aWsifQ.eyJzdWIiOiJ0ZXN0ZXIifQ.Jl9BJyYkLW5sHXpmxM4VNA9IEVFxTKkqWw4TkXBfj02xuLGY4cYKz_IlLEBeUN-mHGEJ8hiJMhaybBI2OM2FBahK-csLgjVuPBAznsGVsW6wAWZR47AeoBLr8uh09IYbEpHvqA_aIBdM5pvgM9_t3VtC9L50944HmTcmOkGR9BzaINk33ubYIgkXfClVNzTXc5PiD6haJqhPRb6XS5UZQOHIhyTtJ3gl1NX0LEBRH5ZsgEe_5L8ZNSoAcBFnuS-XMTy7Z4PacBtZG9Y8NHh90K45WTeS7pQw6GR-AQsrrkW-xkDMF_79qJkvVPU6UneaJjMtQctki1RDRZWF32I5mQ|}
+
+let oct_key_string = "06c3bd5c-0f97-4b3e-bf20-eb29ae9363de"
 
 let oct_jwt_string =
   {|eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6Iko0eFFoN3otRWFKSTdQeTFQNHJGZjJTMHJwcFAybTR5S3JaVzRYNFlmdWsifQ.eyJzdWIiOiJ0ZXN0ZXIifQ.VSzni5ed3P9_vimTe9Weu56vTlMsSGHZY-WjnUo7S0A|}

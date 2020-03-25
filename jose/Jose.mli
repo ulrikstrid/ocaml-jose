@@ -5,8 +5,6 @@
 *)
 
 module JwkP = JwkP
-module JwsP = JwsP
-module JwtP = JwtP
 
 module Jwk : sig
   (**
@@ -15,11 +13,10 @@ module Jwk : sig
   *)
   module Pub : sig
     type oct = {
-      kty : Jwa.kty;
-      (* `oct *)
-      alg : Jwa.alg;
-      (* `HS256 *)
+      kty : Jwa.kty;  (** `oct *)
+      alg : Jwa.alg;  (** `HS256 *)
       kid : string;
+      use : string option;
       k : string;
     }
     (** [oct] represents a JWK with [kty] [`oct] *)
@@ -71,7 +68,7 @@ module Jwk : sig
     [rsa_to_pub_pem t] takes a public JWK and returns a result public PEM string or a message of what went wrong.
     *)
 
-    val oct_of_string : string -> oct
+    val oct_of_string : ?use:string -> string -> oct
     (**
     [oct_of_string secret] creates a [oct] from a shared secret
     *)
@@ -104,11 +101,10 @@ module Jwk : sig
   *)
   module Priv : sig
     type oct = {
-      kty : Jwa.kty;
-      (* `oct *)
-      alg : Jwa.alg;
-      (* `HS256 *)
+      kty : Jwa.kty;  (** `oct *)
+      alg : Jwa.alg;  (** `HS256 *)
       kid : string;
+      use : string option;
       k : string;
     }
 
@@ -164,7 +160,7 @@ module Jwk : sig
     [to_priv_pem t] takes a private JWK and returns a result PEM string or a message of what went wrong.
     *)
 
-    val oct_of_string : string -> oct
+    val oct_of_string : ?use:string -> string -> oct
     (**
     [oct_of_string secret] creates a [oct] from a shared secret
     *)
@@ -231,7 +227,7 @@ end
 {{: https://www.tools.ietf.org/rfc/rfc7518.html } Link to RFC }
 *)
 module Jwa : sig
-  type alg = [ `RS256 | `HS256 | `none | `Unknown ]
+  type alg = [ `RS256 | `HS256 | `none | `Unsupported of string ]
   (**
   {{: https://tools.ietf.org/html/rfc7518#section-3.1 } Link to RFC}
   RS256 and HS256 and none is currently the only supported algs
@@ -245,24 +241,40 @@ module Jwa : sig
 
   val alg_of_json : Yojson.Safe.t -> alg
 
-  type kty = [ `oct | `RSA | `EC ]
+  type kty = [ `oct | `RSA | `EC | `Unsupported of string ]
   (** {{: https://tools.ietf.org/html/rfc7518#section-6.1 } Link to RFC } *)
 
   val kty_to_string : kty -> string
 
   val kty_of_string : string -> kty
+
+  type enc =
+    [ `A128CBC_HS256
+      (** AES_128_CBC_HMAC_SHA_256 authenticated encryption algorithm *)
+    | `A256CBC_HS512
+      (**  AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm *)
+    | `A128GCM  (** AES GCM using 128-bit key *)
+    | `A256GCM  (** AES GCM using 256-bit key *)
+    | `Unsupported of string
+      (** Catch-all for unsupported algorithms so we don't drop the string *)
+    ]
+
+  val enc_to_string : enc -> string
+
+  val enc_of_string : string -> enc
 end
 
 module Header : sig
   type t = {
     alg : Jwa.alg;
     jku : string option;
-    jwk : Jwk.Pub.t option;
+    jwk : JwkP.public JwkP.t option;
     kid : string option;
     x5t : string option;
     x5t256 : string option;
     typ : string option;
     cty : string option;
+    enc : Jwa.enc option;
   }
   (**
     The [header] has the following properties:
@@ -282,7 +294,7 @@ module Header : sig
     {{: https://tools.ietf.org/html/rfc7515#section-4.1 } Link to RFC }
     *)
 
-  val make_header : ?typ:string -> Jwk.Pub.t -> t
+  val make_header : ?typ:string -> 'a JwkP.t -> t
   (**
   [make_header jwk] creates a header with [typ], [kid] and [alg] set based on the public JWK
   *)
@@ -310,7 +322,8 @@ module Jws : sig
 
   val to_string : t -> (string, [> `Msg of string ]) result
 
-  val validate : jwk:Jwk.Pub.t -> t -> (t, [> `Msg of string ]) result
+  val validate :
+    jwk:'a JwkP.t -> t -> (t, [> `Invalid_signature | `Msg of string ]) result
   (**
   [validate jwk t] validates the signature
   *)
@@ -318,7 +331,7 @@ module Jws : sig
   val sign :
     header:Header.t ->
     payload:string ->
-    Jwk.Priv.t ->
+    JwkP.priv JwkP.t ->
     (t, [> `Msg of string ]) result
   (**
   [sign header payload priv] creates a signed JWT from [header] and [payload]
@@ -350,7 +363,9 @@ module Jwt : sig
   val of_jws : Jws.t -> t
 
   val validate :
-    jwk:Jwk.Pub.t -> t -> (t, [> `Expired | `Msg of string ]) result
+    jwk:'a JwkP.t ->
+    t ->
+    (t, [> `Expired | `Invalid_signature | `Msg of string ]) result
   (**
   [validate jwk t] checks if the JWT is valid and then calls Jws.validate to validate the signature
   *)
@@ -358,7 +373,7 @@ module Jwt : sig
   val sign :
     header:Header.t ->
     payload:payload ->
-    Jwk.Priv.t ->
+    JwkP.priv JwkP.t ->
     (t, [> `Msg of string ]) result
   (**
   [sign header payload priv] creates a signed JWT from [header] and [payload]
@@ -366,3 +381,5 @@ module Jwt : sig
   We will start using a private JWK instead of a Mirage_crypto_pk.Rsa.priv soon
   *)
 end
+
+module Jwe = Jwe
