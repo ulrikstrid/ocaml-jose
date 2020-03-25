@@ -13,9 +13,9 @@ let jwk_suite, _ =
                 (Ok (Jose.Jwa.kty_to_string Fixtures.public_jwk.kty))
                 (CCResult.map
                    (fun jwk -> get_kty jwk |> Jose.Jwa.kty_to_string)
-                   jwk)
-              (* check_result_string "correct kid" (Ok Fixtures.public_jwk.kid)
-                (CCResult.map (fun jwk -> jwk.kid) jwk)*));
+                   jwk);
+              check_result_string "correct kid" (Ok Fixtures.public_jwk.kid)
+                (CCResult.flat_map Jose.JwkP.get_kid jwk));
           Alcotest.test_case "pub - Roundtrip rsa" `Quick (fun () ->
               let pub_cert =
                 Jose.JwkP.of_pub_pem Fixtures.rsa_test_pub
@@ -27,8 +27,8 @@ let jwk_suite, _ =
               let jwk_r =
                 Jose.JwkP.of_pub_json_string Fixtures.public_jwk_string
               in
-              (* check_result_string "correct kid" (Ok Fixtures.public_jwk.kid)
-                (CCResult.map Jose.JwkP.get_kid jwk_r); *)
+              check_result_string "correct kid" (Ok Fixtures.public_jwk.kid)
+                (CCResult.flat_map Jose.JwkP.get_kid jwk_r);
               check_result_string "correct kty"
                 (Ok (Fixtures.public_jwk.kty |> Jose.Jwa.kty_to_string))
                 (CCResult.map
@@ -43,11 +43,11 @@ let jwk_suite, _ =
                    jwk_r));
           Alcotest.test_case "pub - make_oct" `Quick (fun () ->
               let open Jose.JwkP in
-              let[@ocaml.warning "-8"] (Oct oct) =
-                make_oct "06c3bd5c-0f97-4b3e-bf20-eb29ae9363de"
-              in
-              check_string "correct k" Fixtures.oct_jwk_pub.k oct.key
-              (*check_string "correct kid" Fixtures.oct_jwk_pub.kid oct.kid);*));
+              let jwk = make_oct "06c3bd5c-0f97-4b3e-bf20-eb29ae9363de" in
+              let[@ocaml.warning "-8"] (Oct oct) = jwk in
+              check_string "correct k" Fixtures.oct_jwk_pub.k oct.key;
+              check_result_string "correct kid" (Ok Fixtures.oct_jwk_pub.kid)
+                (get_kid jwk));
           Alcotest.test_case "pub - to_pub_json_string oct" `Quick (fun () ->
               check_string "correct jwk" Fixtures.oct_jwk_string
                 (Jose.JwkP.to_pub_json_string
@@ -85,18 +85,18 @@ let jwk_suite, _ =
             (fun () ->
               let open Jose.JwkP in
               let jwk = of_priv_pem Fixtures.rsa_test_priv in
+              check_result_string "correct kid" (Ok Fixtures.private_jwk.kid)
+                (CCResult.flat_map Jose.JwkP.get_kid jwk);
               check_result_string "correct kty"
                 (Ok (Jose.Jwa.kty_to_string Fixtures.private_jwk.kty))
                 (CCResult.map
                    (fun jwk -> get_kty jwk |> Jose.Jwa.kty_to_string)
-                   jwk)
-              (*check_result_string "correct kid" (Ok Fixtures.private_jwk.kid)
-                (CCResult.map (fun jwk -> jwk.kid) jwk)*));
+                   jwk));
           Alcotest.test_case "priv - of_priv_json_string rsa" `Quick (fun () ->
               let open Jose.JwkP in
               let jwk = of_priv_json_string Fixtures.private_jwk_string in
-              (*check_result_string "correct kid" (Ok Fixtures.private_jwk.kid)
-                (CCResult.map get_kid jwk);*)
+              check_result_string "correct kid" (Ok Fixtures.private_jwk.kid)
+                (CCResult.flat_map get_kid jwk);
               check_result_string "correct kty"
                 (Ok (Fixtures.private_jwk.kty |> Jose.Jwa.kty_to_string))
                 (CCResult.map
@@ -130,11 +130,11 @@ let jwk_suite, _ =
                 |> CCResult.map Jose.JwkP.to_priv_json_string ));
           Alcotest.test_case "priv - oct_of_string" `Quick (fun () ->
               let open Jose.JwkP in
-              let[@ocaml.warning "-8"] (Oct oct) =
-                make_oct "06c3bd5c-0f97-4b3e-bf20-eb29ae9363de"
-              in
-              check_string "correct k" Fixtures.oct_jwk_priv.k oct.key
-              (* check_string "correct kid" Fixtures.oct_jwk_priv.kid oct.kid*));
+              let jwk = make_oct "06c3bd5c-0f97-4b3e-bf20-eb29ae9363de" in
+              let[@ocaml.warning "-8"] (Oct oct) = jwk in
+              check_string "correct k" Fixtures.oct_jwk_priv.k oct.key;
+              check_result_string "correct kid" (Ok Fixtures.oct_jwk_priv.kid)
+                (get_kid jwk));
           Alcotest.test_case "priv - to_priv_json_string oct" `Quick (fun () ->
               check_result_string "correct jwk" (Ok Fixtures.oct_jwk_string)
                 ( Jose.JwkP.of_priv_json_string Fixtures.oct_jwk_string
