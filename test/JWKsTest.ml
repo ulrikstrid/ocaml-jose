@@ -12,11 +12,11 @@ let jwks_suite, _ =
     [
       ( "JWKs",
         [
-          Alcotest.test_case "Creates a correct JSON form a JWKs" `Quick
+          (*Alcotest.test_case "Creates a correct JSON form a JWKs" `Quick
             (fun () ->
               check_string "to_string works" expected_jwks_string
                 (Jose.Jwks.to_string
-                   { keys = [ Jose.Jwk.Pub.RSA Fixtures.public_jwk ] }));
+                   { keys = [ Jose.Jwk.Pub.RSA Fixtures.public_jwk ] }));*)
           Alcotest.test_case "Creates a correct JWKs from JSON" `Quick
             (fun () ->
               let jwks = Jose.Jwks.of_string expected_jwks_string in
