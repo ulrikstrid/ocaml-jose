@@ -4,8 +4,9 @@
 {{: https://tools.ietf.org/html/rfc7517 } Link to RFC }
 *)
 
-module JwkP = JwkP
+module Jwk = Jwk
 
+(*
 module Jwk : sig
   (**
   {1 Public keys}
@@ -186,6 +187,7 @@ module Jwk : sig
     *)
   end
 end
+*)
 
 (**
 {1 JSON Web Key Set}
@@ -193,7 +195,7 @@ end
 {{: https://tools.ietf.org/html/rfc7517#section-5 } Link to RFC }
 *)
 module Jwks : sig
-  type t = { keys : Jwk.Pub.t list }
+  type t = { keys : Jwk.public Jwk.t list }
   (**  [t] describes a Private JSON Web Key Set *)
 
   val to_json : t -> Yojson.Safe.t
@@ -218,7 +220,7 @@ module Jwks : sig
   [to_string t] takes a t and returns a JSON string representation
   *)
 
-  val find_key : t -> string -> Jwk.Pub.t option
+  val find_key : t -> string -> Jwk.public Jwk.t option
 end
 
 (**
@@ -268,7 +270,7 @@ module Header : sig
   type t = {
     alg : Jwa.alg;
     jku : string option;
-    jwk : JwkP.public JwkP.t option;
+    jwk : Jwk.public Jwk.t option;
     kid : string option;
     x5t : string option;
     x5t256 : string option;
@@ -294,7 +296,7 @@ module Header : sig
     {{: https://tools.ietf.org/html/rfc7515#section-4.1 } Link to RFC }
     *)
 
-  val make_header : ?typ:string -> 'a JwkP.t -> t
+  val make_header : ?typ:string -> 'a Jwk.t -> t
   (**
   [make_header jwk] creates a header with [typ], [kid] and [alg] set based on the public JWK
   *)
@@ -323,7 +325,7 @@ module Jws : sig
   val to_string : t -> (string, [> `Msg of string ]) result
 
   val validate :
-    jwk:'a JwkP.t -> t -> (t, [> `Invalid_signature | `Msg of string ]) result
+    jwk:'a Jwk.t -> t -> (t, [> `Invalid_signature | `Msg of string ]) result
   (**
   [validate jwk t] validates the signature
   *)
@@ -331,7 +333,7 @@ module Jws : sig
   val sign :
     header:Header.t ->
     payload:string ->
-    JwkP.priv JwkP.t ->
+    Jwk.priv Jwk.t ->
     (t, [> `Msg of string ]) result
   (**
   [sign header payload priv] creates a signed JWT from [header] and [payload]
@@ -363,7 +365,7 @@ module Jwt : sig
   val of_jws : Jws.t -> t
 
   val validate :
-    jwk:'a JwkP.t ->
+    jwk:'a Jwk.t ->
     t ->
     (t, [> `Expired | `Invalid_signature | `Msg of string ]) result
   (**
@@ -373,7 +375,7 @@ module Jwt : sig
   val sign :
     header:Header.t ->
     payload:payload ->
-    JwkP.priv JwkP.t ->
+    Jwk.priv Jwk.t ->
     (t, [> `Msg of string ]) result
   (**
   [sign header payload priv] creates a signed JWT from [header] and [payload]

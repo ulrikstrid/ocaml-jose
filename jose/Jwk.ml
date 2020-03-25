@@ -19,7 +19,7 @@ module Util = struct
     `Assoc [ ("e", `String e); ("kty", `String "RSA"); ("n", `String n) ]
     |> kid_of_json
 
-  let get_OCT_kid ~k =
+  let get_OCT_kid k =
     `Assoc [ ("k", `String k); ("kty", `String "oct") ] |> kid_of_json
 
   let get_JWK_x5t fingerprint =
@@ -27,370 +27,262 @@ module Util = struct
     |> RBase64.url_encode ~len:20
 end
 
-module Oct = struct
-  type oct = {
-    kty : Jwa.kty;
-    (* `oct *) alg : Jwa.alg;
-    (* `HS256 *) kid : string;
-    k : string;
-  }
+type public = Public
 
-  let oct_of_string str =
-    let k =
-      Base64.encode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet str
-    in
-    { kty = `oct; alg = `HS256; kid = Util.get_OCT_kid ~k; k }
+type priv = Private
 
-  let oct_to_key oct =
-    Cstruct.of_string
-      (Base64.decode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet oct.k)
-end
+type oct = { kty : Jwa.kty; alg : Jwa.alg; use : string option; key : string }
 
-module Pub = struct
-  include Oct
+type priv_rsa = {
+  alg : Jwa.alg;
+  kty : Jwa.kty;
+  use : string option;
+  key : Mirage_crypto_pk.Rsa.priv;
+}
 
-  (*
-  TODO: Implement EC
+type pub_rsa = {
+  alg : Jwa.alg;
+  kty : Jwa.kty;
+  use : string option;
+  key : Mirage_crypto_pk.Rsa.pub;
+}
+
+type 'a t =
+  | Oct : oct -> 'a t
+  | Rsa_priv : priv_rsa -> priv t
+  | Rsa_pub : pub_rsa -> public t
+
+let get_alg (type a) (t : a t) =
+  match t with
+  | Rsa_priv rsa -> rsa.alg
+  | Rsa_pub rsa -> rsa.alg
+  | Oct oct -> oct.alg
+
+let get_kty (type a) (t : a t) =
+  match t with Rsa_priv _ -> `RSA | Rsa_pub _ -> `RSA | Oct _ -> `oct
+
+let get_kid (type a) (t : a t) =
+  match t with
+  | Rsa_priv rsa ->
+      RResult.both
+        (Util.get_JWK_component rsa.key.e)
+        (Util.get_JWK_component rsa.key.n)
+      |> RResult.map (fun (e, n) -> Util.get_RSA_kid ~e ~n)
+  | Rsa_pub rsa ->
+      RResult.both
+        (Util.get_JWK_component rsa.key.e)
+        (Util.get_JWK_component rsa.key.n)
+      |> RResult.map (fun (e, n) -> Util.get_RSA_kid ~e ~n)
+  | Oct oct -> Ok (Util.get_OCT_kid oct.key)
+
+let make_oct ?(use : string option) (str : string) : priv t =
+  let key =
+    Base64.encode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet str
+  in
+  Oct { kty = `oct; use; alg = `HS256; key }
+
+let make_priv_rsa ?(use : string option) (rsa_priv : Mirage_crypto_pk.Rsa.priv)
+    : priv t =
+  Rsa_priv { alg = `RS256; kty = `RSA; use; key = rsa_priv }
+
+let make_pub_rsa ?(use : string option) (rsa_pub : Mirage_crypto_pk.Rsa.pub) :
+    public t =
+  Rsa_pub { alg = `RS256; kty = `RSA; use; key = rsa_pub }
+
+let of_pub_pem ?(use : string option) pem : (public t, [> `Not_rsa ]) result =
+  Cstruct.of_string pem |> X509.Public_key.decode_pem
+  |> RResult.flat_map (function
+       | `RSA pub_key -> Ok pub_key
+       | _ -> Error `Not_rsa)
+  |> RResult.map (make_pub_rsa ?use)
+
+let to_pub_pem (type a) (jwk : a t) =
+  match jwk with
+  | Rsa_pub rsa ->
+      Ok (X509.Public_key.encode_pem (`RSA rsa.key) |> Cstruct.to_string)
+  | Rsa_priv rsa ->
+      rsa.key |> Mirage_crypto_pk.Rsa.pub_of_priv
+      |> (fun key -> X509.Public_key.encode_pem (`RSA key))
+      |> Cstruct.to_string |> Result.ok
+  | _ -> Error `Not_rsa
+
+let of_priv_pem ?(use : string option) pem : (priv t, [> `Not_rsa ]) result =
+  Cstruct.of_string pem |> X509.Private_key.decode_pem
+  |> RResult.map (function `RSA pub_key -> pub_key)
+  |> RResult.map (make_priv_rsa ?use)
+
+let to_priv_pem (jwk : priv t) =
+  match jwk with
+  | Rsa_priv rsa ->
+      Ok (X509.Private_key.encode_pem (`RSA rsa.key) |> Cstruct.to_string)
+  | _ -> Error `Not_rsa
+
+let oct_to_json (oct : oct) =
+  `Assoc
+    [
+      ("alg", Jwa.alg_to_json oct.alg);
+      ("kty", `String (Jwa.kty_to_string oct.kty));
+      ("k", `String oct.key);
+      ("kid", `String (Util.get_OCT_kid oct.key));
+    ]
+
+let pub_rsa_to_json pub_rsa =
+  let public_key : X509.Public_key.t = `RSA pub_rsa.key in
+  let e = Util.get_JWK_component pub_rsa.key.e |> RResult.to_opt in
+  let n = Util.get_JWK_component pub_rsa.key.n |> RResult.to_opt in
+  let values =
+    [
+      Some ("alg", Jwa.alg_to_json pub_rsa.alg);
+      RJson.to_json_string_opt "e" e;
+      RJson.to_json_string_opt "n" n;
+      Some ("kty", `String (Jwa.kty_to_string pub_rsa.kty));
+      ROpt.both e n
+      |> ROpt.map (fun (e, n) -> Util.get_RSA_kid ~e ~n)
+      |> RJson.to_json_string_opt "kid";
+      RJson.to_json_string_opt "use" pub_rsa.use;
+      RJson.to_json_string_opt "x5t"
+        ( Util.get_JWK_x5t (X509.Public_key.fingerprint ~hash:`SHA1 public_key)
+        |> RResult.to_opt );
+    ]
+  in
+  `Assoc (RList.filter_map (fun x -> x) values)
+
+let pub_of_priv_rsa (priv_rsa : priv_rsa) : pub_rsa =
   {
-    "kty":"EC",
-    "crv":"P-256",
-    "x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
-    "y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
-    "d":"jpsQnnGQmL-YBIffH1136cspYG6-0iY7X1fCE9-E9LI"
-  }
-  *)
-
-  type rsa = {
-    alg : Jwa.alg;
-    (* `RSA *)
-    kty : Jwa.kty;
-    (* `RS256 *)
-    use : string option;
-    n : string;
-    e : string;
-    kid : string;
-    x5t : string option;
+    alg = priv_rsa.alg;
+    kty = priv_rsa.kty;
+    use = priv_rsa.use;
+    key = Mirage_crypto_pk.Rsa.pub_of_priv priv_rsa.key;
   }
 
-  type t = RSA of rsa | OCT of oct
+let priv_rsa_to_pub_json (priv_rsa : priv_rsa) =
+  pub_rsa_to_json (pub_of_priv_rsa priv_rsa)
 
-  let get_kid t = match t with RSA rsa -> rsa.kid | OCT oct -> oct.kid
+let priv_rsa_to_priv_json (priv_rsa : priv_rsa) : Yojson.Safe.t =
+  let n = Util.get_JWK_component priv_rsa.key.n in
+  let e = Util.get_JWK_component priv_rsa.key.e in
+  let d = Util.get_JWK_component priv_rsa.key.d in
+  let p = Util.get_JWK_component priv_rsa.key.p in
+  let q = Util.get_JWK_component priv_rsa.key.q in
+  let dp = Util.get_JWK_component priv_rsa.key.dp in
+  let dq = Util.get_JWK_component priv_rsa.key.dq in
+  let qi = Util.get_JWK_component priv_rsa.key.q' in
+  let n, e, d, p, q, dp, dq, qi =
+    RResult.all8 n e d p q dp dq qi |> Result.get_ok
+  in
+  let values =
+    [
+      Some ("alg", Jwa.alg_to_json priv_rsa.alg);
+      Some ("e", `String e);
+      Some ("n", `String n);
+      Some ("d", `String d);
+      Some ("p", `String p);
+      Some ("q", `String q);
+      Some ("dp", `String dp);
+      Some ("dq", `String dq);
+      Some ("qi", `String qi);
+      Some ("kty", `String (priv_rsa.kty |> Jwa.kty_to_string));
+      RJson.to_json_string_opt "use" priv_rsa.use;
+      Some ("kid", `String (Util.get_RSA_kid ~e ~n));
+    ]
+  in
+  `Assoc (RList.filter_map (fun x -> x) values)
 
-  let get_alg t = match t with RSA rsa -> rsa.alg | OCT oct -> oct.alg
+let to_pub_json (type a) (jwk : a t) : Yojson.Safe.t =
+  match jwk with
+  | Oct oct -> oct_to_json oct
+  | Rsa_priv rsa -> priv_rsa_to_pub_json rsa
+  | Rsa_pub rsa -> pub_rsa_to_json rsa
 
-  let get_kty t = match t with RSA _ -> `RSA | OCT _ -> `oct
+let to_pub_json_string (type a) (jwk : a t) : string =
+  to_pub_json jwk |> Yojson.Safe.to_string
 
-  let rsa_to_pub (rsa : rsa) :
-      (Mirage_crypto_pk.Rsa.pub, [> `Msg of string ]) result =
-    let n = Util.get_component rsa.n in
-    let e = Util.get_component rsa.e in
-    match (e, n) with
-    | Ok e, Ok n -> Mirage_crypto_pk.Rsa.pub ~e ~n
-    | Error (`Msg m), _ ->
-        Error (`Msg ("Can not create pub of rsa, e failed with: " ^ m))
-    | _, Error (`Msg m) ->
-        Error (`Msg ("Can not create pub of rsa, n failed with: " ^ m))
+let to_priv_json (jwk : priv t) : Yojson.Safe.t =
+  match jwk with
+  | Oct oct -> oct_to_json oct
+  | Rsa_priv rsa -> priv_rsa_to_priv_json rsa
 
-  let rsa_of_pub (rsa_pub : Mirage_crypto_pk.Rsa.pub) :
-      (rsa, [> `Msg of string ]) result =
-    let public_key : X509.Public_key.t = `RSA rsa_pub in
-    let n = Util.get_JWK_component rsa_pub.n in
-    let e = Util.get_JWK_component rsa_pub.e in
-    let x5t =
-      Util.get_JWK_x5t (X509.Public_key.fingerprint ~hash:`SHA1 public_key)
-    in
-    match (n, e, x5t) with
-    | Ok n, Ok e, Ok x5t ->
-        Ok
-          {
-            alg = `RS256;
-            kty = `RSA;
-            use = Some "sig";
-            n;
-            e;
-            kid = Util.get_RSA_kid ~e ~n;
-            x5t = Some x5t;
-          }
-    | Ok n, Ok e, _ ->
-        Ok
-          {
-            alg = `RS256;
-            kty = `RSA;
-            use = Some "sig";
-            n;
-            e;
-            kid = Util.get_RSA_kid ~e ~n;
-            x5t = None;
-          }
-    | Error (`Msg m), _, _ ->
-        Error (`Msg ("Can not create rsa of pub, n failed with: " ^ m))
-    | _, Error (`Msg m), _ ->
-        Error (`Msg ("Can not create rsa of pub, e failed with: " ^ m))
+let to_priv_json_string (jwk : priv t) : string =
+  to_priv_json jwk |> Yojson.Safe.to_string
 
-  let rsa_of_pub_pem pem : (rsa, [> `Msg of string ]) result =
-    Cstruct.of_string pem |> X509.Public_key.decode_pem
-    |> RResult.flat_map (function
-         | `RSA pub_key -> Ok pub_key
-         | _ -> Error (`Msg "Only RSA supported"))
-    |> RResult.flat_map rsa_of_pub
+let pub_rsa_of_json json : (public t, 'error) result =
+  let module Json = Yojson.Safe.Util in
+  try
+    let e = json |> Json.member "e" |> Json.to_string |> Util.get_component in
+    let n = json |> Json.member "n" |> Json.to_string |> Util.get_component in
+    RResult.both e n
+    |> RResult.flat_map (fun (e, n) -> Mirage_crypto_pk.Rsa.pub ~e ~n)
+    |> RResult.map (fun key ->
+           Rsa_pub
+             {
+               alg = `RS256;
+               kty = `RSA;
+               (* Shortcut since that is the only thing we handle *)
+               use = json |> Json.member "use" |> Json.to_string_option;
+               key;
+             })
+  with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
-  let rsa_to_pub_pem rsa =
-    rsa_to_pub rsa
-    |> RResult.map (fun p -> X509.Public_key.encode_pem (`RSA p))
-    |> RResult.map Cstruct.to_string
+let priv_rsa_of_json json : (priv t, 'error) result =
+  let module Json = Yojson.Safe.Util in
+  try
+    let e = json |> Json.member "e" |> Json.to_string |> Util.get_component in
+    let n = json |> Json.member "n" |> Json.to_string |> Util.get_component in
+    let d = json |> Json.member "d" |> Json.to_string |> Util.get_component in
+    let p = json |> Json.member "p" |> Json.to_string |> Util.get_component in
+    let q = json |> Json.member "q" |> Json.to_string |> Util.get_component in
+    let dp = json |> Json.member "dp" |> Json.to_string |> Util.get_component in
+    let dq = json |> Json.member "dq" |> Json.to_string |> Util.get_component in
+    let qi = json |> Json.member "qi" |> Json.to_string |> Util.get_component in
+    RResult.all8 e n d p q dp dq qi
+    |> RResult.flat_map (fun (e, n, d, p, q, dp, dq, qi) ->
+           Mirage_crypto_pk.Rsa.priv ~e ~n ~d ~p ~q ~dp ~dq ~q':qi)
+    |> RResult.map (fun key ->
+           Rsa_priv
+             {
+               alg = `RS256;
+               kty = `RSA;
+               use = json |> Json.member "use" |> Json.to_string_option;
+               key;
+             })
+  with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
-  module Json = Yojson.Safe.Util
+let oct_of_json json =
+  let module Json = Yojson.Safe.Util in
+  try
+    Ok
+      (Oct
+         {
+           alg = `HS256;
+           kty = `oct;
+           (* Shortcut since that is the only thing we handle *)
+           use = json |> Json.member "use" |> Json.to_string_option;
+           key = json |> Json.member "k" |> Json.to_string;
+         })
+  with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
-  let rsa_to_json rsa =
-    let values =
-      [
-        Some ("alg", Jwa.alg_to_json rsa.alg);
-        Some ("e", `String rsa.e);
-        Some ("n", `String rsa.n);
-        Some ("kty", `String (Jwa.kty_to_string rsa.kty));
-        Some ("kid", `String rsa.kid);
-        RJson.to_json_string_opt "use" rsa.use;
-        RJson.to_json_string_opt "x5t" rsa.x5t;
-      ]
-    in
-    `Assoc (RList.filter_map (fun x -> x) values)
+let of_pub_json (json : Yojson.Safe.t) : (public t, 'error) result =
+  let module Json = Yojson.Safe.Util in
+  let kty = json |> Json.member "kty" |> Json.to_string |> Jwa.kty_of_string in
+  match kty with
+  | `RSA -> pub_rsa_of_json json
+  | `oct -> oct_of_json json
+  | _ -> Error `Unsupported_kty
 
-  let oct_to_json (oct : oct) =
-    `Assoc
-      [
-        ("alg", Jwa.alg_to_json oct.alg);
-        ("kty", `String (Jwa.kty_to_string oct.kty));
-        ("k", `String oct.k);
-        ("kid", `String oct.kid);
-      ]
+let of_pub_json_string str : (public t, 'error) result =
+  Yojson.Safe.from_string str |> of_pub_json
 
-  let to_json t =
-    match t with RSA rsa -> rsa_to_json rsa | OCT oct -> oct_to_json oct
+let of_priv_json json : (priv t, 'error) result =
+  let module Json = Yojson.Safe.Util in
+  let kty = json |> Json.member "kty" |> Json.to_string |> Jwa.kty_of_string in
+  match kty with
+  | `RSA -> priv_rsa_of_json json
+  | `oct -> oct_of_json json
+  | _ -> Error `Unsupported_kty
 
-  let rsa_of_json json =
-    try
-      Ok
-        (RSA
-           {
-             alg = `RS256;
-             kty = `RSA;
-             (* Shortcut since that is the only thing we handle *)
-             use = json |> Json.member "use" |> Json.to_string_option;
-             n = json |> Json.member "n" |> Json.to_string;
-             e = json |> Json.member "e" |> Json.to_string;
-             kid = json |> Json.member "kid" |> Json.to_string;
-             x5t = json |> Json.member "x5t" |> Json.to_string_option;
-           })
-    with Json.Type_error (s, _) -> Error (`Msg s)
+let of_priv_json_string str : (priv t, 'error) result =
+  Yojson.Safe.from_string str |> of_priv_json
 
-  let oct_of_json json =
-    try
-      Ok
-        (OCT
-           {
-             alg = `HS256;
-             kty = `oct;
-             (* Shortcut since that is the only thing we handle *)
-             k = json |> Json.member "k" |> Json.to_string;
-             kid = json |> Json.member "kid" |> Json.to_string;
-           })
-    with Json.Type_error (s, _) -> Error (`Msg s)
-
-  let of_json json =
-    let kty =
-      json |> Json.member "kty" |> Json.to_string |> Jwa.kty_of_string
-    in
-    match kty with
-    | `RSA -> rsa_of_json json
-    | `oct -> oct_of_json json
-    | _ -> Error (`Msg "kty not supported")
-
-  let of_string str = Yojson.Safe.from_string str |> of_json
-
-  let to_string t = to_json t |> Yojson.Safe.to_string
-end
-
-module Priv = struct
-  include Oct
-
-  type rsa = {
-    alg : Jwa.alg;
-    kty : Jwa.kty;
-    n : string;
-    e : string;
-    d : string;
-    p : string;
-    q : string;
-    dp : string;
-    dq : string;
-    qi : string;
-    kid : string;
-  }
-
-  type t = RSA of rsa | OCT of oct
-
-  let get_kid t = match t with RSA rsa -> rsa.kid | OCT oct -> oct.kid
-
-  let get_alg t = match t with RSA rsa -> rsa.alg | OCT oct -> oct.alg
-
-  let get_kty t = match t with RSA _ -> `RSA | OCT _ -> `oct
-
-  let rsa_of_priv (rsa_priv : Mirage_crypto_pk.Rsa.priv) =
-    let n = Util.get_JWK_component rsa_priv.n in
-    let e = Util.get_JWK_component rsa_priv.e in
-    let d = Util.get_JWK_component rsa_priv.d in
-    let p = Util.get_JWK_component rsa_priv.p in
-    let q = Util.get_JWK_component rsa_priv.q in
-    let dp = Util.get_JWK_component rsa_priv.dp in
-    let dq = Util.get_JWK_component rsa_priv.dq in
-    let qi = Util.get_JWK_component rsa_priv.q' in
-    match (n, e, d, p, q, dp, dq, qi) with
-    | Ok n, Ok e, Ok d, Ok p, Ok q, Ok dp, Ok dq, Ok qi ->
-        Ok
-          {
-            alg = `RS256;
-            kty = `RSA;
-            n;
-            e;
-            d;
-            p;
-            q;
-            dp;
-            dq;
-            qi;
-            kid = Util.get_RSA_kid ~e ~n;
-          }
-    | Error (`Msg m), _, _, _, _, _, _, _ ->
-        Error (`Msg ("Can not create rsa of priv, n failed with: " ^ m))
-    | _, Error (`Msg m), _, _, _, _, _, _ ->
-        Error (`Msg ("Can not create rsa of priv, e failed with: " ^ m))
-    | _, _, Error (`Msg m), _, _, _, _, _ ->
-        Error (`Msg ("Can not create rsa of priv, d failed with: " ^ m))
-    | _, _, _, Error (`Msg m), _, _, _, _ ->
-        Error (`Msg ("Can not create rsa of priv, p failed with: " ^ m))
-    | _, _, _, _, Error (`Msg m), _, _, _ ->
-        Error (`Msg ("Can not create rsa of priv, q failed with: " ^ m))
-    | _, _, _, _, _, Error (`Msg m), _, _ ->
-        Error (`Msg ("Can not create rsa of priv, dp failed with: " ^ m))
-    | _, _, _, _, _, _, Error (`Msg m), _ ->
-        Error (`Msg ("Can not create rsa of priv, dq failed with: " ^ m))
-    | _, _, _, _, _, _, _, Error (`Msg m) ->
-        Error (`Msg ("Can not create rsa of priv, qi failed with: " ^ m))
-
-  let rsa_to_priv (rsa : rsa) :
-      (Mirage_crypto_pk.Rsa.priv, [> `Msg of string ]) result =
-    let n = Util.get_component rsa.n in
-    let e = Util.get_component rsa.e in
-    let d = Util.get_component rsa.d in
-    let p = Util.get_component rsa.p in
-    let q = Util.get_component rsa.q in
-    let dp = Util.get_component rsa.dp in
-    let dq = Util.get_component rsa.dq in
-    let qi = Util.get_component rsa.qi in
-    match (n, e, d, p, q, dp, dq, qi) with
-    | Ok n, Ok e, Ok d, Ok p, Ok q, Ok dp, Ok dq, Ok qi ->
-        Mirage_crypto_pk.Rsa.priv ~e ~n ~d ~p ~q ~dp ~dq ~q':qi
-    | Error (`Msg m), _, _, _, _, _, _, _ ->
-        Error (`Msg ("Can not create priv of rsa, n failed with: " ^ m))
-    | _, Error (`Msg m), _, _, _, _, _, _ ->
-        Error (`Msg ("Can not create priv of rsa, e failed with: " ^ m))
-    | _, _, Error (`Msg m), _, _, _, _, _ ->
-        Error (`Msg ("Can not create priv of rsa, d failed with: " ^ m))
-    | _, _, _, Error (`Msg m), _, _, _, _ ->
-        Error (`Msg ("Can not create priv of rsa, p failed with: " ^ m))
-    | _, _, _, _, Error (`Msg m), _, _, _ ->
-        Error (`Msg ("Can not create priv of rsa, q failed with: " ^ m))
-    | _, _, _, _, _, Error (`Msg m), _, _ ->
-        Error (`Msg ("Can not create priv of rsa, dp failed with: " ^ m))
-    | _, _, _, _, _, _, Error (`Msg m), _ ->
-        Error (`Msg ("Can not create priv of rsa, dq failed with: " ^ m))
-    | _, _, _, _, _, _, _, Error (`Msg m) ->
-        Error (`Msg ("Can not create priv of rsa, qi failed with: " ^ m))
-
-  let rsa_of_priv_pem pem =
-    Cstruct.of_string pem |> X509.Private_key.decode_pem
-    |> RResult.flat_map (function `RSA pub_key -> Ok pub_key)
-    |> RResult.flat_map rsa_of_priv
-
-  let rsa_to_priv_pem rsa =
-    rsa_to_priv rsa
-    |> RResult.map (fun p -> X509.Private_key.encode_pem (`RSA p))
-    |> RResult.map Cstruct.to_string
-
-  module Json = Yojson.Safe.Util
-
-  let rsa_to_json rsa =
-    `Assoc
-      [
-        ("alg", Jwa.alg_to_json rsa.alg);
-        ("e", `String rsa.e);
-        ("n", `String rsa.n);
-        ("d", `String rsa.d);
-        ("p", `String rsa.p);
-        ("q", `String rsa.q);
-        ("dp", `String rsa.dp);
-        ("dq", `String rsa.dq);
-        ("qi", `String rsa.qi);
-        ("kty", `String (rsa.kty |> Jwa.kty_to_string));
-        ("kid", `String rsa.kid);
-      ]
-
-  let oct_to_json (oct : oct) =
-    `Assoc
-      [
-        ("alg", Jwa.alg_to_json oct.alg);
-        ("kty", `String (Jwa.kty_to_string oct.kty));
-        ("k", `String oct.k);
-        ("kid", `String oct.kid);
-      ]
-
-  let to_json t =
-    match t with RSA rsa -> rsa_to_json rsa | OCT oct -> oct_to_json oct
-
-  let rsa_of_json json =
-    try
-      Ok
-        (RSA
-           {
-             alg = `RS256;
-             (* Shortcut since that is the only thing we handle *)
-             kty =
-               json |> Json.member "kty" |> Json.to_string |> Jwa.kty_of_string;
-             n = json |> Json.member "n" |> Json.to_string;
-             e = json |> Json.member "e" |> Json.to_string;
-             d = json |> Json.member "d" |> Json.to_string;
-             p = json |> Json.member "p" |> Json.to_string;
-             q = json |> Json.member "q" |> Json.to_string;
-             dp = json |> Json.member "dp" |> Json.to_string;
-             dq = json |> Json.member "dq" |> Json.to_string;
-             qi = json |> Json.member "qi" |> Json.to_string;
-             kid = json |> Json.member "kid" |> Json.to_string;
-           })
-    with Json.Type_error (s, _) -> Error (`Msg s)
-
-  let oct_of_json json =
-    try
-      Ok
-        (OCT
-           {
-             alg = `HS256;
-             kty = `oct;
-             (* Shortcut since that is the only thing we handle *)
-             k = json |> Json.member "k" |> Json.to_string;
-             kid = json |> Json.member "kid" |> Json.to_string;
-           })
-    with Json.Type_error (s, _) -> Error (`Msg s)
-
-  let of_json json =
-    let kty =
-      json |> Json.member "kty" |> Json.to_string |> Jwa.kty_of_string
-    in
-    match kty with
-    | `RSA -> rsa_of_json json
-    | `oct -> oct_of_json json
-    | _ -> Error (`Msg "kty not supported")
-
-  let of_string str = Yojson.Safe.from_string str |> of_json
-
-  let to_string t = to_json t |> Yojson.Safe.to_string
-end
+let oct_to_sign_key (oct : oct) =
+  Cstruct.of_string
+    (Base64.decode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet oct.key)

@@ -29,16 +29,17 @@
   "devDependencies": {
     "fswatch": "ulrikstrid/esy-fswatch:esy.json",
     "@opam/alcotest": "*",
-    "@opam/bisect_ppx": "aantron/bisect_ppx:bisect_ppx.opam#61399f61ea830425adaca039eb827447258f1365",
+    "@opam/bisect_ppx": "^2.1.0",
     "@opam/containers": "*",
     "@opam/lwt": "*",
     "@opam/merlin": "*",
     "@opam/ocamlformat": "*",
     "@opam/odoc": "*",
     "@opam/junit": "*",
-    "@opam/junit_alcotest": "*"
+    "@opam/junit_alcotest": "*",
+    "@opam/ocaml-lsp-server": "*"
   },
   "resolutions": {
-    "@opam/x509": "mirleft/ocaml-x509:x509.opam#c22c37e5b1cef3941be874c00808f4717ba29644"
+    "@opam/ocaml-lsp-server": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#d57bd91083cfca2472f0eae5d646118286705d78"
   }
 }

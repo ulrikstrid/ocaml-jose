@@ -84,23 +84,17 @@ let oct_key_string = "06c3bd5c-0f97-4b3e-bf20-eb29ae9363de"
 let oct_jwt_string =
   {|eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6Iko0eFFoN3otRWFKSTdQeTFQNHJGZjJTMHJwcFAybTR5S3JaVzRYNFlmdWsifQ.eyJzdWIiOiJ0ZXN0ZXIifQ.VSzni5ed3P9_vimTe9Weu56vTlMsSGHZY-WjnUo7S0A|}
 
-let oct_jwk_pub : Jose.Jwk.Pub.oct =
-  {
-    k = "MDZjM2JkNWMtMGY5Ny00YjNlLWJmMjAtZWIyOWFlOTM2M2Rl";
-    kty = `oct;
-    use = Some "sig";
-    kid = "J4xQh7z-EaJI7Py1P4rFf2S0rppP2m4yKrZW4X4Yfuk";
-    alg = `HS256;
-  }
+let oct_jwk_pub_k = "MDZjM2JkNWMtMGY5Ny00YjNlLWJmMjAtZWIyOWFlOTM2M2Rl"
 
-let oct_jwk_priv : Jose.Jwk.Priv.oct =
-  {
-    k = "MDZjM2JkNWMtMGY5Ny00YjNlLWJmMjAtZWIyOWFlOTM2M2Rl";
-    kty = `oct;
-    use = Some "sig";
-    kid = "J4xQh7z-EaJI7Py1P4rFf2S0rppP2m4yKrZW4X4Yfuk";
-    alg = `HS256;
-  }
+let oct_jwk_pub_kid = "J4xQh7z-EaJI7Py1P4rFf2S0rppP2m4yKrZW4X4Yfuk"
+
+let oct_jwk_priv_k = "MDZjM2JkNWMtMGY5Ny00YjNlLWJmMjAtZWIyOWFlOTM2M2Rl"
+
+let oct_jwk_priv_kid = "J4xQh7z-EaJI7Py1P4rFf2S0rppP2m4yKrZW4X4Yfuk"
+
+let oct_jwk_priv_kty = `oct
+
+let oct_jwk_priv_alg = `HS256
 
 let oct_jwk_string =
   {|{"alg":"HS256","kty":"oct","k":"MDZjM2JkNWMtMGY5Ny00YjNlLWJmMjAtZWIyOWFlOTM2M2Rl","kid":"J4xQh7z-EaJI7Py1P4rFf2S0rppP2m4yKrZW4X4Yfuk"}|}
