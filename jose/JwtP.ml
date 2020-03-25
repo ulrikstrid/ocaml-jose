@@ -55,7 +55,7 @@ let check_exp t =
   | None -> Ok t
 
 let validate (type a) ~(jwk : a JwkP.t) (t : t) :
-    (t, [`Invalid_signature | `Expired | `Msg of string ]) result =
+    (t, [ `Invalid_signature | `Expired | `Msg of string ]) result =
   check_exp t |> RResult.map to_jws
   |> RResult.flat_map (JwsP.validate ~jwk)
   |> RResult.map of_jws

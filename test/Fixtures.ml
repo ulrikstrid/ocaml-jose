@@ -62,6 +62,7 @@ let private_jwk_string =
 "dq": "EJXkyesNn2VFebooK0udhGG3so6652ghZlhjDRfZYVENHTPwQwhXnpVZNnFOnTWhdTQbO9WhSlW6MK86TpPjdibMqdiubjjIAqw16lUamtNBeJWrvHpBCatXoeBMg6XhcTKLddKQapv-v8zido9LbXTyUYf7UtHoI8rMMOEGirU",
 "qi": "he-6Edm5Olb5LteixSjc4sSLdejdlLg0dWIqEUxBNCAq2g7crjJaAFOHeq7anwSFq9mllBYO7YsYhKM-lbW8pgWkTYrJqFImZ9nbVTOyvChoy67LfWSCBF5O3XIQmb8KdMMaKGAIuooCLfz0YboRAFoxIVc44OJ6X7kx1ByPjVs",
 "kty": "RSA",
+"use": "sign",
 "kid": "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik"}|}
 
 let rsa_test_pub =
@@ -94,7 +95,8 @@ let public_jwk_string =
 "n": "6Po23xJipEyBfVwrBq68rID8NISgv3RkLRtwz6YmddIvzt4KR7kQbRekTvgZ7YDnCDKtr-lwbivX6_tR_9klp8BKCtk7rWuouNhaOA5mtfwp80ztfdqqGy250KMqyO1fD7mKMfQfR7WMe-W1ygNOG2YlSzhGODGpE2FSz6dcHlOTa5AJHEvor1723EkvD8FjqolJTOtlvbUg9D9HWYHTtMOtiiKST9rRFacB7A-ppzzn8heiB_qc5UQ4gbw1i7pqcKzwqzaEaHwBrv3CDZ28wwZNxytr97u3hGaRH2NSwB6Ohf7moj0-fQ0uY9UZcaFKr3vGqFH_Noo5kVm5zFtdJQ",
 "kty": "RSA",
 "kid": "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik",
-"use": "sign"}|}
+"use": "sign",
+"x5t":"LiE8S21-GUjC1x4er0S9g76rYbQ"}|}
 
 let external_jwt_string =
   {|eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IjBJUkZOX1JVSFVRY1hjZHBfN1BMQnhvR185YjZiSHJ2R0gwcDhxUm90aWsifQ.eyJzdWIiOiJ0ZXN0ZXIifQ.Jl9BJyYkLW5sHXpmxM4VNA9IEVFxTKkqWw4TkXBfj02xuLGY4cYKz_IlLEBeUN-mHGEJ8hiJMhaybBI2OM2FBahK-csLgjVuPBAznsGVsW6wAWZR47AeoBLr8uh09IYbEpHvqA_aIBdM5pvgM9_t3VtC9L50944HmTcmOkGR9BzaINk33ubYIgkXfClVNzTXc5PiD6haJqhPRb6XS5UZQOHIhyTtJ3gl1NX0LEBRH5ZsgEe_5L8ZNSoAcBFnuS-XMTy7Z4PacBtZG9Y8NHh90K45WTeS7pQw6GR-AQsrrkW-xkDMF_79qJkvVPU6UneaJjMtQctki1RDRZWF32I5mQ|}
@@ -106,6 +108,7 @@ let oct_jwk_pub : Jose.Jwk.Pub.oct =
   {
     k = "MDZjM2JkNWMtMGY5Ny00YjNlLWJmMjAtZWIyOWFlOTM2M2Rl";
     kty = `oct;
+    use = Some "sig";
     kid = "J4xQh7z-EaJI7Py1P4rFf2S0rppP2m4yKrZW4X4Yfuk";
     alg = `HS256;
   }
@@ -114,6 +117,7 @@ let oct_jwk_priv : Jose.Jwk.Priv.oct =
   {
     k = "MDZjM2JkNWMtMGY5Ny00YjNlLWJmMjAtZWIyOWFlOTM2M2Rl";
     kty = `oct;
+    use = Some "sig";
     kid = "J4xQh7z-EaJI7Py1P4rFf2S0rppP2m4yKrZW4X4Yfuk";
     alg = `HS256;
   }

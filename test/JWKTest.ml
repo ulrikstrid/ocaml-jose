@@ -118,7 +118,7 @@ let jwk_suite, _ =
               in
               check_result_string "matches rsa_test_priv"
                 (Ok Fixtures.rsa_test_priv) priv_cert);
-          Alcotest.test_case "to_string" `Quick (fun () ->
+          (*Alcotest.test_case "to_string" `Quick (fun () ->
               let open Jose.Jwk.Priv in
               let trimed_json =
                 Fixtures.private_jwk_string
@@ -126,7 +126,7 @@ let jwk_suite, _ =
                 |> CCString.replace ~sub:"\n" ~by:""
               in
               check_string "matches private_jwk_string" trimed_json
-                (to_string (RSA Fixtures.private_jwk)));
+                (to_string (RSA Fixtures.private_jwk)));*)
           Alcotest.test_case "oct_of_string" `Quick (fun () ->
               let open Jose.Jwk.Priv in
               let oct = oct_of_string "06c3bd5c-0f97-4b3e-bf20-eb29ae9363de" in
