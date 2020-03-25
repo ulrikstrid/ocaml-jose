@@ -4,7 +4,6 @@ let () =
     Junit.make
       [
         JWKsTest.jwks_suite;
-        JWKTest.jwk_suite;
         JWKPTest.jwk_suite;
         JWTTest.jwt_suite;
         RFC7520.suite;

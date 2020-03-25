@@ -4,7 +4,13 @@ type payload = Yojson.Safe.t
 
 type claim = string * Yojson.Safe.t
 
-type error = [ `Msg of string | `Expired ]
+type error =
+  [ `Msg of string
+  | `Expired
+  | `Not_rsa
+  | `Json_parse_failed of string
+  | `Unsupported_kty
+  | `Invalid_signature ]
 
 let empty_payload = `Assoc []
 
@@ -54,12 +60,11 @@ let check_exp t =
   | Some _exp -> Error `Expired
   | None -> Ok t
 
-let validate ~jwk t =
-  check_exp t
-  |> RResult.map (fun jwt -> to_jws jwt)
-  |> RResult.flat_map (fun jws -> Jws.validate ~jwk jws)
-  |> RResult.map (fun jws -> of_jws jws)
+let validate (type a) ~(jwk : a JwkP.t) (t : t) : (t, 'error) result =
+  check_exp t |> RResult.map to_jws
+  |> RResult.flat_map (Jws.validate ~jwk)
+  |> RResult.map of_jws
 
-let sign ~header ~payload key =
-  Jws.sign ~header ~payload:(Yojson.Safe.to_string payload) key
+let sign ~(header : Header.t) ~payload (jwk : JwkP.priv JwkP.t) =
+  Jws.sign ~header ~payload:(Yojson.Safe.to_string payload) jwk
   |> RResult.map of_jws
