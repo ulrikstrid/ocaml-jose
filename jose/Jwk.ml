@@ -103,7 +103,7 @@ let to_pub_pem (type a) (jwk : a t) =
   | Rsa_priv rsa ->
       rsa.key |> Mirage_crypto_pk.Rsa.pub_of_priv
       |> (fun key -> X509.Public_key.encode_pem (`RSA key))
-      |> Cstruct.to_string |> Result.ok
+      |> Cstruct.to_string |> RResult.return
   | _ -> Error `Not_rsa
 
 let of_priv_pem ?(use : string option) pem : (priv t, [> `Not_rsa ]) result =
@@ -168,7 +168,7 @@ let priv_rsa_to_priv_json (priv_rsa : priv_rsa) : Yojson.Safe.t =
   let dq = Util.get_JWK_component priv_rsa.key.dq in
   let qi = Util.get_JWK_component priv_rsa.key.q' in
   let n, e, d, p, q, dp, dq, qi =
-    RResult.all8 n e d p q dp dq qi |> Result.get_ok
+    RResult.all8 n e d p q dp dq qi |> RResult.get_exn
   in
   let values =
     [
