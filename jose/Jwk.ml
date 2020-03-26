@@ -13,7 +13,7 @@ module Util = struct
   let kid_of_json json =
     Yojson.Safe.to_string json |> Cstruct.of_string
     |> Mirage_crypto.Hash.SHA256.digest |> Cstruct.to_bytes |> Bytes.to_string
-    |> Base64.encode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet
+    |> RBase64.url_encode |> RResult.get_exn
 
   let get_RSA_kid ~e ~n =
     `Assoc [ ("e", `String e); ("kty", `String "RSA"); ("n", `String n) ]
@@ -31,21 +31,18 @@ type public = Public
 
 type priv = Private
 
-type oct = { kty : Jwa.kty; alg : Jwa.alg; use : string option; key : string }
-
-type priv_rsa = {
+type 'key jwk = {
   alg : Jwa.alg;
   kty : Jwa.kty;
   use : string option;
-  key : Mirage_crypto_pk.Rsa.priv;
+  key : 'key;
 }
 
-type pub_rsa = {
-  alg : Jwa.alg;
-  kty : Jwa.kty;
-  use : string option;
-  key : Mirage_crypto_pk.Rsa.pub;
-}
+type oct = string jwk
+
+type priv_rsa = Mirage_crypto_pk.Rsa.priv jwk
+
+type pub_rsa = Mirage_crypto_pk.Rsa.pub jwk
 
 type 'a t =
   | Oct : oct -> 'a t
@@ -76,9 +73,8 @@ let get_kid (type a) (t : a t) =
   | Oct oct -> Ok (Util.get_OCT_kid oct.key)
 
 let make_oct ?(use : string option) (str : string) : priv t =
-  let key =
-    Base64.encode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet str
-  in
+  (* Should we make this just return a result intead? *)
+  let key = RBase64.url_encode str |> RResult.get_exn in
   Oct { kty = `oct; use; alg = `HS256; key }
 
 let make_priv_rsa ?(use : string option) (rsa_priv : Mirage_crypto_pk.Rsa.priv)
@@ -127,18 +123,17 @@ let oct_to_json (oct : oct) =
     ]
 
 let pub_rsa_to_json pub_rsa =
+  (* Should I make this a result? It feels like our well-formed key should always be able to become a JSON *)
   let public_key : X509.Public_key.t = `RSA pub_rsa.key in
-  let e = Util.get_JWK_component pub_rsa.key.e |> RResult.to_opt in
-  let n = Util.get_JWK_component pub_rsa.key.n |> RResult.to_opt in
+  let e = Util.get_JWK_component pub_rsa.key.e |> RResult.get_exn in
+  let n = Util.get_JWK_component pub_rsa.key.n |> RResult.get_exn in
   let values =
     [
       Some ("alg", Jwa.alg_to_json pub_rsa.alg);
-      RJson.to_json_string_opt "e" e;
-      RJson.to_json_string_opt "n" n;
+      Some ("e", `String e);
+      Some ("n", `String n);
       Some ("kty", `String (Jwa.kty_to_string pub_rsa.kty));
-      ROpt.both e n
-      |> ROpt.map (fun (e, n) -> Util.get_RSA_kid ~e ~n)
-      |> RJson.to_json_string_opt "kid";
+      Some ("kid", `String (Util.get_RSA_kid ~e ~n));
       RJson.to_json_string_opt "use" pub_rsa.use;
       RJson.to_json_string_opt "x5t"
         ( Util.get_JWK_x5t (X509.Public_key.fingerprint ~hash:`SHA1 public_key)
@@ -159,6 +154,7 @@ let priv_rsa_to_pub_json (priv_rsa : priv_rsa) =
   pub_rsa_to_json (pub_of_priv_rsa priv_rsa)
 
 let priv_rsa_to_priv_json (priv_rsa : priv_rsa) : Yojson.Safe.t =
+  (* Should I make this a result? It feels like our well-formed key should always be able to become a JSON *)
   let n = Util.get_JWK_component priv_rsa.key.n in
   let e = Util.get_JWK_component priv_rsa.key.e in
   let d = Util.get_JWK_component priv_rsa.key.d in
@@ -283,6 +279,5 @@ let of_priv_json json : (priv t, 'error) result =
 let of_priv_json_string str : (priv t, 'error) result =
   Yojson.Safe.from_string str |> of_priv_json
 
-let oct_to_sign_key (oct : oct) =
-  Cstruct.of_string
-    (Base64.decode_exn ~pad:false ~alphabet:Base64.uri_safe_alphabet oct.key)
+let oct_to_sign_key (oct : oct) : (Cstruct.t, [> `Msg of string ]) result =
+  RBase64.url_decode oct.key |> RResult.map Cstruct.of_string

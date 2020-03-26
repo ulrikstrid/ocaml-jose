@@ -9,7 +9,9 @@ module RResult = struct
 
   let return v = Ok v
 
-  let get_exn = function Ok v -> v | Error _ -> raise Not_found
+  let get_exn = function Ok v -> v | Error _ -> raise (Failure "get_exn")
+
+  let get_default ~default = function Ok v -> v | Error _ -> default
 
   let both a b =
     match (a, b) with

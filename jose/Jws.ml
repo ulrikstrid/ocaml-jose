@@ -23,10 +23,10 @@ let to_string t =
 let verify_RS256 (type a) ~(jwk : a Jwk.t) str =
   ( match jwk with
   | Jwk.Rsa_priv jwk ->
-      Jwk.pub_of_priv_rsa jwk |> fun jwk ->
-      Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:jwk.key str
+      let pub_jwk = Jwk.pub_of_priv_rsa jwk in
+      Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:pub_jwk.key str
   | Jwk.Rsa_pub jwk -> Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:jwk.key str
-  | _ -> None )
+  | Jwk.Oct _ -> None )
   |> function
   | None -> Error `Invalid_signature
   | Some message -> Ok message
@@ -75,9 +75,11 @@ let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
     | Jwk.Rsa_priv { key; _ } ->
         Ok (fun x -> Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key x)
     | Jwk.Oct oct ->
-        Ok
-          (fun [@ocaml.warning "-8"] (`Message x) ->
-            Mirage_crypto.Hash.SHA256.hmac ~key:(Jwk.oct_to_sign_key oct) x)
+        Jwk.oct_to_sign_key oct
+        |> RResult.map (fun key ->
+             function
+             | `Message x -> Mirage_crypto.Hash.SHA256.hmac ~key x
+             | `Digest _ -> raise (Invalid_argument "Digest"))
   in
   match sign_f with
   | Ok sign_f ->
