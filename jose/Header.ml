@@ -67,7 +67,7 @@ let to_json t =
       RJson.to_json_string_opt "x5t" t.x5t;
       RJson.to_json_string_opt "x5t#256" t.x5t256;
       RJson.to_json_string_opt "cty" t.cty;
-      ROpt.map Jwa.enc_to_json t.enc |> Option.map (fun enc -> ("enc", enc));
+      ROpt.map Jwa.enc_to_json t.enc |> ROpt.map (fun enc -> ("enc", enc));
     ]
   in
   `Assoc (RList.filter_map (fun x -> x) values)
