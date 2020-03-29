@@ -31,6 +31,8 @@ module ROpt = struct
 
   let map fn o = match o with Some v -> Some (fn v) | None -> None
 
+  let get_with_default ~default o = match o with Some v -> v | None -> default
+
   let both a b = match (a, b) with Some a, Some b -> Some (a, b) | _ -> None
 end
 
@@ -66,11 +68,11 @@ module RString = struct
 end
 
 module RBase64 = struct
+  let url_encode_string ?(pad = false) payload =
+    Base64.encode_string ~pad ~alphabet:Base64.uri_safe_alphabet payload
+
   let url_encode ?(pad = false) ?off ?len payload =
-    let encoded =
-      Base64.encode ~pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
-    in
-    RResult.map_error (function `Msg s -> `Msg s) encoded
+    Base64.encode ~pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
 
   let url_decode ?(pad = false) ?off ?len payload =
     let decoded =
