@@ -165,23 +165,16 @@ let jwe_rsa_tests =
   ( "JWE RSA",
     [
       Alcotest.test_case "Generates the same JWE" `Quick (fun () ->
-          let jwk = Jose.Jwk.of_priv_json_string rsa_priv_enc_json in
-          let header =
-            Jose.Header.of_json @@ Yojson.Safe.from_string rsa_jws_header
-            |> CCResult.map_err (fun (`Msg e) -> `Msg ("header: " ^ e))
+          let jwk =
+            Jose.Jwk.of_priv_json_string rsa_priv_enc_json |> CCResult.get_exn
           in
-          let jws =
-            CCResult.both jwk header
-            |> CCResult.flat_map (fun (jwk, header) ->
-                   Jose.Jws.sign ~header ~payload:jws_payload jwk)
-          in
-          check_result_string "correct jws string" (Ok rsa_jws)
-            (CCResult.flat_map Jose.Jws.to_string jws));
+          let text = Jose.Jwe.encrypt jws_payload ~jwk in
+          check_string "correct jws string" rsa_jws text);
     ] )
 
 (* Begin tests *)
 let rfc_suite, _ =
   Junit_alcotest.run_and_report ~package:"jose" "RFC7520"
-    [ jws_rsa_tests; jws_oct_tests (* jwe_rsa_tests *) ]
+    [ jws_rsa_tests; jws_oct_tests; jwe_rsa_tests ]
 
 let suite = rfc_suite

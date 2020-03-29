@@ -1,9 +1,9 @@
 open Utils
 
 module Util = struct
-  let get_JWK_component ?(pad = false) e =
+  let get_JWK_component ?(pad = false) e : string =
     Z.to_bits e |> RString.rev |> RString.trim_leading_null
-    |> RBase64.url_encode ~pad
+    |> RBase64.url_encode_string ~pad
 
   let get_component ?(pad = false) e =
     RBase64.url_decode ~pad e
@@ -13,7 +13,7 @@ module Util = struct
   let kid_of_json json =
     Yojson.Safe.to_string json |> Cstruct.of_string
     |> Mirage_crypto.Hash.SHA256.digest |> Cstruct.to_bytes |> Bytes.to_string
-    |> RBase64.url_encode |> RResult.get_exn
+    |> RBase64.url_encode_string
 
   let get_RSA_kid ~e ~n =
     `Assoc [ ("e", `String e); ("kty", `String "RSA"); ("n", `String n) ]
@@ -27,16 +27,37 @@ module Util = struct
     |> RBase64.url_encode ~len:20
 end
 
+type use = [ `Sig | `Enc | `Unsupported of string ]
+
+let use_to_string use =
+  match use with `Sig -> "sig" | `Enc -> "enc" | `Unsupported str -> str
+
+let use_of_string use =
+  match use with "sig" -> `Sig | "enc" -> `Enc | str -> `Unsupported str
+
+let alg_of_use_and_kty ?(use : use = `Sig) (kty : Jwa.kty) =
+  match (use, kty) with
+  | `Sig, `oct -> Jwa.HS256
+  | `Sig, `RSA -> Jwa.RS256
+  | `Enc, `RSA -> Jwa.RSA_OAEP
+  | `Enc, `oct -> Jwa.Unsupported "encryption with oct is not supported yet"
+  | _, `EC -> Jwa.Unsupported "Eliptic curves are not supported yet"
+  | `Unsupported u, _ ->
+      Jwa.Unsupported ("We don't know what to do with use: " ^ u)
+
+let use_of_alg (alg : Jwa.alg) =
+  match alg with
+  | Jwa.HS256 -> `Sig
+  | Jwa.RS256 -> `Sig
+  | Jwa.RSA_OAEP -> `Enc
+  | Jwa.None -> `Unsupported "none"
+  | Jwa.Unsupported str -> `Unsupported str
+
 type public = Public
 
 type priv = Private
 
-type 'key jwk = {
-  alg : Jwa.alg;
-  kty : Jwa.kty;
-  use : string option;
-  key : 'key;
-}
+type 'key jwk = { alg : Jwa.alg; kty : Jwa.kty; use : use; key : 'key }
 
 type oct = string jwk
 
@@ -49,7 +70,7 @@ type 'a t =
   | Rsa_priv : priv_rsa -> priv t
   | Rsa_pub : pub_rsa -> public t
 
-let get_alg (type a) (t : a t) =
+let get_alg (type a) (t : a t) : Jwa.alg =
   match t with
   | Rsa_priv rsa -> rsa.alg
   | Rsa_pub rsa -> rsa.alg
@@ -61,36 +82,38 @@ let get_kty (type a) (t : a t) =
 let get_kid (type a) (t : a t) =
   match t with
   | Rsa_priv rsa ->
-      RResult.both
-        (Util.get_JWK_component rsa.key.e)
-        (Util.get_JWK_component rsa.key.n)
-      |> RResult.map (fun (e, n) -> Util.get_RSA_kid ~e ~n)
+      let e = Util.get_JWK_component rsa.key.e in
+      let n = Util.get_JWK_component rsa.key.n in
+      Util.get_RSA_kid ~e ~n
   | Rsa_pub rsa ->
-      RResult.both
-        (Util.get_JWK_component rsa.key.e)
-        (Util.get_JWK_component rsa.key.n)
-      |> RResult.map (fun (e, n) -> Util.get_RSA_kid ~e ~n)
-  | Oct oct -> Ok (Util.get_OCT_kid oct.key)
+      let e = Util.get_JWK_component rsa.key.e in
+      let n = Util.get_JWK_component rsa.key.n in
+      Util.get_RSA_kid ~e ~n
+  | Oct oct -> Util.get_OCT_kid oct.key
 
-let make_oct ?(use : string option) (str : string) : priv t =
+let make_oct ?(use : use = `Sig) (str : string) : priv t =
   (* Should we make this just return a result intead? *)
-  let key = RBase64.url_encode str |> RResult.get_exn in
-  Oct { kty = `oct; use; alg = `HS256; key }
+  let key = RBase64.url_encode_string str in
+  Oct { kty = `oct; use; alg = Jwa.HS256; key }
 
-let make_priv_rsa ?(use : string option) (rsa_priv : Mirage_crypto_pk.Rsa.priv)
-    : priv t =
-  Rsa_priv { alg = `RS256; kty = `RSA; use; key = rsa_priv }
+let make_priv_rsa ?(use : use = `Sig) (rsa_priv : Mirage_crypto_pk.Rsa.priv) :
+    priv t =
+  let kty : Jwa.kty = `RSA in
+  let alg = alg_of_use_and_kty ~use kty in
+  Rsa_priv { alg; kty; use; key = rsa_priv }
 
-let make_pub_rsa ?(use : string option) (rsa_pub : Mirage_crypto_pk.Rsa.pub) :
+let make_pub_rsa ?(use : use = `Sig) (rsa_pub : Mirage_crypto_pk.Rsa.pub) :
     public t =
-  Rsa_pub { alg = `RS256; kty = `RSA; use; key = rsa_pub }
+  let kty : Jwa.kty = `RSA in
+  let alg = alg_of_use_and_kty ~use kty in
+  Rsa_pub { alg; kty; use; key = rsa_pub }
 
-let of_pub_pem ?(use : string option) pem : (public t, [> `Not_rsa ]) result =
+let of_pub_pem ?(use : use = `Sig) pem : (public t, [> `Not_rsa ]) result =
   Cstruct.of_string pem |> X509.Public_key.decode_pem
   |> RResult.flat_map (function
        | `RSA pub_key -> Ok pub_key
        | _ -> Error `Not_rsa)
-  |> RResult.map (make_pub_rsa ?use)
+  |> RResult.map (make_pub_rsa ~use)
 
 let to_pub_pem (type a) (jwk : a t) =
   match jwk with
@@ -102,10 +125,10 @@ let to_pub_pem (type a) (jwk : a t) =
       |> Cstruct.to_string |> RResult.return
   | _ -> Error `Not_rsa
 
-let of_priv_pem ?(use : string option) pem : (priv t, [> `Not_rsa ]) result =
+let of_priv_pem ?(use : use = `Sig) pem : (priv t, [> `Not_rsa ]) result =
   Cstruct.of_string pem |> X509.Private_key.decode_pem
   |> RResult.map (function `RSA pub_key -> pub_key)
-  |> RResult.map (make_priv_rsa ?use)
+  |> RResult.map (make_priv_rsa ~use)
 
 let to_priv_pem (jwk : priv t) =
   match jwk with
@@ -125,8 +148,8 @@ let oct_to_json (oct : oct) =
 let pub_rsa_to_json pub_rsa =
   (* Should I make this a result? It feels like our well-formed key should always be able to become a JSON *)
   let public_key : X509.Public_key.t = `RSA pub_rsa.key in
-  let e = Util.get_JWK_component pub_rsa.key.e |> RResult.get_exn in
-  let n = Util.get_JWK_component pub_rsa.key.n |> RResult.get_exn in
+  let e = Util.get_JWK_component pub_rsa.key.e in
+  let n = Util.get_JWK_component pub_rsa.key.n in
   let values =
     [
       Some ("alg", Jwa.alg_to_json pub_rsa.alg);
@@ -134,7 +157,7 @@ let pub_rsa_to_json pub_rsa =
       Some ("n", `String n);
       Some ("kty", `String (Jwa.kty_to_string pub_rsa.kty));
       Some ("kid", `String (Util.get_RSA_kid ~e ~n));
-      RJson.to_json_string_opt "use" pub_rsa.use;
+      Some ("use", `String (use_to_string pub_rsa.use));
       RJson.to_json_string_opt "x5t"
         ( Util.get_JWK_x5t (X509.Public_key.fingerprint ~hash:`SHA1 public_key)
         |> RResult.to_opt );
@@ -163,9 +186,6 @@ let priv_rsa_to_priv_json (priv_rsa : priv_rsa) : Yojson.Safe.t =
   let dp = Util.get_JWK_component priv_rsa.key.dp in
   let dq = Util.get_JWK_component priv_rsa.key.dq in
   let qi = Util.get_JWK_component priv_rsa.key.q' in
-  let n, e, d, p, q, dp, dq, qi =
-    RResult.all8 n e d p q dp dq qi |> RResult.get_exn
-  in
   let values =
     [
       Some ("alg", Jwa.alg_to_json priv_rsa.alg);
@@ -178,7 +198,7 @@ let priv_rsa_to_priv_json (priv_rsa : priv_rsa) : Yojson.Safe.t =
       Some ("dq", `String dq);
       Some ("qi", `String qi);
       Some ("kty", `String (priv_rsa.kty |> Jwa.kty_to_string));
-      RJson.to_json_string_opt "use" priv_rsa.use;
+      Some ("use", `String (use_to_string priv_rsa.use));
       Some ("kid", `String (Util.get_RSA_kid ~e ~n));
     ]
   in
@@ -209,12 +229,18 @@ let pub_rsa_of_json json : (public t, 'error) result =
     RResult.both e n
     |> RResult.flat_map (fun (e, n) -> Mirage_crypto_pk.Rsa.pub ~e ~n)
     |> RResult.map (fun key ->
+           let alg =
+             json |> Json.member "alg" |> Json.to_string |> Jwa.alg_of_string
+           in
            Rsa_pub
              {
-               alg = `RS256;
+               alg;
                kty = `RSA;
                (* Shortcut since that is the only thing we handle *)
-               use = json |> Json.member "use" |> Json.to_string_option;
+               use =
+                 json |> Json.member "use" |> Json.to_string_option
+                 |> ROpt.map use_of_string
+                 |> ROpt.get_with_default ~default:(use_of_alg alg);
                key;
              })
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
@@ -234,11 +260,17 @@ let priv_rsa_of_json json : (priv t, 'error) result =
     |> RResult.flat_map (fun (e, n, d, p, q, dp, dq, qi) ->
            Mirage_crypto_pk.Rsa.priv ~e ~n ~d ~p ~q ~dp ~dq ~q':qi)
     |> RResult.map (fun key ->
+           let alg =
+             json |> Json.member "alg" |> Json.to_string |> Jwa.alg_of_string
+           in
            Rsa_priv
              {
-               alg = `RS256;
+               alg;
                kty = `RSA;
-               use = json |> Json.member "use" |> Json.to_string_option;
+               use =
+                 json |> Json.member "use" |> Json.to_string_option
+                 |> ROpt.map use_of_string
+                 |> ROpt.get_with_default ~default:(use_of_alg alg);
                key;
              })
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
@@ -246,13 +278,19 @@ let priv_rsa_of_json json : (priv t, 'error) result =
 let oct_of_json json =
   let module Json = Yojson.Safe.Util in
   try
+    let alg =
+      json |> Json.member "alg" |> Json.to_string |> Jwa.alg_of_string
+    in
     Ok
       (Oct
          {
-           alg = `HS256;
+           alg;
            kty = `oct;
            (* Shortcut since that is the only thing we handle *)
-           use = json |> Json.member "use" |> Json.to_string_option;
+           use =
+             json |> Json.member "use" |> Json.to_string_option
+             |> ROpt.map use_of_string
+             |> ROpt.get_with_default ~default:(use_of_alg alg);
            key = json |> Json.member "k" |> Json.to_string;
          })
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
