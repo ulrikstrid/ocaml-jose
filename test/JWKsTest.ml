@@ -19,7 +19,7 @@ let jwks_suite, _ =
                    {
                      keys =
                        [
-                         Jose.Jwk.of_pub_pem ~use:"sign" Fixtures.rsa_test_pub
+                         Jose.Jwk.of_pub_pem Fixtures.rsa_test_pub
                          |> CCResult.get_exn;
                        ];
                    }));
@@ -34,7 +34,7 @@ let jwks_suite, _ =
                 | Error s -> Error (`Msg s)
               in
               check_result_string "correct kid" (Ok Fixtures.public_jwk_kid)
-                (CCResult.flat_map Jose.Jwk.get_kid jwk));
+                (CCResult.map Jose.Jwk.get_kid jwk));
           Alcotest.test_case "Parses without alg" `Quick (fun () ->
               let jwks =
                 Jose.Jwks.of_string Fixtures.jwks_string_from_oidc_validation

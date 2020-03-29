@@ -20,7 +20,6 @@ let of_string str = Yojson.Safe.from_string str |> of_json
 let find_key jwks kid =
   Utils.RList.find_opt
     (fun (jwk : Jwk.public Jwk.t) ->
-      Jwk.get_kid jwk
-      |> Utils.RResult.map (fun k -> k = kid)
-      |> Utils.RResult.get_default ~default:false)
+      let curr_kid = Jwk.get_kid jwk in
+      curr_kid = kid)
     jwks.keys

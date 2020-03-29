@@ -1,63 +1,67 @@
-type kty = [ `oct | `RSA | `EC | `Unsupported of string ]
+type kty =
+  [ `oct  (** Octet sequence (used to represent symmetric keys) *)
+  | `RSA  (** RSA  *)
+  | `EC  (** Elliptic Curve *) ]
 
-let kty_to_string = function
+let kty_to_string : kty -> string = function
   | `oct -> "oct"
   | `RSA -> "RSA"
   | `EC -> "EC"
-  | `Unsupported str -> str
 
-let kty_of_string = function
+let kty_of_string : string -> kty = function
   | "oct" -> `oct
   | "RSA" -> `RSA
   | "EC" -> `EC
-  | str -> `Unsupported str
+  | str -> raise (Failure ("Unsupported kty: " ^ str))
 
-type alg = [ `RS256 | `HS256 | `none | `Unsupported of string ]
+type alg =
+  | RS256  (** HMAC using SHA-256 *)
+  | HS256  (** RSASSA-PKCS1-v1_5 using SHA-256 *)
+  | RSA_OAEP  (** RSAES OAEP using default parameters *)
+  | None
+  | Unsupported of string
 
 let alg_to_string = function
-  | `RS256 -> "RS256"
-  | `HS256 -> "HS256"
-  | `none -> "none"
-  | `Unsupported string -> string
+  | RS256 -> "RS256"
+  | HS256 -> "HS256"
+  | RSA_OAEP -> "RSA-OAEP"
+  | None -> "none"
+  | Unsupported string -> string
 
 let alg_of_string = function
-  | "RS256" -> `RS256
-  | "HS256" -> `HS256
-  | "none" -> `none
-  | str -> `Unsupported str
+  | "RS256" -> RS256
+  | "HS256" -> HS256
+  | "RSA_OAEP" -> RSA_OAEP
+  | "none" -> None
+  | str -> Unsupported str
 
 let alg_to_json alg = `String (alg_to_string alg)
 
-let alg_of_json alg = Yojson.Safe.Util.to_string alg |> alg_of_string
+let alg_of_json json = Yojson.Safe.to_string json |> alg_of_string
 
+(** https://tools.ietf.org/html/rfc7518#section-5 *)
 type enc =
-  [ `A128CBC_HS256
-  | `A256CBC_HS512
-  | `A128GCM
-  | `A256GCM
-  | `Unsupported of string ]
+  | A128CBC_HS256
+      (** AES_128_CBC_HMAC_SHA_256 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.3 *)
+  | A256CBC_HS512
+      (** AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.5 *)
+  | A256GCM  (** AES GCM using 256-bit key *)
 
-let enc_to_string = function
-  | `A128CBC_HS256 -> "A128CBC-HS256"
-  | `A256CBC_HS512 -> "A256CBC-HS512"
-  | `A128GCM -> "A128GCM"
-  | `A256GCM -> "A256GCM"
-  | `Unsupported str -> str
+let enc_to_string enc =
+  match enc with
+  | A128CBC_HS256 -> "A128CBC-HS256"
+  | A256CBC_HS512 -> "A256CBC-HS512"
+  | A256GCM -> "A256GCM"
 
-let enc_of_string = function
-  | "A128CBC-HS256" -> `A128CBC_HS256
-  | "A256CBC-HS512" -> `A256CBC_HS512
-  | "A128GCM" -> `A128GCM
-  | "A256GCM" -> `A256GCM
-  | str -> `Unsupported str
+let enc_of_string enc =
+  match enc with
+  | "A128CBC-HS256" -> A128CBC_HS256
+  | "A256CBC-HS512" -> A256CBC_HS512
+  | "A256GCM" -> A256GCM
+  | _ -> raise Not_found
 
 let enc_to_length = function
-  | `A128CBC_HS256 -> 256
-  | `A256CBC_HS512 -> 512
-  | `A128GCM -> 128
-  | `A256GCM -> 256
-  | `Unsupported _ -> 0
-
-let enc_to_json enc = `String (enc_to_string enc)
-
-let enc_of_json enc = Yojson.Safe.Util.to_string enc |> enc_of_string
+  | A128CBC_HS256 -> 256
+  | A256CBC_HS512 -> 512
+  (* | `A128GCM -> 128 *)
+  | A256GCM -> 256

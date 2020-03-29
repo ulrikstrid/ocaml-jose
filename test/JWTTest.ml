@@ -90,7 +90,7 @@ let jwt_suite, _ =
               let open Jose in
               let header =
                 Header.make_header ~typ:"JWT"
-                  (Jose.Jwk.make_oct ~use:"sign" Fixtures.oct_key_string)
+                  (Jose.Jwk.make_oct ~use:`Sig Fixtures.oct_key_string)
               in
               let payload =
                 Jwt.empty_payload |> Jwt.add_claim "sub" (`String "tester")

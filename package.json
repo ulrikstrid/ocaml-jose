@@ -4,11 +4,11 @@
   "description": "JOSE implementation in native Reason",
   "esy": {
     "build": "dune build -p jose",
-    "buildDev": "dune build --root ."
+    "buildDev": "dune build --root=. @default @runtest --no-buffer"
   },
   "scripts": {
     "test": "dune runtest --no-buffer",
-    "test:watch": "dune runtest --no-buffer --watch",
+    "test:watch": "dune runtest --root=. --no-buffer --watch",
     "fmt": "dune build @fmt --auto-promote --root .",
     "docs": "dune build @doc --root .",
     "docs:path": "esy echo #{self.target_dir / 'default' / '_doc' / '_html'}",
