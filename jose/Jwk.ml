@@ -228,21 +228,33 @@ let pub_rsa_of_json json : (public t, 'error) result =
     let n = json |> Json.member "n" |> Json.to_string |> Util.get_component in
     RResult.both e n
     |> RResult.flat_map (fun (e, n) -> Mirage_crypto_pk.Rsa.pub ~e ~n)
-    |> RResult.map (fun key ->
+    |> RResult.flat_map (fun key ->
            let alg =
-             json |> Json.member "alg" |> Json.to_string |> Jwa.alg_of_string
+             json |> Json.member "alg" |> Json.to_string_option
+             |> ROpt.map Jwa.alg_of_string
            in
-           Rsa_pub
-             {
-               alg;
-               kty = `RSA;
-               (* Shortcut since that is the only thing we handle *)
-               use =
-                 json |> Json.member "use" |> Json.to_string_option
-                 |> ROpt.map use_of_string
-                 |> ROpt.get_with_default ~default:(use_of_alg alg);
-               key;
-             })
+           let use =
+             json |> Json.member "use" |> Json.to_string_option
+             |> ROpt.map use_of_string
+           in
+           let kty = `RSA in
+           match (alg, use) with
+           | Some alg, Some use -> Ok (Rsa_pub { alg; kty; use; key })
+           | Some alg, None ->
+               Ok
+                 (Rsa_pub
+                    {
+                      alg;
+                      kty;
+                      use =
+                        json |> Json.member "use" |> Json.to_string_option
+                        |> ROpt.map use_of_string
+                        |> ROpt.get_with_default ~default:(use_of_alg alg);
+                      key;
+                    })
+           | None, Some use ->
+               Ok (Rsa_pub { alg = alg_of_use_and_kty ~use kty; kty; use; key })
+           | None, None -> Error `Missing_use_and_alg)
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
 let priv_rsa_of_json json : (priv t, 'error) result =
@@ -259,20 +271,34 @@ let priv_rsa_of_json json : (priv t, 'error) result =
     RResult.all8 e n d p q dp dq qi
     |> RResult.flat_map (fun (e, n, d, p, q, dp, dq, qi) ->
            Mirage_crypto_pk.Rsa.priv ~e ~n ~d ~p ~q ~dp ~dq ~q':qi)
-    |> RResult.map (fun key ->
+    |> RResult.flat_map (fun key ->
            let alg =
-             json |> Json.member "alg" |> Json.to_string |> Jwa.alg_of_string
+             json |> Json.member "alg" |> Json.to_string_option
+             |> ROpt.map Jwa.alg_of_string
            in
-           Rsa_priv
-             {
-               alg;
-               kty = `RSA;
-               use =
-                 json |> Json.member "use" |> Json.to_string_option
-                 |> ROpt.map use_of_string
-                 |> ROpt.get_with_default ~default:(use_of_alg alg);
-               key;
-             })
+           let use =
+             json |> Json.member "use" |> Json.to_string_option
+             |> ROpt.map use_of_string
+           in
+           let kty = `RSA in
+           match (alg, use) with
+           | Some alg, Some use -> Ok (Rsa_priv { alg; kty; use; key })
+           | Some alg, None ->
+               Ok
+                 (Rsa_priv
+                    {
+                      alg;
+                      kty;
+                      use =
+                        json |> Json.member "use" |> Json.to_string_option
+                        |> ROpt.map use_of_string
+                        |> ROpt.get_with_default ~default:(use_of_alg alg);
+                      key;
+                    })
+           | None, Some use ->
+               Ok
+                 (Rsa_priv { alg = alg_of_use_and_kty ~use kty; kty; use; key })
+           | None, None -> Error `Missing_use_and_alg)
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
 let oct_of_json json =

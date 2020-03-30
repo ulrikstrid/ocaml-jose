@@ -70,7 +70,8 @@ let jwt_suite, _ =
               check_result_string "JWT is correctly created"
                 (Ok Fixtures.oct_jwt_string)
                 (CCResult.flat_map Jwt.to_string jwt_r));
-          Alcotest.test_case "Can validate my own RSA JWT" `Quick (fun () ->
+          Alcotest.test_case "Can validate my own RSA JWT (priv rsa)" `Quick
+            (fun () ->
               let open Jose in
               let jwk =
                 Jwk.of_priv_pem Fixtures.rsa_test_priv |> CCResult.get_exn
@@ -82,6 +83,26 @@ let jwt_suite, _ =
               let jwt_r =
                 Jwt.sign ~header:(Obj.magic header) ~payload jwk
                 |> CCResult.flat_map (Jwt.validate ~jwk)
+              in
+              check_result_string "JWT is correctly created"
+                (Ok Fixtures.external_jwt_string)
+                (CCResult.flat_map Jwt.to_string jwt_r));
+          Alcotest.test_case "Can validate my own RSA JWT (pub rsa)" `Quick
+            (fun () ->
+              let open Jose in
+              let jwk =
+                Jwk.of_priv_pem Fixtures.rsa_test_priv |> CCResult.get_exn
+              in
+              let pub_jwk =
+                Jwk.of_pub_pem Fixtures.rsa_test_pub |> CCResult.get_exn
+              in
+              let header = Header.make_header ~typ:"JWT" jwk in
+              let payload =
+                Jwt.empty_payload |> Jwt.add_claim "sub" (`String "tester")
+              in
+              let jwt_r =
+                Jwt.sign ~header:(Obj.magic header) ~payload jwk
+                |> CCResult.flat_map (Jwt.validate ~jwk:pub_jwk)
               in
               check_result_string "JWT is correctly created"
                 (Ok Fixtures.external_jwt_string)
