@@ -4,15 +4,17 @@ let result_t :
     | `Not_rsa
     | `Json_parse_failed of string
     | `Unsupported_kty
-    | `Invalid_signature ]
+    | `Invalid_signature
+    | `Missing_use_and_alg ]
     Alcotest.testable =
   let pp ppf = function
     | `Msg e -> Fmt.string ppf e
     | `Expired -> Fmt.string ppf "expired"
     | `Not_rsa -> Fmt.string ppf "Expected RSA"
-    | `Json_parse_failed s -> Fmt.string ppf ("Badly formed jwk json " ^ s)
+    | `Json_parse_failed s -> Fmt.string ppf ("Badly formed json " ^ s)
     | `Unsupported_kty -> Fmt.string ppf "Unsupported kty"
     | `Invalid_signature -> Fmt.string ppf "Invalid signature"
+    | `Missing_use_and_alg -> Fmt.string ppf "Missing use and alg"
   in
   Alcotest.testable pp ( = )
 
