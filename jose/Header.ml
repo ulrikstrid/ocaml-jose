@@ -12,12 +12,9 @@ type t = {
   enc : Jwa.enc option;
 }
 
-let make_header (type a) ?typ (jwk : a Jwk.t) =
+let make_header ?typ (jwk : Jwk.priv Jwk.t) =
   let alg =
-    match jwk with
-    | Jwk.Rsa_pub _ -> Jwa.RS256
-    | Jwk.Rsa_priv _ -> Jwa.RS256
-    | Jwk.Oct _ -> Jwa.HS256
+    match jwk with Jwk.Rsa_priv _ -> Jwa.RS256 | Jwk.Oct _ -> Jwa.HS256
   in
   {
     alg;

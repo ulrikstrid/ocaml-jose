@@ -1,7 +1,7 @@
 opam-version: "2.0"
 
 synopsis: "Code coverage for OCaml"
-version: "2.1.0"
+version: "2.2.0"
 license: "MIT"
 homepage: "https://github.com/aantron/bisect_ppx"
 doc: "https://github.com/aantron/bisect_ppx"
@@ -49,6 +49,6 @@ Usage is simple - add package bisect_ppx when building tests, run your tests,
 then run the Bisect_ppx report tool on the generated visitation files."
 
 url {
-  src: "https://github.com/aantron/bisect_ppx/archive/2.1.0.tar.gz"
-  checksum: "md5=c8ed055423d80aeeb5a1bac3d512b307"
+  src: "https://github.com/aantron/bisect_ppx/archive/2.2.0.tar.gz"
+  checksum: "md5=b95bf21859fba40079eddce8cd910cca"
 }

@@ -1,4 +1,56 @@
 (**
+{1 JSON Web Algorithm}
+
+{{: https://www.tools.ietf.org/rfc/rfc7518.html } Link to RFC }
+*)
+module Jwa : sig
+  type alg =
+    | RS256  (** HMAC using SHA-256 *)
+    | HS256  (** RSASSA-PKCS1-v1_5 using SHA-256 *)
+    | RSA_OAEP  (** RSAES OAEP using default parameters *)
+    | None
+    | Unsupported of string
+
+  (**
+  {{: https://tools.ietf.org/html/rfc7518#section-3.1 } Link to RFC}
+
+  - [RS256] and [HS256] and none is currently the only supported algs for signature
+  - [RSA_OAEP] is currently the only supported alg for encryption
+
+  *)
+
+  val alg_to_string : alg -> string
+
+  val alg_of_string : string -> alg
+
+  val alg_to_json : alg -> Yojson.Safe.t
+
+  val alg_of_json : Yojson.Safe.t -> alg
+
+  type kty =
+    [ `oct  (** Octet sequence (used to represent symmetric keys) *)
+    | `RSA  (** RSA {{: https://tools.ietf.org/html/rfc3447} Link to RFC} *)
+    | `EC  (** Elliptic Curve *) ]
+  (** {{: https://tools.ietf.org/html/rfc7518#section-6.1 } Link to RFC } *)
+
+  val kty_to_string : kty -> string
+
+  val kty_of_string : string -> kty
+
+  (** {{: https://tools.ietf.org/html/rfc7518#section-5 } Link to RFC}*)
+  type enc =
+    | A128CBC_HS256
+        (** AES_128_CBC_HMAC_SHA_256 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.3 *)
+    | A256CBC_HS512
+        (** AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.5 *)
+    | A256GCM  (** AES GCM using 256-bit key *)
+
+  val enc_to_string : enc -> string
+
+  val enc_of_string : string -> enc
+end
+
+(**
 {1 JSON Web Key}
 
 {{: https://tools.ietf.org/html/rfc7517 } Link to RFC }
@@ -65,7 +117,10 @@ module Jwk : sig
   val of_pub_json :
     Yojson.Safe.t ->
     ( public t,
-      [> `Json_parse_failed of string | `Msg of string | `Unsupported_kty ] )
+      [> `Json_parse_failed of string
+      | `Msg of string
+      | `Unsupported_kty
+      | `Missing_use_and_alg ] )
     result
   (**
     [of_pub_json t] takes a [Yojson.Safe.t] and tries to return a [public t] 
@@ -74,7 +129,10 @@ module Jwk : sig
   val of_pub_json_string :
     string ->
     ( public t,
-      [> `Json_parse_failed of string | `Msg of string | `Unsupported_kty ] )
+      [> `Json_parse_failed of string
+      | `Msg of string
+      | `Unsupported_kty
+      | `Missing_use_and_alg ] )
     result
   (**
     [of_pub_json_string json_string] takes a JSON string representation and tries to return a [public t]
@@ -120,7 +178,7 @@ module Jwk : sig
   val of_priv_json :
     Yojson.Safe.t ->
     ( priv t,
-      [> `Json_parse_failed of string | `Msg of string | `Unsupported_kty ] )
+      [> `Json_parse_failed of string | `Msg of string | `Unsupported_kty | `Missing_use_and_alg ] )
     result
   (**
     [of_json json] takes a [Yojson.Safe.t] and returns a [priv t]
@@ -129,7 +187,7 @@ module Jwk : sig
   val of_priv_json_string :
     string ->
     ( priv t,
-      [> `Json_parse_failed of string | `Msg of string | `Unsupported_kty ] )
+      [> `Json_parse_failed of string | `Msg of string | `Unsupported_kty | `Missing_use_and_alg ] )
     result
   (**
     [of_priv_json_string json_string] takes a JSON string representation and tries to return a [private t]
@@ -194,58 +252,6 @@ module Jwks : sig
   val find_key : t -> string -> Jwk.public Jwk.t option
 end
 
-(**
-{1 JSON Web Algorithm}
-
-{{: https://www.tools.ietf.org/rfc/rfc7518.html } Link to RFC }
-*)
-module Jwa : sig
-  type alg =
-    | RS256  (** HMAC using SHA-256 *)
-    | HS256  (** RSASSA-PKCS1-v1_5 using SHA-256 *)
-    | RSA_OAEP  (** RSAES OAEP using default parameters *)
-    | None
-    | Unsupported of string
-
-  (**
-  {{: https://tools.ietf.org/html/rfc7518#section-3.1 } Link to RFC}
-
-  - [RS256] and [HS256] and none is currently the only supported algs for signature
-  - [RSA_OAEP] is currently the only supported alg for encryption
-
-  *)
-
-  val alg_to_string : alg -> string
-
-  val alg_of_string : string -> alg
-
-  val alg_to_json : alg -> Yojson.Safe.t
-
-  val alg_of_json : Yojson.Safe.t -> alg
-
-  type kty =
-    [ `oct  (** Octet sequence (used to represent symmetric keys) *)
-    | `RSA  (** RSA {{: https://tools.ietf.org/html/rfc3447} Link to RFC} *)
-    | `EC  (** Elliptic Curve *) ]
-  (** {{: https://tools.ietf.org/html/rfc7518#section-6.1 } Link to RFC } *)
-
-  val kty_to_string : kty -> string
-
-  val kty_of_string : string -> kty
-
-  (** {{: https://tools.ietf.org/html/rfc7518#section-5 } Link to RFC}*)
-  type enc =
-    | A128CBC_HS256
-        (** AES_128_CBC_HMAC_SHA_256 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.3 *)
-    | A256CBC_HS512
-        (** AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.5 *)
-    | A256GCM  (** AES GCM using 256-bit key *)
-
-  val enc_to_string : enc -> string
-
-  val enc_of_string : string -> enc
-end
-
 module Header : sig
   type t = {
     alg : Jwa.alg;
@@ -276,7 +282,7 @@ module Header : sig
     {{: https://tools.ietf.org/html/rfc7515#section-4.1 } Link to RFC }
     *)
 
-  val make_header : ?typ:string -> 'a Jwk.t -> t
+  val make_header : ?typ:string -> Jwk.priv Jwk.t -> t
   (**
   [make_header jwk] creates a header with [typ], [kid] and [alg] set based on the public JWK
   *)
@@ -364,4 +370,16 @@ module Jwt : sig
   *)
 end
 
-module Jwe = Jwe
+module Jwe : sig
+  (** {{: https://tools.ietf.org/html/rfc7516 } Link to RFC } *)
+
+  type aad
+  (** Additional Authentication Data *)
+
+  type protected
+  (** JWE Protected Header *)
+
+  type t = { header : Header.t; payload : string; aad : aad option }
+
+  val encrypt : ?protected:'a -> string -> jwk:Jwk.priv Jwk.t -> string
+end

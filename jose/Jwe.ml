@@ -27,11 +27,11 @@ let make_cek enc =
   |> Cstruct.to_string
   |> Jwk.make_oct ~use:`Enc
 
-let encrypt ?protected cleartext ~(jwk : Jwk.priv Jwk.t) =
+let encrypt ?protected payload ~(jwk : Jwk.priv Jwk.t) =
   let () = match protected with Some _ -> () | None -> () in
   let _input_key =
     match Jwk.get_alg jwk with
     | Jwa.RSA_OAEP -> Ok (Mirage_crypto_rng.generate 32)
     | _ -> Error `Unsupported_enc
   in
-  cleartext
+  payload
