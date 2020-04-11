@@ -18,7 +18,7 @@ type alg =
   | RS256  (** HMAC using SHA-256 *)
   | HS256  (** RSASSA-PKCS1-v1_5 using SHA-256 *)
   | RSA_OAEP  (** RSAES OAEP using default parameters *)
-  | RSA1_5 (** RSA PKCS 1 *)
+  | RSA1_5  (** RSA PKCS 1 *)
   | None
   | Unsupported of string
 

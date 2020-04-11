@@ -172,12 +172,17 @@ let jwe_rsa_tests =
           check_result_string "correct kid in header"
             (Ok "frodo.baggins@hobbiton.example")
             (CCResult.map (fun jwe -> jwe.Jose.Jwe.header.kid) jwe);
-          check_result_string "correct alg in header"
-            (Ok "RSA1_5")
-            (CCResult.map (fun jwe -> Jose.Jwa.alg_to_string jwe.Jose.Jwe.header.alg) jwe);
-          check_result_string "correct enc in header"
-            (Ok "A128CBC-HS256")
-            (CCResult.map (fun jwe -> match jwe.Jose.Jwe.header.enc with None -> "none" | Some x -> Jose.Jwa.enc_to_string x) jwe);
+          check_result_string "correct alg in header" (Ok "RSA1_5")
+            (CCResult.map
+               (fun jwe -> Jose.Jwa.alg_to_string jwe.Jose.Jwe.header.alg)
+               jwe);
+          check_result_string "correct enc in header" (Ok "A128CBC-HS256")
+            (CCResult.map
+               (fun jwe ->
+                 match jwe.Jose.Jwe.header.enc with
+                 | None -> "none"
+                 | Some x -> Jose.Jwa.enc_to_string x)
+               jwe);
           check_result_string "correct initialization vector"
             (Ok "bbd5sTkYwhAIqfHsx8DayA")
             (CCResult.map (fun jwe -> jwe.Jose.Jwe.init_vector) jwe);
@@ -190,13 +195,13 @@ let jwe_rsa_tests =
                       ~alphabet:Base64.uri_safe_alphabet)
                jwe);
           check_result_string "correct payload" (Ok jwe_payload)
-            (CCResult.map (fun jwe -> jwe.Jose.Jwe.payload) jwe) );
-(*      Alcotest.test_case "Can decrypt a JWE" `Quick (fun () ->
-          let jwk =
-            Jose.Jwk.of_priv_json_string rsa_priv_enc_json |> CCResult.get_exn
-          in
-          let text = Jose.Jwe.encrypt jwe_payload ~jwk in
-          check_string "correct jws string" rsa_jws text); *)
+            (CCResult.map (fun jwe -> jwe.Jose.Jwe.payload) jwe));
+      (* Alcotest.test_case "Can decrypt a JWE" `Quick (fun () ->
+         let jwk =
+           Jose.Jwk.of_priv_json_string rsa_priv_enc_json |> CCResult.get_exn
+         in
+         let text = Jose.Jwe.encrypt jwe_payload ~jwk in
+         check_string "correct jws string" rsa_jws text); *)
     ] )
 
 (* Begin tests *)
