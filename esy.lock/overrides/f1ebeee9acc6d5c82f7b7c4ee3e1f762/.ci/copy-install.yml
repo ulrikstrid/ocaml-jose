@@ -1,6 +1,0 @@
-parameters:
-  platform: darwin
-
-steps:
-- publish: test_dir/${{ parameters.platform }}
-  artifact: ${{ parameters.platform }}

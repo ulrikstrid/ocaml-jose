@@ -27,7 +27,6 @@
     "ocaml": ">=4.7.0"
   },
   "devDependencies": {
-    "fswatch": "ulrikstrid/esy-fswatch:esy.json",
     "@opam/alcotest": "*",
     "@opam/bisect_ppx": "^2.1.0",
     "@opam/containers": "*",
@@ -37,9 +36,6 @@
     "@opam/odoc": "*",
     "@opam/junit": "*",
     "@opam/junit_alcotest": "*",
-    "@opam/ocaml-lsp-server": "*"
-  },
-  "resolutions": {
-    "@opam/ocaml-lsp-server": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#d57bd91083cfca2472f0eae5d646118286705d78"
+    "@opam/ocaml-lsp-server": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam"
   }
 }
