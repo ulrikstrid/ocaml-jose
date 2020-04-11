@@ -50,6 +50,7 @@ let use_of_alg (alg : Jwa.alg) =
   | Jwa.HS256 -> `Sig
   | Jwa.RS256 -> `Sig
   | Jwa.RSA_OAEP -> `Enc
+  | Jwa.RSA1_5 -> `Enc
   | Jwa.None -> `Unsupported "none"
   | Jwa.Unsupported str -> `Unsupported str
 
