@@ -9,10 +9,6 @@ module RResult = struct
 
   let return v = Ok v
 
-  let get_exn = function Ok v -> v | Error _ -> raise (Failure "get_exn")
-
-  let get_default ~default = function Ok v -> v | Error _ -> default
-
   let both a b =
     match (a, b) with
     | Ok a, Ok b -> Ok (a, b)
@@ -32,8 +28,6 @@ module ROpt = struct
   let map fn o = match o with Some v -> Some (fn v) | None -> None
 
   let get_with_default ~default o = match o with Some v -> v | None -> default
-
-  let both a b = match (a, b) with Some a, Some b -> Some (a, b) | _ -> None
 end
 
 module RList = struct
@@ -75,10 +69,7 @@ module RBase64 = struct
     Base64.encode ~pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
 
   let url_decode ?(pad = false) ?off ?len payload =
-    let decoded =
-      Base64.decode ~pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
-    in
-    RResult.map_error (function `Msg s -> `Msg s) decoded
+    Base64.decode ~pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
 end
 
 module RJson = struct

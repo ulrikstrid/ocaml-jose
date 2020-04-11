@@ -5,7 +5,10 @@ let result_t :
     | `Json_parse_failed of string
     | `Unsupported_kty
     | `Invalid_signature
-    | `Missing_use_and_alg ]
+    | `Missing_use_and_alg
+    | `Invalid_JWE
+    | `Invalid_JWK
+    | `Decrypt_cek_failed ]
     Alcotest.testable =
   let pp ppf = function
     | `Msg e -> Fmt.string ppf e
@@ -15,6 +18,9 @@ let result_t :
     | `Unsupported_kty -> Fmt.string ppf "Unsupported kty"
     | `Invalid_signature -> Fmt.string ppf "Invalid signature"
     | `Missing_use_and_alg -> Fmt.string ppf "Missing use and alg"
+    | `Invalid_JWE -> Fmt.string ppf "Invalid JWE"
+    | `Invalid_JWK -> Fmt.string ppf "Invalide JWK"
+    | `Decrypt_cek_failed -> Fmt.string ppf "Failed to decrypt cek"
   in
   Alcotest.testable pp ( = )
 

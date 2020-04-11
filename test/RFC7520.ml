@@ -157,6 +157,10 @@ let oct_enc_A256GCMKW =
 "alg": "A256GCMKW",
 "k": "qC57l_uxcm7Nm3K-ct4GFjx8tM1U8CZ0NLBvdQstiS8"}|}
 
+(* Key Encryption Using RSA v1.5 and AES-HMAC-SHA2 *)
+let jwe_aes_hmac_sha2 =
+  "eyJhbGciOiJSU0ExXzUiLCJraWQiOiJmcm9kby5iYWdnaW5zQGhvYmJpdG9uLmV4YW1wbGUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.laLxI0j-nLH-_BgLOXMozKxmy9gffy2gTdvqzfTihJBuuzxg0V7yk1WClnQePFvG2K-pvSlWc9BRIazDrn50RcRai__3TDON395H3c62tIouJJ4XaRvYHFjZTZ2GXfz8YAImcc91Tfk0WXC2F5Xbb71ClQ1DDH151tlpH77f2ff7xiSxh9oSewYrcGTSLUeeCt36r1Kt3OSj7EyBQXoZlN7IxbyhMAfgIe7Mv1rOTOI5I8NQqeXXW8VlzNmoxaGMny3YnGir5Wf6Qt2nBq4qDaPdnaAuuGUGEecelIO1wx1BpyIfgvfjOhMBs9M8XL223Fg47xlGsMXdfuY-4jaqVw.bbd5sTkYwhAIqfHsx8DayA.0fys_TY_na7f8dwSfXLiYdHaA2DxUjD67ieF7fcVbIR62JhJvGZ4_FNVSiGc_raa0HnLQ6s1P2sv3Xzl1p1l_o5wR_RsSzrS8Z-wnI3Jvo0mkpEEnlDmZvDu_k8OWzJv7eZVEqiWKdyVzFhPpiyQU28GLOpRc2VbVbK4dQKPdNTjPPEmRqcaGeTWZVyeSUvf5k59yJZxRuSvWFf6KrNtmRdZ8R4mDOjHSrM_s8uwIFcqt4r5GX8TKaI0zT5CbL5Qlw3sRc7u_hg0yKVOiRytEAEs3vZkcfLkP6nbXdC_PkMdNS-ohP78T2O6_7uInMGhFeX4ctHG7VelHGiT93JfWDEQi5_V9UN1rhXNrYu-0fVMkZAKX3VWi7lzA6BP430m.kvKuFBXHe5mQr4lqgobAUg"
+
 let initialization_vector = "3qyTVhIWt5juqZUCpfRqpvauwB956MEJL2Rt-8qXKSo"
 
 let content_encryption_key = "bbd5sTkYwhAIqfHsx8DayA"
@@ -164,11 +168,32 @@ let content_encryption_key = "bbd5sTkYwhAIqfHsx8DayA"
 let jwe_rsa_tests =
   ( "JWE RSA",
     [
-      Alcotest.test_case "Generates the same JWE" `Quick (fun () ->
+      Alcotest.test_case "Can verify a JWE" `Quick (fun () ->
           let jwk =
             Jose.Jwk.of_priv_json_string rsa_priv_enc_json |> CCResult.get_exn
           in
-          let text = Jose.Jwe.encrypt jws_payload ~jwk in
+          let jwe = Jose.Jwe.decrypt jwe_aes_hmac_sha2 ~jwk in
+          check_result_string "correct kid in header"
+            (Ok "frodo.baggins@hobbiton.example")
+            (CCResult.map (fun jwe -> jwe.Jose.Jwe.header.kid) jwe);
+          check_result_string "corret initialization vector"
+            (Ok "bbd5sTkYwhAIqfHsx8DayA")
+            (CCResult.map (fun jwe -> jwe.Jose.Jwe.init_vector) jwe);
+          check_result_string "correct Content Encryption Key"
+            (Ok "3qyTVhIWt5juqZUCpfRqpvauwB956MEJL2Rt-8qXKSo")
+            (CCResult.map
+               (fun jwe ->
+                 jwe.Jose.Jwe.cek
+                 |> Base64.encode_string ~pad:false
+                      ~alphabet:Base64.uri_safe_alphabet)
+               jwe);
+          check_result_string "corret payload" (Ok jwe_payload)
+            (CCResult.map (fun jwe -> jwe.Jose.Jwe.payload) jwe));
+      Alcotest.test_case "Can decrypt a JWE" `Quick (fun () ->
+          let jwk =
+            Jose.Jwk.of_priv_json_string rsa_priv_enc_json |> CCResult.get_exn
+          in
+          let text = Jose.Jwe.encrypt jwe_payload ~jwk in
           check_string "correct jws string" rsa_jws text);
     ] )
 

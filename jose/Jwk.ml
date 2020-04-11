@@ -241,17 +241,7 @@ let pub_rsa_of_json json : (public t, 'error) result =
            match (alg, use) with
            | Some alg, Some use -> Ok (Rsa_pub { alg; kty; use; key })
            | Some alg, None ->
-               Ok
-                 (Rsa_pub
-                    {
-                      alg;
-                      kty;
-                      use =
-                        json |> Json.member "use" |> Json.to_string_option
-                        |> ROpt.map use_of_string
-                        |> ROpt.get_with_default ~default:(use_of_alg alg);
-                      key;
-                    })
+               Ok (Rsa_pub { alg; kty; use = use_of_alg alg; key })
            | None, Some use ->
                Ok (Rsa_pub { alg = alg_of_use_and_kty ~use kty; kty; use; key })
            | None, None -> Error `Missing_use_and_alg)
@@ -284,17 +274,7 @@ let priv_rsa_of_json json : (priv t, 'error) result =
            match (alg, use) with
            | Some alg, Some use -> Ok (Rsa_priv { alg; kty; use; key })
            | Some alg, None ->
-               Ok
-                 (Rsa_priv
-                    {
-                      alg;
-                      kty;
-                      use =
-                        json |> Json.member "use" |> Json.to_string_option
-                        |> ROpt.map use_of_string
-                        |> ROpt.get_with_default ~default:(use_of_alg alg);
-                      key;
-                    })
+               Ok (Rsa_priv { alg; kty; use = use_of_alg alg; key })
            | None, Some use ->
                Ok
                  (Rsa_priv { alg = alg_of_use_and_kty ~use kty; kty; use; key })
