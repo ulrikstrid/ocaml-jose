@@ -64,7 +64,7 @@ let validate (type a) ~(jwk : a Jwk.t) t =
   ( match header.alg with
   | Jwa.RS256 -> Ok header.alg
   | Jwa.HS256 -> Ok header.alg
-  | Jwa.Unsupported _ | Jwa.RSA_OAEP | Jwa.None ->
+  | Jwa.Unsupported _ | Jwa.RSA_OAEP | Jwa.RSA1_5 | Jwa.None ->
       Error (`Msg "alg must be RS256 or HS256") )
   |> RResult.flat_map (fun _ -> verify_internal ~jwk t)
   |> RResult.map (fun _ -> t)
