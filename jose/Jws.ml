@@ -40,9 +40,9 @@ let verify_HS256 (type a) ~(jwk : a Jwk.t) str =
 
 let verify_jwk (type a) ~(jwk : a Jwk.t) str =
   match Jwk.get_alg jwk with
-  | Jwa.RS256 -> verify_RS256 ~jwk str
-  | Jwa.HS256 -> verify_HS256 ~jwk str
-  | Jwa.None -> Ok str
+  | `RS256 -> verify_RS256 ~jwk str
+  | `HS256 -> verify_HS256 ~jwk str
+  | `None -> Ok str
   | _ -> Error (`Msg "alg not supported")
 
 let verify_internal (type a) ~(jwk : a Jwk.t) t =
@@ -62,9 +62,9 @@ let verify_internal (type a) ~(jwk : a Jwk.t) t =
 let validate (type a) ~(jwk : a Jwk.t) t =
   let header = t.header in
   ( match header.alg with
-  | Jwa.RS256 -> Ok header.alg
-  | Jwa.HS256 -> Ok header.alg
-  | Jwa.Unsupported _ | Jwa.RSA_OAEP | Jwa.RSA1_5 | Jwa.None ->
+  | `RS256 -> Ok header.alg
+  | `HS256 -> Ok header.alg
+  | `Unsupported _ | `RSA_OAEP | `RSA1_5 | `None ->
       Error (`Msg "alg must be RS256 or HS256") )
   |> RResult.flat_map (fun _ -> verify_internal ~jwk t)
   |> RResult.map (fun _ -> t)

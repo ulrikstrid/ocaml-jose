@@ -34,7 +34,7 @@ let encrypt ?protected payload ~(jwk : Jwk.priv Jwk.t) =
   let () = match protected with Some _ -> () | None -> () in
   let _input_key =
     match Jwk.get_alg jwk with
-    | Jwa.RSA_OAEP -> Ok (Mirage_crypto_rng.generate 32)
+    | `RSA_OAEP -> Ok (Mirage_crypto_rng.generate 32)
     | _ -> Error `Unsupported_enc
   in
   payload
@@ -48,12 +48,12 @@ let decrypt_cek alg str ~(jwk : Jwk.priv Jwk.t) =
     | None -> Error `Decrypt_cek_failed
   in
   match (alg, jwk) with
-  | Jwa.RSA1_5, Jwk.Rsa_priv rsa ->
+  | `RSA1_5, Jwk.Rsa_priv rsa ->
       Utils.RBase64.url_decode str
       |> RResult.map Cstruct.of_string
       |> RResult.map (Mirage_crypto_pk.Rsa.PKCS1.decrypt ~key:rsa.key)
       |> RResult.flat_map of_opt_cstruct
-  | Jwa.RSA_OAEP, Jwk.Rsa_priv rsa ->
+  | `RSA_OAEP, Jwk.Rsa_priv rsa ->
       Utils.RBase64.url_decode str
       |> RResult.map Cstruct.of_string
       |> RResult.map (RSA_OAEP.decrypt ~key:rsa.key)

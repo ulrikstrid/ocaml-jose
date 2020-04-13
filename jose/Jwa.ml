@@ -15,28 +15,28 @@ let kty_of_string : string -> kty = function
   | str -> raise (Failure ("Unsupported kty: " ^ str))
 
 type alg =
-  | RS256  (** HMAC using SHA-256 *)
-  | HS256  (** RSASSA-PKCS1-v1_5 using SHA-256 *)
-  | RSA_OAEP  (** RSAES OAEP using default parameters *)
-  | RSA1_5  (** RSA PKCS 1 *)
-  | None
-  | Unsupported of string
+  [ `RS256  (** HMAC using SHA-256 *)
+  | `HS256  (** RSASSA-PKCS1-v1_5 using SHA-256 *)
+  | `RSA_OAEP  (** RSAES OAEP using default parameters *)
+  | `RSA1_5  (** RSA PKCS 1 *)
+  | `None
+  | `Unsupported of string ]
 
 let alg_to_string = function
-  | RS256 -> "RS256"
-  | HS256 -> "HS256"
-  | RSA_OAEP -> "RSA-OAEP"
-  | RSA1_5 -> "RSA1_5"
-  | None -> "none"
-  | Unsupported string -> string
+  | `RS256 -> "RS256"
+  | `HS256 -> "HS256"
+  | `RSA_OAEP -> "RSA-OAEP"
+  | `RSA1_5 -> "RSA1_5"
+  | `None -> "none"
+  | `Unsupported string -> string
 
 let alg_of_string = function
-  | "RS256" -> RS256
-  | "HS256" -> HS256
-  | "RSA-OAEP" -> RSA_OAEP
-  | "RSA1_5" -> RSA1_5
-  | "none" -> None
-  | str -> Unsupported str
+  | "RS256" -> `RS256
+  | "HS256" -> `HS256
+  | "RSA-OAEP" -> `RSA_OAEP
+  | "RSA1_5" -> `RSA1_5
+  | "none" -> `None
+  | str -> `Unsupported str
 
 let alg_to_json alg = `String (alg_to_string alg)
 
