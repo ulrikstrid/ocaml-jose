@@ -13,9 +13,7 @@ type t = {
 }
 
 let make_header ?typ (jwk : Jwk.priv Jwk.t) =
-  let alg =
-    match jwk with Jwk.Rsa_priv _ -> Jwa.RS256 | Jwk.Oct _ -> Jwa.HS256
-  in
+  let alg = match jwk with Jwk.Rsa_priv _ -> `RS256 | Jwk.Oct _ -> `HS256 in
   {
     alg;
     jku = None;

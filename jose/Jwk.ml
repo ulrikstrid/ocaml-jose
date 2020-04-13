@@ -37,22 +37,21 @@ let use_of_string use =
 
 let alg_of_use_and_kty ?(use : use = `Sig) (kty : Jwa.kty) =
   match (use, kty) with
-  | `Sig, `oct -> Jwa.HS256
-  | `Sig, `RSA -> Jwa.RS256
-  | `Enc, `RSA -> Jwa.RSA_OAEP
-  | `Enc, `oct -> Jwa.Unsupported "encryption with oct is not supported yet"
-  | _, `EC -> Jwa.Unsupported "Eliptic curves are not supported yet"
-  | `Unsupported u, _ ->
-      Jwa.Unsupported ("We don't know what to do with use: " ^ u)
+  | `Sig, `oct -> `HS256
+  | `Sig, `RSA -> `RS256
+  | `Enc, `RSA -> `RSA_OAEP
+  | `Enc, `oct -> `Unsupported "encryption with oct is not supported yet"
+  | _, `EC -> `Unsupported "Eliptic curves are not supported yet"
+  | `Unsupported u, _ -> `Unsupported ("We don't know what to do with use: " ^ u)
 
 let use_of_alg (alg : Jwa.alg) =
   match alg with
-  | Jwa.HS256 -> `Sig
-  | Jwa.RS256 -> `Sig
-  | Jwa.RSA_OAEP -> `Enc
-  | Jwa.RSA1_5 -> `Enc
-  | Jwa.None -> `Unsupported "none"
-  | Jwa.Unsupported str -> `Unsupported str
+  | `HS256 -> `Sig
+  | `RS256 -> `Sig
+  | `RSA_OAEP -> `Enc
+  | `RSA1_5 -> `Enc
+  | `None -> `Unsupported "none"
+  | `Unsupported str -> `Unsupported str
 
 type public = Public
 
@@ -95,7 +94,7 @@ let get_kid (type a) (t : a t) =
 let make_oct ?(use : use = `Sig) (str : string) : priv t =
   (* Should we make this just return a result intead? *)
   let key = RBase64.url_encode_string str in
-  Oct { kty = `oct; use; alg = Jwa.HS256; key }
+  Oct { kty = `oct; use; alg = `HS256; key }
 
 let make_priv_rsa ?(use : use = `Sig) (rsa_priv : Mirage_crypto_pk.Rsa.priv) :
     priv t =

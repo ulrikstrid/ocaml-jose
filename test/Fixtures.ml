@@ -31,7 +31,7 @@ EQBaMSFXOODiel+5MdQcj41b
 
 let private_jwk_kty = `RSA
 
-let private_jwk_alg = Jose.Jwa.RS256
+let private_jwk_alg = `RS256
 
 let private_jwk_kid = "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik"
 
@@ -61,7 +61,7 @@ JQIDAQAB
 -----END PUBLIC KEY-----
 |}
 
-let public_jwk_alg : Jose.Jwa.alg = Jose.Jwa.RS256
+let public_jwk_alg : Jose.Jwa.alg = `RS256
 
 let public_jwk_kty = `RSA
 
@@ -94,7 +94,7 @@ let oct_jwk_priv_kid = "J4xQh7z-EaJI7Py1P4rFf2S0rppP2m4yKrZW4X4Yfuk"
 
 let oct_jwk_priv_kty = `oct
 
-let oct_jwk_priv_alg = Jose.Jwa.HS256
+let oct_jwk_priv_alg = `HS256
 
 let oct_jwk_string =
   {|{"alg":"HS256","kty":"oct","k":"MDZjM2JkNWMtMGY5Ny00YjNlLWJmMjAtZWIyOWFlOTM2M2Rl","kid":"J4xQh7z-EaJI7Py1P4rFf2S0rppP2m4yKrZW4X4Yfuk"}|}
