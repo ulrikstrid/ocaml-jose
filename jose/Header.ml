@@ -34,7 +34,7 @@ let of_json json =
   try
     Ok
       {
-        alg = json |> Json.member "alg" |> Json.to_string |> Jwa.alg_of_string;
+        alg = json |> Json.member "alg" |> Jwa.alg_of_json;
         jku = json |> Json.member "jku" |> Json.to_string_option;
         jwk =
           json |> Json.member "jwk"

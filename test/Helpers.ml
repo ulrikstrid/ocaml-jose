@@ -19,7 +19,7 @@ let result_t :
     | `Invalid_signature -> Fmt.string ppf "Invalid signature"
     | `Missing_use_and_alg -> Fmt.string ppf "Missing use and alg"
     | `Invalid_JWE -> Fmt.string ppf "Invalid JWE"
-    | `Invalid_JWK -> Fmt.string ppf "Invalide JWK"
+    | `Invalid_JWK -> Fmt.string ppf "Invalid JWK"
     | `Decrypt_cek_failed -> Fmt.string ppf "Failed to decrypt cek"
   in
   Alcotest.testable pp ( = )

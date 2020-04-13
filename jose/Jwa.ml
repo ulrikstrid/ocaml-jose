@@ -25,7 +25,7 @@ type alg =
 let alg_to_string = function
   | RS256 -> "RS256"
   | HS256 -> "HS256"
-  | RSA_OAEP -> "RSA_OAEP"
+  | RSA_OAEP -> "RSA-OAEP"
   | RSA1_5 -> "RSA1_5"
   | None -> "none"
   | Unsupported string -> string
@@ -33,14 +33,14 @@ let alg_to_string = function
 let alg_of_string = function
   | "RS256" -> RS256
   | "HS256" -> HS256
-  | "RSA_OAEP" -> RSA_OAEP
+  | "RSA-OAEP" -> RSA_OAEP
   | "RSA1_5" -> RSA1_5
   | "none" -> None
   | str -> Unsupported str
 
 let alg_to_json alg = `String (alg_to_string alg)
 
-let alg_of_json json = Yojson.Safe.to_string json |> alg_of_string
+let alg_of_json json = Yojson.Safe.Util.to_string json |> alg_of_string
 
 (** https://tools.ietf.org/html/rfc7518#section-5 *)
 type enc =
