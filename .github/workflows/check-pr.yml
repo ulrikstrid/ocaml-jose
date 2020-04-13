@@ -1,0 +1,61 @@
+name: Check PR
+
+on:
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+    steps:
+    - uses: actions/setup-node@v1
+      with:
+        node-version: 12
+    - uses: actions/checkout@v1
+    - name: Install esy
+      run: npm install -g esy
+    - name: Install dependencies
+      run: esy install
+    - name: Print esy cache
+      id: print_esy_cache
+      run: node .github/workflows/print_esy_cache.js
+    - name: Try to restore dependencies cache
+      id: deps-cache
+      uses: actions/cache@v1
+      with:
+        path: ${{ steps.print_esy_cache.outputs.esy_cache }}
+        key: ${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+    - name: Build
+      run: esy build
+    - name: Test
+      run: esy test
+      if: matrix.os != 'macos-latest'
+    - name: Test with coverage
+      run: node .github/workflows/test_with_coverage.js
+      if: matrix.os == 'macos-latest'
+    # - name: Benchmark
+    #   if: matrix.os == 'macos-latest'
+    #   uses: actions/github-script@0.8.0
+    #   with:
+    #     result-encoding: string
+    #     script: |
+    #       const Cp = require("child_process");
+
+    #       Cp.execSync("esy @benchmark");
+    #       const benchmark = Cp.execSync(`esy @benchmark "#{self.target_dir / 'default' / 'lib_bench' / 'main.exe' }"`);
+          
+    #       console.log(benchmark);
+          
+    #       github.issues.createComment({
+    #           issue_number: context.issue.number,
+    #           owner: context.repo.owner,
+    #           repo: context.repo.repo,
+    #           body: `Benchmark for this PR is:
+    #         \`\`\`
+    #         ${benchmark}
+    #         \`\`\``
+    #       });
