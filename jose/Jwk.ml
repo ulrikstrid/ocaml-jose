@@ -285,9 +285,7 @@ let priv_rsa_of_json json : (priv t, 'error) result =
 let oct_of_json json =
   let module Json = Yojson.Safe.Util in
   try
-    let alg =
-      json |> Json.member "alg" |> Json.to_string |> Jwa.alg_of_string
-    in
+    let alg = json |> Json.member "alg" |> Jwa.alg_of_json in
     Ok
       (Oct
          {
