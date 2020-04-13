@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@opam/alcotest": "*",
-    "@opam/bisect_ppx": "^2.1.0",
+    "@opam/bisect_ppx": "^2.3.0",
     "@opam/containers": "*",
     "@opam/lwt": "*",
     "@opam/merlin": "*",
