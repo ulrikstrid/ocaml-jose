@@ -80,7 +80,7 @@ let decrypt_ciphertext enc ~cek ~init_vector ~auth_tag ~aad ciphertext =
   RBase64.url_decode ciphertext >>= fun encrypted ->
   let encrypted = Cstruct.of_string encrypted in
   match enc with
-  | Some Jwa.A128CBC_HS256 ->
+  | Some `A128CBC_HS256 ->
       (* RFC 7516 appendix B.1: first 128 bit hmac, last 128 bit aes *)
       let hmac_key, aes_key = Cstruct.(split (of_string cek) 16) in
       let key = Mirage_crypto.Cipher_block.AES.CBC.of_secret aes_key in
@@ -104,7 +104,7 @@ let decrypt_ciphertext enc ~cek ~init_vector ~auth_tag ~aad ciphertext =
         Mirage_crypto.Cipher_block.AES.CBC.decrypt ~key ~iv encrypted
         |> pkcs7_unpad
         >>= fun data -> Ok (Cstruct.to_string data)
-  | Some Jwa.A256GCM ->
+  | Some `A256GCM ->
       let cek = Cstruct.of_string cek in
       let key = Mirage_crypto.Cipher_block.AES.GCM.of_secret cek in
       let adata = Cstruct.of_string aad in

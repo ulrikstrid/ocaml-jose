@@ -38,13 +38,13 @@ module Jwa : sig
 
   val kty_of_string : string -> kty
 
-  (** {{: https://tools.ietf.org/html/rfc7518#section-5 } Link to RFC}*)
+  (** https://tools.ietf.org/html/rfc7518#section-5 *)
   type enc =
-    | A128CBC_HS256
-        (** AES_128_CBC_HMAC_SHA_256 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.3 *)
-    | A256CBC_HS512
-        (** AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.5 *)
-    | A256GCM  (** AES GCM using 256-bit key *)
+    [ `A128CBC_HS256
+      (** AES_128_CBC_HMAC_SHA_256 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.3 *)
+    | `A256CBC_HS512
+      (** AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.5 *)
+    | `A256GCM  (** AES GCM using 256-bit key *) ]
 
   val enc_to_string : enc -> string
 
