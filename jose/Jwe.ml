@@ -1,3 +1,4 @@
+open Utils
 (** {{: https://tools.ietf.org/html/rfc7516 } Link to RFC } *)
 
 type t = {
@@ -7,6 +8,12 @@ type t = {
   payload : string;
   aad : string option;
 }
+
+module RSA_OAEP = Mirage_crypto_pk.Rsa.OAEP (Mirage_crypto.Hash.SHA1)
+
+let bind v f = match v with Ok v -> f v | Error _ as e -> e
+
+let ( >>= ) = bind
 
 (*
 Steps to create a JWE
@@ -22,25 +29,49 @@ Steps to create a JWE
 * Base64url encode the Authentication Tag to create the Encoded JWE Authentication Tag.
 * Assemble the final representation: The Compact Serialization of this result is the concatenation of the Encoded JWE Header, the Encoded JWE Encrypted Key, the Encoded JWE Initialization Vector, the Encoded JWE Ciphertext, and the Encoded JWE Authentication Tag in that order, with the five strings being separated by four period ('.') characters. 
 *)
-(*
-  TODO: Implement encryption
+
 let make_cek enc =
   let key_length = Jwa.enc_to_length enc in
   Mirage_crypto_rng.generate (key_length / 8)
   |> Cstruct.to_string
   |> Jwk.make_oct ~use:`Enc
 
-let encrypt ?protected payload ~(jwk : Jwk.priv Jwk.t) =
-  let () = match protected with Some _ -> () | None -> () in
-  let _input_key =
-    match Jwk.get_alg jwk with
-    | `RSA_OAEP -> Ok (Mirage_crypto_rng.generate 32)
-    | _ -> Error `Unsupported_enc
+let encrypt_payload ~enc ~cek ~init_vector ~aad payload =
+  let iv = Cstruct.of_string init_vector in
+  match enc with
+  | Some `A256GCM ->
+      let cek = Cstruct.of_string cek in
+      let key = Mirage_crypto.Cipher_block.AES.GCM.of_secret cek in
+      let adata = Cstruct.of_string aad in
+      Mirage_crypto.Cipher_block.AES.GCM.encrypt ~key ~iv ~adata
+        (Cstruct.of_string payload)
+      |> fun { message; tag } ->
+      let tag_string = Cstruct.to_string tag in
+      let ciphertext = Cstruct.to_string message in
+      Ok (ciphertext, tag_string)
+  | _ -> Error (`Msg "unsupported encryption")
+
+let encrypt (type a) ~(jwk : a Jwk.t) t =
+  let key =
+    match jwk with
+    | Rsa_priv rsa -> rsa.key |> Mirage_crypto_pk.Rsa.pub_of_priv
+    | Rsa_pub rsa -> rsa.key
+    | Oct _ -> raise (Invalid_argument "oct")
   in
-  payload
-*)
-open Utils
-module RSA_OAEP = Mirage_crypto_pk.Rsa.OAEP (Mirage_crypto.Hash.SHA1)
+  let header_string = Header.to_string t.header |> RResult.get_exn in
+  let cek = t.cek |> Cstruct.of_string in
+  let jek = RSA_OAEP.encrypt ~key cek |> Cstruct.to_string in
+  let ecek = RBase64.url_encode_string jek in
+  let einit_vector = RBase64.url_encode_string t.init_vector in
+  let ciphertext, auth_tag =
+    encrypt_payload ~enc:t.header.enc ~cek:t.cek ~init_vector:t.init_vector
+      ~aad:header_string t.payload
+    |> RResult.get_exn
+  in
+  header_string ^ "." ^ ecek ^ "." ^ einit_vector ^ "."
+  ^ RBase64.url_encode_string ciphertext
+  ^ "."
+  ^ RBase64.url_encode_string auth_tag
 
 let decrypt_cek alg str ~(jwk : Jwk.priv Jwk.t) =
   let of_opt_cstruct = function
@@ -69,10 +100,6 @@ let pkcs7_unpad cs =
     else Cstruct.get_uint8 padding idx = pad_len && check (idx + 1)
   in
   if check 0 then Ok data else Error (`Msg "bad padding")
-
-let bind v f = match v with Ok v -> f v | Error _ as e -> e
-
-let ( >>= ) = bind
 
 (* Move to Jwa? *)
 let decrypt_ciphertext enc ~cek ~init_vector ~auth_tag ~aad ciphertext =
@@ -124,6 +151,5 @@ let decrypt jwe ~(jwk : Jwk.priv Jwk.t) =
       RBase64.url_decode auth_tag >>= fun auth_tag ->
       decrypt_ciphertext header.Header.enc ~cek ~init_vector ~auth_tag
         ~aad:enc_header ciphertext
-      >>= fun payload ->
-      Ok { header; cek; init_vector = enc_init_vector; payload; aad = None }
+      >>= fun payload -> Ok { header; cek; init_vector; payload; aad = None }
   | _ -> Error `Invalid_JWE

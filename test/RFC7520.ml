@@ -174,6 +174,22 @@ let jwe_rsa_oaep_aes_gcm_5_2 =
 let jwe_rsa_tests =
   ( "JWE RSA",
     [
+      Alcotest.test_case "Can encrypt a JWE Using RSA-OAEP with AES-GCM" `Quick
+        (fun () ->
+          let jwk =
+            Jose.Jwk.of_priv_json_string rsa_priv_enc_json_5_2
+            |> CCResult.get_exn
+          in
+          let jwe =
+            Jose.Jwe.decrypt jwe_rsa_oaep_aes_gcm_5_2 ~jwk |> CCResult.get_exn
+          in
+          let str = Jose.Jwe.encrypt ~jwk jwe in
+          let jwe2 = Jose.Jwe.decrypt ~jwk str |> CCResult.get_exn in
+          check_string "Has the same payload after roundtrip" jwe.payload
+            jwe2.payload;
+          check_string "Has the same cek after roundtrip" jwe.cek jwe2.cek;
+          check_string "Has the same init_vector after roundtrip"
+            jwe.init_vector jwe2.init_vector);
       Alcotest.test_case "Can decrypt a JWE Using RSA v1.5 and AES-HMAC-SHA2"
         `Quick (fun () ->
           let jwk =
@@ -197,7 +213,12 @@ let jwe_rsa_tests =
                jwe);
           check_result_string "correct initialization vector"
             (Ok "bbd5sTkYwhAIqfHsx8DayA")
-            (CCResult.map (fun jwe -> jwe.Jose.Jwe.init_vector) jwe);
+            (CCResult.map
+               (fun jwe ->
+                 jwe.Jose.Jwe.init_vector
+                 |> Base64.encode_string ~pad:false
+                      ~alphabet:Base64.uri_safe_alphabet)
+               jwe);
           check_result_string "correct Content Encryption Key"
             (Ok "3qyTVhIWt5juqZUCpfRqpvauwB956MEJL2Rt-8qXKSo")
             (CCResult.map
@@ -231,7 +252,12 @@ let jwe_rsa_tests =
                jwe);
           check_result_string "correct initialization vector"
             (Ok "-nBoKLH0YkLZPSI9")
-            (CCResult.map (fun jwe -> jwe.Jose.Jwe.init_vector) jwe);
+            (CCResult.map
+               (fun jwe ->
+                 jwe.Jose.Jwe.init_vector
+                 |> Base64.encode_string ~pad:false
+                      ~alphabet:Base64.uri_safe_alphabet)
+               jwe);
           check_result_string "correct Content Encryption Key"
             (Ok "mYMfsggkTAm0TbvtlFh2hyoXnbEzJQjMxmgLN3d8xXA")
             (CCResult.map
