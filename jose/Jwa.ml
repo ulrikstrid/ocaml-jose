@@ -42,13 +42,13 @@ let alg_to_json alg = `String (alg_to_string alg)
 
 let alg_of_json json = Yojson.Safe.Util.to_string json |> alg_of_string
 
+(** https://tools.ietf.org/html/rfc7518#section-5 *)
 type enc =
   [ `A128CBC_HS256
     (** AES_128_CBC_HMAC_SHA_256 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.3 *)
   | `A256CBC_HS512
     (** AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.5 *)
   | `A256GCM  (** AES GCM using 256-bit key *) ]
-(** https://tools.ietf.org/html/rfc7518#section-5 *)
 
 let enc_to_string enc =
   match enc with
