@@ -20,6 +20,11 @@ module RResult = struct
     | Ok a, Ok b, Ok c, Ok d, Ok e, Ok f, Ok g, Ok h ->
         Ok (a, b, c, d, e, f, g, h)
     | _ -> Error (`Msg "all 8 was not Ok")
+
+  let get_exn = function
+    | Ok a -> a
+    | Error (`Msg m) -> raise (Invalid_argument m)
+    | Error _ -> raise Not_found
 end
 
 module ROpt = struct
