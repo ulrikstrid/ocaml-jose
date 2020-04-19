@@ -174,6 +174,25 @@ let jwe_rsa_oaep_aes_gcm_5_2 =
 let jwe_rsa_tests =
   ( "JWE RSA",
     [
+      Alcotest.test_case "Can encrypt a JWE Using RSA v1.5 and AES-HMAC-SHA2"
+        `Quick (fun () ->
+          let jwk =
+            Jose.Jwk.of_priv_json_string rsa_priv_enc_json_5_1
+            |> CCResult.get_exn
+          in
+          let jwe =
+            Jose.Jwe.decrypt jwe_aes_hmac_sha2_5_1 ~jwk |> CCResult.get_exn
+          in
+          let str = Jose.Jwe.encrypt ~jwk jwe in
+          let jwe2 = Jose.Jwe.decrypt ~jwk str in
+          check_result_string "Has the same payload after roundtrip"
+            (Ok jwe.payload)
+            (CCResult.map (fun (j : Jose.Jwe.t) -> j.payload) jwe2);
+          check_result_string "Has the same cek after roundtrip" (Ok jwe.cek)
+            (CCResult.map (fun (j : Jose.Jwe.t) -> j.cek) jwe2);
+          check_result_string "Has the same init_vector after roundtrip"
+            (Ok jwe.init_vector)
+            (CCResult.map (fun (j : Jose.Jwe.t) -> j.init_vector) jwe2));
       Alcotest.test_case "Can encrypt a JWE Using RSA-OAEP with AES-GCM" `Quick
         (fun () ->
           let jwk =
@@ -184,12 +203,15 @@ let jwe_rsa_tests =
             Jose.Jwe.decrypt jwe_rsa_oaep_aes_gcm_5_2 ~jwk |> CCResult.get_exn
           in
           let str = Jose.Jwe.encrypt ~jwk jwe in
-          let jwe2 = Jose.Jwe.decrypt ~jwk str |> CCResult.get_exn in
-          check_string "Has the same payload after roundtrip" jwe.payload
-            jwe2.payload;
-          check_string "Has the same cek after roundtrip" jwe.cek jwe2.cek;
-          check_string "Has the same init_vector after roundtrip"
-            jwe.init_vector jwe2.init_vector);
+          let jwe2 = Jose.Jwe.decrypt ~jwk str in
+          check_result_string "Has the same payload after roundtrip"
+            (Ok jwe.payload)
+            (CCResult.map (fun (j : Jose.Jwe.t) -> j.payload) jwe2);
+          check_result_string "Has the same cek after roundtrip" (Ok jwe.cek)
+            (CCResult.map (fun (j : Jose.Jwe.t) -> j.cek) jwe2);
+          check_result_string "Has the same init_vector after roundtrip"
+            (Ok jwe.init_vector)
+            (CCResult.map (fun (j : Jose.Jwe.t) -> j.init_vector) jwe2));
       Alcotest.test_case "Can decrypt a JWE Using RSA v1.5 and AES-HMAC-SHA2"
         `Quick (fun () ->
           let jwk =

@@ -36,9 +36,38 @@ let make_cek enc =
   |> Cstruct.to_string
   |> Jwk.make_oct ~use:`Enc
 
+let pkcs7_pad len cs =
+  let cs_len = Cstruct.len cs in
+  let pad_len = len - cs_len in
+  let padding =
+    String.make pad_len (Cstruct.byte pad_len) |> Cstruct.of_string
+  in
+  Cstruct.append cs padding
+
 let encrypt_payload ~enc ~cek ~init_vector ~aad payload =
   let iv = Cstruct.of_string init_vector in
   match enc with
+  | Some `A128CBC_HS256 ->
+      (* RFC 7516 appendix B.1: first 128 bit hmac, last 128 bit aes *)
+      let hmac_key, aes_key = Cstruct.(split (of_string cek) 16) in
+      let key = Mirage_crypto.Cipher_block.AES.CBC.of_secret aes_key in
+      (* B.2 encryption in CBC mode *)
+      Mirage_crypto.Cipher_block.AES.CBC.encrypt ~key ~iv
+        (Cstruct.of_string payload |> pkcs7_pad 512)
+      |> fun data ->
+      (* B.5 input to HMAC computation *)
+      let hmac_input =
+        (* B.3 64 bit big-endian AAD length (in bits!) *)
+        let aal = Cstruct.create 8 in
+        Cstruct.BE.set_uint64 aal 0 Int64.(mul 8L (of_int (String.length aad)));
+        Cstruct.(concat [ of_string aad; iv; data; aal ])
+      in
+      let computed_auth_tag =
+        let full = Mirage_crypto.Hash.SHA256.hmac ~key:hmac_key hmac_input in
+        (* B.7 truncate to 128 bit *)
+        Cstruct.sub full 0 16 |> Cstruct.to_string
+      in
+      Ok (Cstruct.to_string data, computed_auth_tag)
   | Some `A256GCM ->
       let cek = Cstruct.of_string cek in
       let key = Mirage_crypto.Cipher_block.AES.GCM.of_secret cek in
@@ -51,27 +80,47 @@ let encrypt_payload ~enc ~cek ~init_vector ~aad payload =
       Ok (ciphertext, tag_string)
   | _ -> Error (`Msg "unsupported encryption")
 
-let encrypt (type a) ~(jwk : a Jwk.t) t =
-  let key =
+let encrypt_cek (type a) alg (cek : string) ~(jwk : a Jwk.t) =
+  let key : Mirage_crypto_pk.Rsa.pub =
     match jwk with
-    | Rsa_priv rsa -> rsa.key |> Mirage_crypto_pk.Rsa.pub_of_priv
+    | Rsa_priv rsa -> Mirage_crypto_pk.Rsa.pub_of_priv rsa.key
     | Rsa_pub rsa -> rsa.key
     | Oct _ -> raise (Invalid_argument "oct")
   in
+  match alg with
+  | `RSA1_5 ->
+      let ecek =
+        cek |> Cstruct.of_string
+        |> Mirage_crypto_pk.Rsa.PKCS1.encrypt ~key
+        |> Cstruct.to_string
+      in
+      Ok ecek
+  | `RSA_OAEP ->
+      let cek = Cstruct.of_string cek in
+      let jek = RSA_OAEP.encrypt ~key cek |> Cstruct.to_string in
+      Ok jek
+  | _ -> Error `Invalid_alg
+
+let encrypt (type a) ~(jwk : a Jwk.t) t =
   let header_string = Header.to_string t.header |> RResult.get_exn in
-  let cek = t.cek |> Cstruct.of_string in
-  let jek = RSA_OAEP.encrypt ~key cek |> Cstruct.to_string in
-  let ecek = RBase64.url_encode_string jek in
+  let ecek =
+    encrypt_cek t.header.alg t.cek ~jwk
+    |> RResult.get_exn |> RBase64.url_encode_string
+  in
   let einit_vector = RBase64.url_encode_string t.init_vector in
   let ciphertext, auth_tag =
     encrypt_payload ~enc:t.header.enc ~cek:t.cek ~init_vector:t.init_vector
       ~aad:header_string t.payload
     |> RResult.get_exn
   in
-  header_string ^ "." ^ ecek ^ "." ^ einit_vector ^ "."
-  ^ RBase64.url_encode_string ciphertext
-  ^ "."
-  ^ RBase64.url_encode_string auth_tag
+  String.concat "."
+    [
+      header_string;
+      ecek;
+      einit_vector;
+      RBase64.url_encode_string ciphertext;
+      RBase64.url_encode_string auth_tag;
+    ]
 
 let decrypt_cek alg str ~(jwk : Jwk.priv Jwk.t) =
   let of_opt_cstruct = function

@@ -23,8 +23,8 @@ module RResult = struct
 
   let get_exn = function
     | Ok a -> a
-    | Error (`Msg m) -> raise (Invalid_argument m)
-    | Error _ -> raise Not_found
+    | Error (`Msg m) -> invalid_arg m
+    | Error _ -> failwith "get_exn"
 end
 
 module ROpt = struct
