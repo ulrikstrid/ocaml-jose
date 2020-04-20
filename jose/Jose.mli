@@ -60,10 +60,6 @@ module Jwk : sig
   type use = [ `Sig | `Enc | `Unsupported of string ]
   (** [use] will default to [`Sig] in all functions unless supplied *)
 
-  val use_to_string : use -> string
-
-  val use_of_string : string -> use
-
   type public = Public
 
   type priv = Private
@@ -223,6 +219,10 @@ module Jwk : sig
 
   val get_alg : 'a t -> Jwa.alg
   (** [get_alg jwk] is a convencience function to get the algorithm *)
+
+  val use_to_string : use -> string
+
+  val use_of_string : string -> use
 end
 
 (**
