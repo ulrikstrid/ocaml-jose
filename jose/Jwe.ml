@@ -1,5 +1,5 @@
-(** {{: https://tools.ietf.org/html/rfc7516 } Link to RFC } *)
 open Utils
+(** {{: https://tools.ietf.org/html/rfc7516 } Link to RFC } *)
 
 type t = {
   header : Header.t;
@@ -95,25 +95,24 @@ let encrypt_cek (type a) alg (cek : string) ~(jwk : a Jwk.t) =
   | _ -> Error `Invalid_alg
 
 let encrypt (type a) ~(jwk : a Jwk.t) t =
-  let header_string = Header.to_string t.header |> RResult.get_exn in
-  let ecek =
-    encrypt_cek t.header.alg t.cek ~jwk
-    |> RResult.get_exn |> RBase64.url_encode_string
-  in
+  let open RResult.Infix in
+  let header_string = Header.to_string t.header in
+
+  encrypt_cek t.header.alg t.cek ~jwk >|= RBase64.url_encode_string
+  >>= fun ecek ->
   let einit_vector = RBase64.url_encode_string t.init_vector in
-  let ciphertext, auth_tag =
-    encrypt_payload ?enc:t.header.enc ~cek:t.cek ~init_vector:t.init_vector
-      ~aad:header_string t.payload
-    |> RResult.get_exn
-  in
-  String.concat "."
-    [
-      header_string;
-      ecek;
-      einit_vector;
-      RBase64.url_encode_string ciphertext;
-      RBase64.url_encode_string auth_tag;
-    ]
+  encrypt_payload ?enc:t.header.enc ~cek:t.cek ~init_vector:t.init_vector
+    ~aad:header_string t.payload
+  >>= fun (ciphertext, auth_tag) ->
+  Ok
+    (String.concat "."
+       [
+         header_string;
+         ecek;
+         einit_vector;
+         RBase64.url_encode_string ciphertext;
+         RBase64.url_encode_string auth_tag;
+       ])
 
 let decrypt_cek alg str ~(jwk : Jwk.priv Jwk.t) =
   let of_opt_cstruct = function

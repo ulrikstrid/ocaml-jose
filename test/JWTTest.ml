@@ -48,7 +48,7 @@ let jwt_suite, _ =
               let jwt_r = Jwt.sign ~header:(Obj.magic header) ~payload jwk in
               check_result_string "JWT is correctly created"
                 (Ok Fixtures.external_jwt_string)
-                (CCResult.flat_map Jwt.to_string jwt_r));
+                (CCResult.map Jwt.to_string jwt_r));
           Alcotest.test_case "Can create a JWT with HS256" `Quick (fun () ->
               let open Jose in
               let header =
@@ -69,7 +69,7 @@ let jwt_suite, _ =
               let jwt_r = Jwt.sign ~header:(Obj.magic header) ~payload jwk in
               check_result_string "JWT is correctly created"
                 (Ok Fixtures.oct_jwt_string)
-                (CCResult.flat_map Jwt.to_string jwt_r));
+                (CCResult.map Jwt.to_string jwt_r));
           Alcotest.test_case "Can validate my own RSA JWT (priv rsa)" `Quick
             (fun () ->
               let open Jose in
@@ -86,7 +86,7 @@ let jwt_suite, _ =
               in
               check_result_string "JWT is correctly created"
                 (Ok Fixtures.external_jwt_string)
-                (CCResult.flat_map Jwt.to_string jwt_r));
+                (CCResult.map Jwt.to_string jwt_r));
           Alcotest.test_case "Can validate my own RSA JWT (pub rsa)" `Quick
             (fun () ->
               let open Jose in
@@ -106,7 +106,7 @@ let jwt_suite, _ =
               in
               check_result_string "JWT is correctly created"
                 (Ok Fixtures.external_jwt_string)
-                (CCResult.flat_map Jwt.to_string jwt_r));
+                (CCResult.map Jwt.to_string jwt_r));
           Alcotest.test_case "Can validate my own OCT JWT" `Quick (fun () ->
               let open Jose in
               let header =
@@ -123,7 +123,7 @@ let jwt_suite, _ =
               in
               check_result_string "JWT is correctly created"
                 (Ok Fixtures.oct_jwt_string)
-                (CCResult.flat_map Jwt.to_string jwt_r));
+                (CCResult.map Jwt.to_string jwt_r));
         ] );
     ]
 
