@@ -15,6 +15,8 @@ module RResult = struct
     | Error e, _ -> Error e
     | _, Error e -> Error e
 
+  let bind v f = match v with Ok v -> f v | Error _ as e -> e
+
   let all8 a b c d e f g h =
     match (a, b, c, d, e, f, g, h) with
     | Ok a, Ok b, Ok c, Ok d, Ok e, Ok f, Ok g, Ok h ->
@@ -25,6 +27,10 @@ module RResult = struct
     | Ok a -> a
     | Error (`Msg m) -> invalid_arg m
     | Error _ -> failwith "get_exn"
+
+  module Infix = struct
+    let ( >>= ) = bind
+  end
 end
 
 module ROpt = struct
@@ -80,4 +86,26 @@ end
 module RJson = struct
   let to_json_string_opt key value =
     match value with Some s -> Some (key, `String s) | None -> None
+end
+
+module Pkcs7 = struct
+  let pad data block_size =
+    let pad_size = block_size - (Cstruct.len data mod block_size) in
+    if pad_size = 0 then data
+    else
+      (* this is the remaining bytes in the last block *)
+      let pad = Cstruct.create pad_size in
+      Cstruct.memset pad pad_size;
+      (* fills the pad buffer with bytes each containing "pad_size" as value *)
+      Cstruct.append data pad
+
+  let unpad cs =
+    let cs_len = Cstruct.len cs in
+    let pad_len = Cstruct.get_uint8 cs (cs_len - 1) in
+    let data, padding = Cstruct.split cs (cs_len - pad_len) in
+    let rec check idx =
+      if idx >= pad_len then true
+      else Cstruct.get_uint8 padding idx = pad_len && check (idx + 1)
+    in
+    if check 0 then Ok data else Error (`Msg "bad padding")
 end
