@@ -71,15 +71,16 @@ let encrypt_payload ?enc ~cek ~init_vector ~aad payload =
       let tag_string = Cstruct.to_string tag in
       let ciphertext = Cstruct.to_string message in
       Ok (ciphertext, tag_string)
-  | _ -> Error (`Msg "unsupported encryption")
+  | None -> Error `Missing_enc
+  | _ -> Error `Unsupported_enc
 
 let encrypt_cek (type a) alg (cek : string) ~(jwk : a Jwk.t) =
-  let key : Mirage_crypto_pk.Rsa.pub =
-    match jwk with
-    | Rsa_priv rsa -> Mirage_crypto_pk.Rsa.pub_of_priv rsa.key
-    | Rsa_pub rsa -> rsa.key
-    | Oct _ -> raise (Invalid_argument "oct")
-  in
+  let open RResult.Infix in
+  ( match jwk with
+  | Rsa_priv rsa -> Ok (Mirage_crypto_pk.Rsa.pub_of_priv rsa.key)
+  | Rsa_pub rsa -> Ok rsa.key
+  | Oct _ -> Error `Unsupported_kty )
+  >>= fun key ->
   match alg with
   | `RSA1_5 ->
       let ecek =
