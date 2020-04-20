@@ -16,7 +16,7 @@ let empty_payload = `Assoc []
 
 let payload_to_string payload =
   let serialized_payload = Yojson.Safe.to_string payload in
-  RBase64.url_encode serialized_payload
+  RBase64.url_encode_string serialized_payload
 
 let payload_of_string payload_str =
   let payload = RBase64.url_decode payload_str in
@@ -31,9 +31,7 @@ let add_claim (claim_name : string) (claim_value : Yojson.Safe.t)
 let to_string t =
   let header_str = Header.to_string t.header in
   let payload_str = payload_to_string t.payload in
-  RResult.both header_str payload_str
-  |> RResult.map (fun (header_str, payload_str) ->
-         header_str ^ "." ^ payload_str ^ "." ^ t.signature)
+  header_str ^ "." ^ payload_str ^ "." ^ t.signature
 
 let of_string token =
   String.split_on_char '.' token |> function

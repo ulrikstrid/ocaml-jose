@@ -30,6 +30,8 @@ module RResult = struct
 
   module Infix = struct
     let ( >>= ) = bind
+
+    let ( >|= ) r fn = match r with Ok v -> Ok (fn v) | Error e -> Error e
   end
 end
 

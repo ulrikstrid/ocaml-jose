@@ -91,7 +91,7 @@ let jws_rsa_tests =
                    Jose.Jws.sign ~header ~payload:jws_payload jwk)
           in
           check_result_string "correct jws string" (Ok rsa_jws)
-            (CCResult.flat_map Jose.Jws.to_string jws));
+            (CCResult.map Jose.Jws.to_string jws));
     ] )
 
 (* https://tools.ietf.org/html/rfc7520#section-4.4 *)
@@ -134,7 +134,7 @@ let jws_oct_tests =
                    Jose.Jws.sign ~header ~payload:jws_payload jwk)
           in
           check_result_string "correct jws string" (Ok oct_jws)
-            (CCResult.flat_map Jose.Jws.to_string jws));
+            (CCResult.map Jose.Jws.to_string jws));
     ] )
 
 let rsa_priv_enc_json_5_1 =
@@ -183,7 +183,7 @@ let jwe_rsa_tests =
           let jwe =
             Jose.Jwe.decrypt jwe_aes_hmac_sha2_5_1 ~jwk |> CCResult.get_exn
           in
-          let str = Jose.Jwe.encrypt ~jwk jwe in
+          let str = Jose.Jwe.encrypt ~jwk jwe |> CCResult.get_exn in
           let jwe2 = Jose.Jwe.decrypt ~jwk str in
           check_result_string "Has the same payload after roundtrip"
             (Ok jwe.payload)
@@ -202,7 +202,7 @@ let jwe_rsa_tests =
           let jwe =
             Jose.Jwe.decrypt jwe_rsa_oaep_aes_gcm_5_2 ~jwk |> CCResult.get_exn
           in
-          let str = Jose.Jwe.encrypt ~jwk jwe in
+          let str = Jose.Jwe.encrypt ~jwk jwe |> CCResult.get_exn in
           let jwe2 = Jose.Jwe.decrypt ~jwk str in
           check_result_string "Has the same payload after roundtrip"
             (Ok jwe.payload)

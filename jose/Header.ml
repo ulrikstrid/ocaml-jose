@@ -73,4 +73,4 @@ let of_string header_str =
          Yojson.Safe.from_string decoded_header |> of_json)
 
 let to_string header =
-  to_json header |> Yojson.Safe.to_string |> RBase64.url_encode
+  to_json header |> Yojson.Safe.to_string |> RBase64.url_encode_string

@@ -15,10 +15,8 @@ let of_string token =
 
 let to_string t =
   let header_str = Header.to_string t.header in
-  let payload_str = t.payload |> RBase64.url_encode in
-  RResult.both header_str payload_str
-  |> RResult.map (fun (header_str, payload_str) ->
-         header_str ^ "." ^ payload_str ^ "." ^ t.signature)
+  let payload_str = t.payload |> RBase64.url_encode_string in
+  header_str ^ "." ^ payload_str ^ "." ^ t.signature
 
 let verify_RS256 (type a) ~(jwk : a Jwk.t) str =
   ( match jwk with
@@ -46,18 +44,16 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) str =
   | _ -> Error (`Msg "alg not supported")
 
 let verify_internal (type a) ~(jwk : a Jwk.t) t =
-  Header.to_string t.header
-  |> RResult.flat_map (fun header_str ->
-         let input_str = header_str ^ "." ^ t.payload in
-         t.signature |> RBase64.url_decode
-         |> RResult.map Cstruct.of_string
-         |> RResult.flat_map (verify_jwk ~jwk)
-         |> RResult.map (fun message ->
-                let token_hash =
-                  input_str |> Cstruct.of_string
-                  |> Mirage_crypto.Hash.SHA256.digest
-                in
-                Cstruct.equal message token_hash))
+  let header_str = Header.to_string t.header in
+  let input_str = header_str ^ "." ^ t.payload in
+  t.signature |> RBase64.url_decode
+  |> RResult.map Cstruct.of_string
+  |> RResult.flat_map (verify_jwk ~jwk)
+  |> RResult.map (fun message ->
+         let token_hash =
+           input_str |> Cstruct.of_string |> Mirage_crypto.Hash.SHA256.digest
+         in
+         Cstruct.equal message token_hash)
 
 let validate (type a) ~(jwk : a Jwk.t) t =
   let header = t.header in
@@ -84,10 +80,12 @@ let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
   in
   match sign_f with
   | Ok sign_f ->
-      RResult.both (Header.to_string header) (RBase64.url_encode payload)
-      |> RResult.flat_map (fun (header_str, payload_str) ->
-             let input_str = header_str ^ "." ^ payload_str in
-             `Message (Cstruct.of_string input_str)
-             |> sign_f |> Cstruct.to_string |> RBase64.url_encode)
-      |> RResult.map (fun signature -> { header; payload; signature })
+      let header_str = Header.to_string header in
+      let payload_str = RBase64.url_encode_string payload in
+      let input_str = header_str ^ "." ^ payload_str in
+      let signature =
+        `Message (Cstruct.of_string input_str)
+        |> sign_f |> Cstruct.to_string |> RBase64.url_encode_string
+      in
+      Ok { header; payload; signature }
   | Error e -> Error e
