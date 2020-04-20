@@ -28,23 +28,23 @@ module Jwa : sig
 
   val alg_of_json : Yojson.Safe.t -> alg
 
+  (** {{: https://tools.ietf.org/html/rfc7518#section-6.1 } Link to RFC } *)
   type kty =
     [ `oct  (** Octet sequence (used to represent symmetric keys) *)
     | `RSA  (** RSA {{: https://tools.ietf.org/html/rfc3447} Link to RFC} *)
     | `EC  (** Elliptic Curve *) ]
-  (** {{: https://tools.ietf.org/html/rfc7518#section-6.1 } Link to RFC } *)
 
   val kty_to_string : kty -> string
 
   val kty_of_string : string -> kty
 
+  (** https://tools.ietf.org/html/rfc7518#section-5 *)
   type enc =
     [ `A128CBC_HS256
       (** AES_128_CBC_HMAC_SHA_256 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.3 *)
     | `A256CBC_HS512
       (** AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.5 *)
     | `A256GCM  (** AES GCM using 256-bit key *) ]
-  (** https://tools.ietf.org/html/rfc7518#section-5 *)
 
   val enc_to_string : enc -> string
 
@@ -57,8 +57,8 @@ end
 {{: https://tools.ietf.org/html/rfc7517 } Link to RFC }
 *)
 module Jwk : sig
-  type use = [ `Sig | `Enc | `Unsupported of string ]
   (** [use] will default to [`Sig] in all functions unless supplied *)
+  type use = [ `Sig | `Enc | `Unsupported of string ]
 
   type public = Public
 
@@ -71,16 +71,16 @@ module Jwk : sig
     key : 'key;  (** The key implementation *)
   }
 
-  type pub_rsa = Mirage_crypto_pk.Rsa.pub jwk
   (** [rsa] represents a public JWK with [kty] [`RSA] and a [Rsa.pub] key *)
+  type pub_rsa = Mirage_crypto_pk.Rsa.pub jwk
 
-  type priv_rsa = Mirage_crypto_pk.Rsa.priv jwk
   (** [rsa] represents a private JWK with [kty] [`RSA] and a [Rsa.priv] key *)
+  type priv_rsa = Mirage_crypto_pk.Rsa.priv jwk
 
-  type oct = string jwk
   (** [oct] represents a JWK with [kty] [`OCT] and a string key.
 
   [oct] will in most cases be a private key but there are some cases where it will be considered public, eg. if you parse a public JSON *)
+  type oct = string jwk
 
   (**
     [t] describes a JSON Web Key which can be either [public] or [private]
@@ -231,8 +231,8 @@ end
 {{: https://tools.ietf.org/html/rfc7517#section-5 } Link to RFC }
 *)
 module Jwks : sig
-  type t = { keys : Jwk.public Jwk.t list }
   (**  [t] describes a Private JSON Web Key Set *)
+  type t = { keys : Jwk.public Jwk.t list }
 
   val to_json : t -> Yojson.Safe.t
   (**
@@ -260,17 +260,6 @@ module Jwks : sig
 end
 
 module Header : sig
-  type t = {
-    alg : Jwa.alg;
-    jku : string option;
-    jwk : Jwk.public Jwk.t option;
-    kid : string;
-    x5t : string option;
-    x5t256 : string option;
-    typ : string option;
-    cty : string option;
-    enc : Jwa.enc option;
-  }
   (**
     The [header] has the following properties:
     - [alg] Jwa - RS256 and none is currently the only supported algs
@@ -288,6 +277,17 @@ module Header : sig
 
     {{: https://tools.ietf.org/html/rfc7515#section-4.1 } Link to RFC }
     *)
+  type t = {
+    alg : Jwa.alg;
+    jku : string option;
+    jwk : Jwk.public Jwk.t option;
+    kid : string;
+    x5t : string option;
+    x5t256 : string option;
+    typ : string option;
+    cty : string option;
+    enc : Jwa.enc option;
+  }
 
   val make_header : ?typ:string -> Jwk.priv Jwk.t -> t
   (**
