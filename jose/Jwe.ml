@@ -11,10 +11,6 @@ type t = {
 
 module RSA_OAEP = Mirage_crypto_pk.Rsa.OAEP (Mirage_crypto.Hash.SHA1)
 
-let bind v f = match v with Ok v -> f v | Error _ as e -> e
-
-let ( >>= ) = bind
-
 (*
 Steps to create a JWE
 
@@ -36,14 +32,6 @@ let make_cek enc =
   |> Cstruct.to_string
   |> Jwk.make_oct ~use:`Enc
 
-let pkcs7_pad data block_size =
-  let pad_size = block_size - (Cstruct.len data mod block_size) in
-  (* this is the remaining bytes in the last block *)
-  let pad = Cstruct.create pad_size in
-  Cstruct.memset pad pad_size;
-  (* fills the pad buffer with bytes each containing "pad_size" as value *)
-  Cstruct.append data pad
-
 let encrypt_payload ?enc ~cek ~init_vector ~aad payload =
   let iv = Cstruct.of_string init_vector in
   match enc with
@@ -56,7 +44,7 @@ let encrypt_payload ?enc ~cek ~init_vector ~aad payload =
       let key = Mirage_crypto.Cipher_block.AES.CBC.of_secret aes_key in
       (* B.2 encryption in CBC mode *)
       Mirage_crypto.Cipher_block.AES.CBC.encrypt ~key ~iv
-        (pkcs7_pad
+        (Pkcs7.pad
            (Cstruct.of_string payload)
            Mirage_crypto.Cipher_block.AES.CBC.block_size)
       |> fun data ->
@@ -145,19 +133,10 @@ let decrypt_cek alg str ~(jwk : Jwk.priv Jwk.t) =
       |> RResult.flat_map of_opt_cstruct
   | _ -> Error `Invalid_JWK
 
-let pkcs7_unpad cs =
-  let cs_len = Cstruct.len cs in
-  let pad_len = Cstruct.get_uint8 cs (cs_len - 1) in
-  let data, padding = Cstruct.split cs (cs_len - pad_len) in
-  let rec check idx =
-    if idx >= pad_len then true
-    else Cstruct.get_uint8 padding idx = pad_len && check (idx + 1)
-  in
-  if check 0 then Ok data else Error (`Msg "bad padding")
-
 (* Move to Jwa? *)
 let decrypt_ciphertext enc ~cek ~init_vector ~auth_tag ~aad ciphertext =
   let iv = Cstruct.of_string init_vector in
+  let open Utils.RResult.Infix in
   RBase64.url_decode ciphertext >>= fun encrypted ->
   let encrypted = Cstruct.of_string encrypted in
   match enc with
@@ -183,7 +162,7 @@ let decrypt_ciphertext enc ~cek ~init_vector ~auth_tag ~aad ciphertext =
       else
         (* B.2 encryption in CBC mode *)
         Mirage_crypto.Cipher_block.AES.CBC.decrypt ~key ~iv encrypted
-        |> pkcs7_unpad
+        |> Pkcs7.unpad
         >>= fun data -> Ok (Cstruct.to_string data)
   | Some `A256GCM ->
       let cek = Cstruct.of_string cek in
@@ -197,6 +176,7 @@ let decrypt_ciphertext enc ~cek ~init_vector ~auth_tag ~aad ciphertext =
   | _ -> Error (`Msg "unsupported encryption")
 
 let decrypt jwe ~(jwk : Jwk.priv Jwk.t) =
+  let open Utils.RResult.Infix in
   String.split_on_char '.' jwe |> function
   | [ enc_header; enc_cek; enc_init_vector; ciphertext; auth_tag ] ->
       Header.of_string enc_header >>= fun header ->
