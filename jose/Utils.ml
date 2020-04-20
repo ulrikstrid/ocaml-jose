@@ -23,11 +23,6 @@ module RResult = struct
         Ok (a, b, c, d, e, f, g, h)
     | _ -> Error (`Msg "all 8 was not Ok")
 
-  let get_exn = function
-    | Ok a -> a
-    | Error (`Msg m) -> invalid_arg m
-    | Error _ -> failwith "get_exn"
-
   module Infix = struct
     let ( >>= ) = bind
 

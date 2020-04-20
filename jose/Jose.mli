@@ -389,7 +389,11 @@ module Jwe : sig
   }
 
   val encrypt :
-    jwk:'a Jwk.t -> t -> (string, [> `Invalid_alg | `Msg of string ]) result
+    jwk:'a Jwk.t ->
+    t ->
+    ( string,
+      [> `Invalid_alg | `Missing_enc | `Unsupported_enc | `Unsupported_kty ] )
+    result
 
   val decrypt :
     string ->
