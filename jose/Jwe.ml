@@ -1,5 +1,5 @@
-(** {{: https://tools.ietf.org/html/rfc7516 } Link to RFC } *)
 open Utils
+(** {{: https://tools.ietf.org/html/rfc7516 } Link to RFC } *)
 
 type t = {
   header : Header.t;
@@ -36,24 +36,29 @@ let make_cek enc =
   |> Cstruct.to_string
   |> Jwk.make_oct ~use:`Enc
 
-let pkcs7_pad len cs =
-  let cs_len = Cstruct.len cs in
-  let pad_len = len - cs_len in
-  let padding =
-    String.make pad_len (Cstruct.byte pad_len) |> Cstruct.of_string
-  in
-  Cstruct.append cs padding
+let pkcs7_pad data block_size =
+  let pad_size = block_size - (Cstruct.len data mod block_size) in
+  (* this is the remaining bytes in the last block *)
+  let pad = Cstruct.create pad_size in
+  Cstruct.memset pad pad_size;
+  (* fills the pad buffer with bytes each containing "pad_size" as value *)
+  Cstruct.append data pad
 
-let encrypt_payload ~enc ~cek ~init_vector ~aad payload =
+let encrypt_payload ?enc ~cek ~init_vector ~aad payload =
   let iv = Cstruct.of_string init_vector in
   match enc with
   | Some `A128CBC_HS256 ->
       (* RFC 7516 appendix B.1: first 128 bit hmac, last 128 bit aes *)
-      let hmac_key, aes_key = Cstruct.(split (of_string cek) 16) in
+      let hmac_key, aes_key =
+        Cstruct.(
+          split (of_string cek) Mirage_crypto.Cipher_block.AES.CBC.block_size)
+      in
       let key = Mirage_crypto.Cipher_block.AES.CBC.of_secret aes_key in
       (* B.2 encryption in CBC mode *)
       Mirage_crypto.Cipher_block.AES.CBC.encrypt ~key ~iv
-        (Cstruct.of_string payload |> pkcs7_pad 512)
+        (pkcs7_pad
+           (Cstruct.of_string payload)
+           Mirage_crypto.Cipher_block.AES.CBC.block_size)
       |> fun data ->
       (* B.5 input to HMAC computation *)
       let hmac_input =
@@ -109,7 +114,7 @@ let encrypt (type a) ~(jwk : a Jwk.t) t =
   in
   let einit_vector = RBase64.url_encode_string t.init_vector in
   let ciphertext, auth_tag =
-    encrypt_payload ~enc:t.header.enc ~cek:t.cek ~init_vector:t.init_vector
+    encrypt_payload ?enc:t.header.enc ~cek:t.cek ~init_vector:t.init_vector
       ~aad:header_string t.payload
     |> RResult.get_exn
   in
