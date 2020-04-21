@@ -1,5 +1,5 @@
-(** {{: https://tools.ietf.org/html/rfc7516 } Link to RFC } *)
 open Utils
+(** {{: https://tools.ietf.org/html/rfc7516 } Link to RFC } *)
 
 type t = {
   header : Header.t;
