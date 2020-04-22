@@ -45,26 +45,16 @@ let alg_of_json json = Yojson.Safe.Util.to_string json |> alg_of_string
 type enc =
   [ `A128CBC_HS256
     (** AES_128_CBC_HMAC_SHA_256 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.3 *)
-  | `A256CBC_HS512
-    (** AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.5 *)
   | `A256GCM  (** AES GCM using 256-bit key *) ]
 (** https://tools.ietf.org/html/rfc7518#section-5 *)
 
 let enc_to_string enc =
-  match enc with
-  | `A128CBC_HS256 -> "A128CBC-HS256"
-  | `A256CBC_HS512 -> "A256CBC-HS512"
-  | `A256GCM -> "A256GCM"
+  match enc with `A128CBC_HS256 -> "A128CBC-HS256" | `A256GCM -> "A256GCM"
 
 let enc_of_string enc =
   match enc with
   | "A128CBC-HS256" -> `A128CBC_HS256
-  | "A256CBC-HS512" -> `A256CBC_HS512
   | "A256GCM" -> `A256GCM
   | _ -> raise Not_found
 
-let enc_to_length = function
-  | `A128CBC_HS256 -> 256
-  | `A256CBC_HS512 -> 512
-  (* | `A128GCM -> 128 *)
-  | `A256GCM -> 256
+let enc_to_length = function `A128CBC_HS256 -> 256 | `A256GCM -> 256
