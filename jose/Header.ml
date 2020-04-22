@@ -12,8 +12,13 @@ type t = {
   enc : Jwa.enc option;
 }
 
-let make_header ?typ (jwk : Jwk.priv Jwk.t) =
-  let alg = match jwk with Jwk.Rsa_priv _ -> `RS256 | Jwk.Oct _ -> `HS256 in
+let make_header ?typ ?alg ?enc (jwk : Jwk.priv Jwk.t) =
+  let alg =
+    match alg with
+    | Some alg -> alg
+    | None -> (
+        match jwk with Jwk.Rsa_priv _ -> `RS256 | Jwk.Oct _ -> `HS256 )
+  in
   {
     alg;
     jku = None;
@@ -23,7 +28,7 @@ let make_header ?typ (jwk : Jwk.priv Jwk.t) =
     x5t256 = None;
     typ;
     cty = None;
-    enc = None;
+    enc;
   }
 
 module Json = Yojson.Safe.Util

@@ -190,9 +190,8 @@ let jwe_rsa_tests =
             (CCResult.map (fun (j : Jose.Jwe.t) -> j.payload) jwe2);
           check_result_string "Has the same cek after roundtrip" (Ok jwe.cek)
             (CCResult.map (fun (j : Jose.Jwe.t) -> j.cek) jwe2);
-          check_result_string "Has the same init_vector after roundtrip"
-            (Ok jwe.init_vector)
-            (CCResult.map (fun (j : Jose.Jwe.t) -> j.init_vector) jwe2));
+          check_result_string "Has the same iv after roundtrip" (Ok jwe.iv)
+            (CCResult.map (fun (j : Jose.Jwe.t) -> j.iv) jwe2));
       Alcotest.test_case "Can encrypt a JWE Using RSA-OAEP with AES-GCM" `Quick
         (fun () ->
           let jwk =
@@ -209,9 +208,8 @@ let jwe_rsa_tests =
             (CCResult.map (fun (j : Jose.Jwe.t) -> j.payload) jwe2);
           check_result_string "Has the same cek after roundtrip" (Ok jwe.cek)
             (CCResult.map (fun (j : Jose.Jwe.t) -> j.cek) jwe2);
-          check_result_string "Has the same init_vector after roundtrip"
-            (Ok jwe.init_vector)
-            (CCResult.map (fun (j : Jose.Jwe.t) -> j.init_vector) jwe2));
+          check_result_string "Has the same iv after roundtrip" (Ok jwe.iv)
+            (CCResult.map (fun (j : Jose.Jwe.t) -> j.iv) jwe2));
       Alcotest.test_case "Can decrypt a JWE Using RSA v1.5 and AES-HMAC-SHA2"
         `Quick (fun () ->
           let jwk =
@@ -237,7 +235,7 @@ let jwe_rsa_tests =
             (Ok "bbd5sTkYwhAIqfHsx8DayA")
             (CCResult.map
                (fun jwe ->
-                 jwe.Jose.Jwe.init_vector
+                 jwe.Jose.Jwe.iv
                  |> Base64.encode_string ~pad:false
                       ~alphabet:Base64.uri_safe_alphabet)
                jwe);
@@ -276,7 +274,7 @@ let jwe_rsa_tests =
             (Ok "-nBoKLH0YkLZPSI9")
             (CCResult.map
                (fun jwe ->
-                 jwe.Jose.Jwe.init_vector
+                 jwe.Jose.Jwe.iv
                  |> Base64.encode_string ~pad:false
                       ~alphabet:Base64.uri_safe_alphabet)
                jwe);

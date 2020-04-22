@@ -86,6 +86,7 @@ module RJson = struct
 end
 
 module Pkcs7 = struct
+  (* https://tools.ietf.org/html/rfc5652#section-6.3 *)
   let pad data block_size =
     let pad_size = block_size - (Cstruct.len data mod block_size) in
     if pad_size = 0 then data

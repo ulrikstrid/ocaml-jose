@@ -41,8 +41,6 @@ module Jwa : sig
   type enc =
     [ `A128CBC_HS256
       (** AES_128_CBC_HMAC_SHA_256 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.3 *)
-    | `A256CBC_HS512
-      (** AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm, https://tools.ietf.org/html/rfc7518#section-5.2.5 *)
     | `A256GCM  (** AES GCM using 256-bit key *) ]
   (** https://tools.ietf.org/html/rfc7518#section-5 *)
 
@@ -289,9 +287,10 @@ module Header : sig
     {{: https://tools.ietf.org/html/rfc7515#section-4.1 } Link to RFC }
     *)
 
-  val make_header : ?typ:string -> Jwk.priv Jwk.t -> t
+  val make_header :
+    ?typ:string -> ?alg:Jwa.alg -> ?enc:Jwa.enc -> Jwk.priv Jwk.t -> t
   (**
-  [make_header jwk] creates a header with [typ], [kid] and [alg] set based on the public JWK
+  [make_header typ alg enc jwk] if [alg] is not provided it will be derived from [jwk].
   *)
 
   val of_string : string -> (t, [> `Msg of string ]) result
@@ -382,11 +381,18 @@ module Jwe : sig
 
   type t = {
     header : Header.t;
-    cek : string;
-    init_vector : string;
-    payload : string;
-    aad : string option;
+    cek : string;  (** Content Encryption Key *)
+    iv : string;  (** Initialization Vector*)
+    payload : string;  (** plaintext to be encrypted *)
+    aad : string option;  (** Additional Authentication Data, for future use *)
   }
+  (** A JWE ready for encryption *)
+
+  val make :
+    header:Header.t ->
+    string ->
+    (t, [> `Missing_enc | `Unsupported_alg ]) result
+  (** [make header payload] creates a JWE from a {! Header.t } and the plaintext that you want to encrypt *)
 
   val encrypt :
     jwk:'a Jwk.t ->
@@ -394,12 +400,14 @@ module Jwe : sig
     ( string,
       [> `Invalid_alg | `Missing_enc | `Unsupported_enc | `Unsupported_kty ] )
     result
+  (** [encrypt jwk t] encrypts a {! t } into the compact string format *)
 
   val decrypt :
-    string ->
     jwk:Jwk.priv Jwk.t ->
+    string ->
     ( t,
       [> `Invalid_JWE | `Invalid_JWK | `Decrypt_cek_failed | `Msg of string ]
     )
     result
+  (** [decrypt jwk string] decrypts a compact string formated JWE into a {! t } *)
 end

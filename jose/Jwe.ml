@@ -4,7 +4,7 @@ open Utils
 type t = {
   header : Header.t;
   cek : string;
-  init_vector : string;
+  iv : string;
   payload : string;
   aad : string option;
 }
@@ -26,14 +26,33 @@ Steps to create a JWE
 * Assemble the final representation: The Compact Serialization of this result is the concatenation of the Encoded JWE Header, the Encoded JWE Encrypted Key, the Encoded JWE Initialization Vector, the Encoded JWE Ciphertext, and the Encoded JWE Authentication Tag in that order, with the five strings being separated by four period ('.') characters. 
 *)
 
-let make_cek enc =
-  let key_length = Jwa.enc_to_length enc in
-  Mirage_crypto_rng.generate (key_length / 8)
-  |> Cstruct.to_string
-  |> Jwk.make_oct ~use:`Enc
+let make_cek (header : Header.t) =
+  match header.enc with
+  | Some enc ->
+      let key_length = Jwa.enc_to_length enc in
+      Mirage_crypto_rng.generate (key_length / 8)
+      |> Cstruct.to_string |> RResult.return
+  | None -> Error `Missing_enc
 
-let encrypt_payload ?enc ~cek ~init_vector ~aad payload =
-  let iv = Cstruct.of_string init_vector in
+let make_iv (header : Header.t) =
+  match header.alg with
+  | `RSA_OAEP ->
+      Mirage_crypto_rng.generate Mirage_crypto.Cipher_block.AES.GCM.block_size
+      |> Cstruct.to_string |> RResult.return
+  | `RSA1_5 ->
+      Mirage_crypto_rng.generate Mirage_crypto.Cipher_block.AES.CBC.block_size
+      |> Cstruct.to_string |> RResult.return
+  | _ -> Error `Unsupported_alg
+
+let make ~header payload =
+  let open RResult.Infix in
+  make_cek header >>= fun cek ->
+  make_iv header >>= fun iv ->
+  let aad = None in
+  Ok { header; cek; iv; aad; payload }
+
+let encrypt_payload ?enc ~cek ~iv ~aad payload =
+  let iv = Cstruct.of_string iv in
   match enc with
   | Some `A128CBC_HS256 ->
       (* RFC 7516 appendix B.1: first 128 bit hmac, last 128 bit aes *)
@@ -101,16 +120,16 @@ let encrypt (type a) ~(jwk : a Jwk.t) t =
 
   encrypt_cek t.header.alg t.cek ~jwk >|= RBase64.url_encode_string
   >>= fun ecek ->
-  let einit_vector = RBase64.url_encode_string t.init_vector in
-  encrypt_payload ?enc:t.header.enc ~cek:t.cek ~init_vector:t.init_vector
-    ~aad:header_string t.payload
+  let eiv = RBase64.url_encode_string t.iv in
+  encrypt_payload ?enc:t.header.enc ~cek:t.cek ~iv:t.iv ~aad:header_string
+    t.payload
   >>= fun (ciphertext, auth_tag) ->
   Ok
     (String.concat "."
        [
          header_string;
          ecek;
-         einit_vector;
+         eiv;
          RBase64.url_encode_string ciphertext;
          RBase64.url_encode_string auth_tag;
        ])
@@ -134,8 +153,8 @@ let decrypt_cek alg str ~(jwk : Jwk.priv Jwk.t) =
   | _ -> Error `Invalid_JWK
 
 (* Move to Jwa? *)
-let decrypt_ciphertext enc ~cek ~init_vector ~auth_tag ~aad ciphertext =
-  let iv = Cstruct.of_string init_vector in
+let decrypt_ciphertext enc ~cek ~iv ~auth_tag ~aad ciphertext =
+  let iv = Cstruct.of_string iv in
   let open Utils.RResult.Infix in
   RBase64.url_decode ciphertext >>= fun encrypted ->
   let encrypted = Cstruct.of_string encrypted in
@@ -175,15 +194,15 @@ let decrypt_ciphertext enc ~cek ~init_vector ~auth_tag ~aad ciphertext =
       else Error (`Msg "invalid auth tag")
   | _ -> Error (`Msg "unsupported encryption")
 
-let decrypt jwe ~(jwk : Jwk.priv Jwk.t) =
+let decrypt ~(jwk : Jwk.priv Jwk.t) jwe =
   let open Utils.RResult.Infix in
   String.split_on_char '.' jwe |> function
-  | [ enc_header; enc_cek; enc_init_vector; ciphertext; auth_tag ] ->
+  | [ enc_header; enc_cek; enc_iv; ciphertext; auth_tag ] ->
       Header.of_string enc_header >>= fun header ->
       decrypt_cek header.Header.alg ~jwk enc_cek >>= fun cek ->
-      RBase64.url_decode enc_init_vector >>= fun init_vector ->
+      RBase64.url_decode enc_iv >>= fun iv ->
       RBase64.url_decode auth_tag >>= fun auth_tag ->
-      decrypt_ciphertext header.Header.enc ~cek ~init_vector ~auth_tag
-        ~aad:enc_header ciphertext
-      >>= fun payload -> Ok { header; cek; init_vector; payload; aad = None }
+      decrypt_ciphertext header.Header.enc ~cek ~iv ~auth_tag ~aad:enc_header
+        ciphertext
+      >>= fun payload -> Ok { header; cek; iv; payload; aad = None }
   | _ -> Error `Invalid_JWE
