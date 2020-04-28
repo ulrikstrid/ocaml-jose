@@ -7,7 +7,7 @@ JOSE implementation in ReasonML and OCaml
 ## Goals
 
 This package aims to implement the JOSE specication.
-The main usecase for JOSE is probably JWT singing and verification via JWKs.
+The main usecase for JOSE is probably JWT signing and verification via JWKs.
 
 ## pre 1.0.0
 
