@@ -24,6 +24,7 @@
    (cstruct (>= 4.0.0))
    astring
    yojson
+   result
    zarith
    (containers :with-test)
    (bisect_ppx :with-test)
