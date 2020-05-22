@@ -57,7 +57,7 @@ type public = Public
 
 type priv = Private
 
-type 'key jwk = { alg : Jwa.alg; kty : Jwa.kty; use : use; key : 'key }
+type 'key jwk = { alg : Jwa.alg; kty : Jwa.kty; use : use; kid: string; key : 'key }
 
 type oct = string jwk
 
@@ -82,31 +82,31 @@ let get_kty (type a) (t : a t) =
 let get_kid (type a) (t : a t) =
   match t with
   | Rsa_priv rsa ->
-      let e = Util.get_JWK_component rsa.key.e in
-      let n = Util.get_JWK_component rsa.key.n in
-      Util.get_RSA_kid ~e ~n
+     rsa.kid
   | Rsa_pub rsa ->
-      let e = Util.get_JWK_component rsa.key.e in
-      let n = Util.get_JWK_component rsa.key.n in
-      Util.get_RSA_kid ~e ~n
-  | Oct oct -> Util.get_OCT_kid oct.key
+    rsa.kid
+  | Oct oct -> oct.kid
 
 let make_oct ?(use : use = `Sig) (str : string) : priv t =
   (* Should we make this just return a result intead? *)
   let key = RBase64.url_encode_string str in
-  Oct { kty = `oct; use; alg = `HS256; key }
+  Oct { kty = `oct; use; alg = `HS256; key; kid = Util.get_OCT_kid key; }
 
 let make_priv_rsa ?(use : use = `Sig) (rsa_priv : Mirage_crypto_pk.Rsa.priv) :
     priv t =
   let kty : Jwa.kty = `RSA in
   let alg = alg_of_use_and_kty ~use kty in
-  Rsa_priv { alg; kty; use; key = rsa_priv }
+  let e = Util.get_JWK_component rsa_priv.e in
+  let n = Util.get_JWK_component rsa_priv.n in
+  Rsa_priv { alg; kty; use; key = rsa_priv; kid = Util.get_RSA_kid ~e ~n; }
 
 let make_pub_rsa ?(use : use = `Sig) (rsa_pub : Mirage_crypto_pk.Rsa.pub) :
     public t =
   let kty : Jwa.kty = `RSA in
   let alg = alg_of_use_and_kty ~use kty in
-  Rsa_pub { alg; kty; use; key = rsa_pub }
+  let e = Util.get_JWK_component rsa_pub.e in
+  let n = Util.get_JWK_component rsa_pub.n in
+  Rsa_pub { alg; kty; use; key = rsa_pub; kid = Util.get_RSA_kid ~e ~n; }
 
 let of_pub_pem ?(use : use = `Sig) pem : (public t, [> `Not_rsa ]) result =
   Cstruct.of_string pem |> X509.Public_key.decode_pem
@@ -142,7 +142,7 @@ let oct_to_json (oct : oct) =
       ("alg", Jwa.alg_to_json oct.alg);
       ("kty", `String (Jwa.kty_to_string oct.kty));
       ("k", `String oct.key);
-      ("kid", `String (Util.get_OCT_kid oct.key));
+      ("kid", `String oct.kid);
     ]
 
 let pub_rsa_to_json pub_rsa =
@@ -156,7 +156,7 @@ let pub_rsa_to_json pub_rsa =
       Some ("e", `String e);
       Some ("n", `String n);
       Some ("kty", `String (Jwa.kty_to_string pub_rsa.kty));
-      Some ("kid", `String (Util.get_RSA_kid ~e ~n));
+      Some ("kid", `String pub_rsa.kid);
       Some ("use", `String (use_to_string pub_rsa.use));
       RJson.to_json_string_opt "x5t"
         ( Util.get_JWK_x5t (X509.Public_key.fingerprint ~hash:`SHA1 public_key)
@@ -171,6 +171,7 @@ let pub_of_priv_rsa (priv_rsa : priv_rsa) : pub_rsa =
     kty = priv_rsa.kty;
     use = priv_rsa.use;
     key = Mirage_crypto_pk.Rsa.pub_of_priv priv_rsa.key;
+    kid = priv_rsa.kid;
   }
 
 let priv_rsa_to_pub_json (priv_rsa : priv_rsa) =
@@ -199,7 +200,7 @@ let priv_rsa_to_priv_json (priv_rsa : priv_rsa) : Yojson.Safe.t =
       Some ("qi", `String qi);
       Some ("kty", `String (priv_rsa.kty |> Jwa.kty_to_string));
       Some ("use", `String (use_to_string priv_rsa.use));
-      Some ("kid", `String (Util.get_RSA_kid ~e ~n));
+      Some ("kid", `String priv_rsa.kid);
     ]
   in
   `Assoc (RList.filter_map (fun x -> x) values)
@@ -237,13 +238,14 @@ let pub_rsa_of_json json : (public t, 'error) result =
              json |> Json.member "use" |> Json.to_string_option
              |> ROpt.map use_of_string
            in
+           let kid = json |> Json.member "kid" |> Json.to_string in
            let kty = `RSA in
            match (alg, use) with
-           | Some alg, Some use -> Ok (Rsa_pub { alg; kty; use; key })
+           | Some alg, Some use -> Ok (Rsa_pub { alg; kty; use; key; kid })
            | Some alg, None ->
-               Ok (Rsa_pub { alg; kty; use = use_of_alg alg; key })
+               Ok (Rsa_pub { alg; kty; use = use_of_alg alg; key; kid })
            | None, Some use ->
-               Ok (Rsa_pub { alg = alg_of_use_and_kty ~use kty; kty; use; key })
+               Ok (Rsa_pub { alg = alg_of_use_and_kty ~use kty; kty; use; key; kid })
            | None, None -> Error `Missing_use_and_alg)
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
@@ -270,14 +272,15 @@ let priv_rsa_of_json json : (priv t, 'error) result =
              json |> Json.member "use" |> Json.to_string_option
              |> ROpt.map use_of_string
            in
+           let kid = json |> Json.member "kid" |> Json.to_string in
            let kty = `RSA in
            match (alg, use) with
-           | Some alg, Some use -> Ok (Rsa_priv { alg; kty; use; key })
+           | Some alg, Some use -> Ok (Rsa_priv { alg; kty; use; key; kid })
            | Some alg, None ->
-               Ok (Rsa_priv { alg; kty; use = use_of_alg alg; key })
+               Ok (Rsa_priv { alg; kty; use = use_of_alg alg; key; kid })
            | None, Some use ->
                Ok
-                 (Rsa_priv { alg = alg_of_use_and_kty ~use kty; kty; use; key })
+                 (Rsa_priv { alg = alg_of_use_and_kty ~use kty; kty; use; key; kid })
            | None, None -> Error `Missing_use_and_alg)
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
@@ -296,6 +299,7 @@ let oct_of_json json =
              |> ROpt.map use_of_string
              |> ROpt.get_with_default ~default:(use_of_alg alg);
            key = json |> Json.member "k" |> Json.to_string;
+           kid = json |> Json.member "kid" |> Json.to_string;
          })
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
