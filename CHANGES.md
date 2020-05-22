@@ -1,6 +1,8 @@
 0.3.1
 --------------
-- Add `kid` to JWK representation to keep it from JSON input
+- Add result compatability package (by @anmonteiro)
+- Add `kid` to JWK representation to keep it when parsing JSON input
+- Fix upper constraint on mirage-crypto
 
 0.3.0
 --------------
