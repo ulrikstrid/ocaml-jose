@@ -66,6 +66,7 @@ module Jwk : sig
     alg : Jwa.alg;  (** The algorithm for the key *)
     kty : Jwa.kty;  (** The key type for the key *)
     use : use;
+    kid : string;  (** Key ID *)
     key : 'key;  (** The key implementation *)
   }
 
