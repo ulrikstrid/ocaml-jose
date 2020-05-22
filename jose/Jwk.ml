@@ -57,7 +57,13 @@ type public = Public
 
 type priv = Private
 
-type 'key jwk = { alg : Jwa.alg; kty : Jwa.kty; use : use; kid: string; key : 'key }
+type 'key jwk = {
+  alg : Jwa.alg;
+  kty : Jwa.kty;
+  use : use;
+  kid : string;
+  key : 'key;
+}
 
 type oct = string jwk
 
@@ -81,16 +87,14 @@ let get_kty (type a) (t : a t) =
 
 let get_kid (type a) (t : a t) =
   match t with
-  | Rsa_priv rsa ->
-     rsa.kid
-  | Rsa_pub rsa ->
-    rsa.kid
+  | Rsa_priv rsa -> rsa.kid
+  | Rsa_pub rsa -> rsa.kid
   | Oct oct -> oct.kid
 
 let make_oct ?(use : use = `Sig) (str : string) : priv t =
   (* Should we make this just return a result intead? *)
   let key = RBase64.url_encode_string str in
-  Oct { kty = `oct; use; alg = `HS256; key; kid = Util.get_OCT_kid key; }
+  Oct { kty = `oct; use; alg = `HS256; key; kid = Util.get_OCT_kid key }
 
 let make_priv_rsa ?(use : use = `Sig) (rsa_priv : Mirage_crypto_pk.Rsa.priv) :
     priv t =
@@ -98,7 +102,7 @@ let make_priv_rsa ?(use : use = `Sig) (rsa_priv : Mirage_crypto_pk.Rsa.priv) :
   let alg = alg_of_use_and_kty ~use kty in
   let e = Util.get_JWK_component rsa_priv.e in
   let n = Util.get_JWK_component rsa_priv.n in
-  Rsa_priv { alg; kty; use; key = rsa_priv; kid = Util.get_RSA_kid ~e ~n; }
+  Rsa_priv { alg; kty; use; key = rsa_priv; kid = Util.get_RSA_kid ~e ~n }
 
 let make_pub_rsa ?(use : use = `Sig) (rsa_pub : Mirage_crypto_pk.Rsa.pub) :
     public t =
@@ -106,7 +110,7 @@ let make_pub_rsa ?(use : use = `Sig) (rsa_pub : Mirage_crypto_pk.Rsa.pub) :
   let alg = alg_of_use_and_kty ~use kty in
   let e = Util.get_JWK_component rsa_pub.e in
   let n = Util.get_JWK_component rsa_pub.n in
-  Rsa_pub { alg; kty; use; key = rsa_pub; kid = Util.get_RSA_kid ~e ~n; }
+  Rsa_pub { alg; kty; use; key = rsa_pub; kid = Util.get_RSA_kid ~e ~n }
 
 let of_pub_pem ?(use : use = `Sig) pem : (public t, [> `Not_rsa ]) result =
   Cstruct.of_string pem |> X509.Public_key.decode_pem
@@ -245,7 +249,9 @@ let pub_rsa_of_json json : (public t, 'error) result =
            | Some alg, None ->
                Ok (Rsa_pub { alg; kty; use = use_of_alg alg; key; kid })
            | None, Some use ->
-               Ok (Rsa_pub { alg = alg_of_use_and_kty ~use kty; kty; use; key; kid })
+               Ok
+                 (Rsa_pub
+                    { alg = alg_of_use_and_kty ~use kty; kty; use; key; kid })
            | None, None -> Error `Missing_use_and_alg)
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
@@ -280,7 +286,8 @@ let priv_rsa_of_json json : (priv t, 'error) result =
                Ok (Rsa_priv { alg; kty; use = use_of_alg alg; key; kid })
            | None, Some use ->
                Ok
-                 (Rsa_priv { alg = alg_of_use_and_kty ~use kty; kty; use; key; kid })
+                 (Rsa_priv
+                    { alg = alg_of_use_and_kty ~use kty; kty; use; key; kid })
            | None, None -> Error `Missing_use_and_alg)
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
