@@ -119,7 +119,7 @@ module Jwk : sig
       | `Missing_use_and_alg ] )
     result
   (**
-    [of_pub_json t] takes a [Yojson.Safe.t] and tries to return a [public t] 
+    [of_pub_json t] takes a [Yojson.Safe.t] and tries to return a [public t]
     *)
 
   val of_pub_json_string :
@@ -218,6 +218,14 @@ module Jwk : sig
 
   val get_alg : 'a t -> Jwa.alg
   (** [get_alg jwk] is a convencience function to get the algorithm *)
+
+  val get_thumbprint :
+    Mirage_crypto.Hash.hash -> 'a t -> (string, [> `Unsafe ]) result
+  (** [get_thumbprint hash jwk] calculates the thumbprint of [jwk] with
+      [hash], following {{: https://tools.ietf.org/html/rfc7638 } RFC 7638 }.
+
+      Returns an error for symmetric keys: sharing the hash may leak
+      information about the key itself ans it's deemed unsafe. *)
 
   val use_to_string : use -> string
 
