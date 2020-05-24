@@ -8,7 +8,8 @@ let result_t :
     | `Missing_use_and_alg
     | `Invalid_JWE
     | `Invalid_JWK
-    | `Decrypt_cek_failed ]
+    | `Decrypt_cek_failed
+    | `Unsafe ]
     Alcotest.testable =
   let pp ppf = function
     | `Msg e -> Fmt.string ppf e
@@ -21,6 +22,7 @@ let result_t :
     | `Invalid_JWE -> Fmt.string ppf "Invalid JWE"
     | `Invalid_JWK -> Fmt.string ppf "Invalid JWK"
     | `Decrypt_cek_failed -> Fmt.string ppf "Failed to decrypt cek"
+    | `Unsafe -> Fmt.string ppf "Unsafe"
   in
   Alcotest.testable pp ( = )
 
@@ -36,3 +38,5 @@ let check_int = Alcotest.(check int)
 
 let trim_json_string str =
   str |> CCString.replace ~sub:" " ~by:"" |> CCString.replace ~sub:"\n" ~by:""
+
+let make_test_case (name, test) = Alcotest.test_case name `Quick test

@@ -8,6 +8,7 @@ let () =
         JWTTest.jwt_suite;
         JWETest.jwe_suite;
         RFC7520.suite;
+        RFC7638.suite;
       ]
   in
   match path with Some path -> Junit.to_file report path | None -> ()

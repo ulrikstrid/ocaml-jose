@@ -334,3 +334,28 @@ let of_priv_json_string str : (priv t, 'error) result =
 
 let oct_to_sign_key (oct : oct) : (Cstruct.t, [> `Msg of string ]) result =
   RBase64.url_decode oct.key |> RResult.map Cstruct.of_string
+
+let hash_values hash values =
+  let module Hash = (val Mirage_crypto.Hash.module_of hash) in
+  `Assoc (RList.filter_map (fun x -> x) values)
+  |> Yojson.to_string |> Cstruct.of_string |> Hash.digest |> Cstruct.to_string
+
+let pub_rsa_to_thumbprint hash (pub_rsa : Mirage_crypto_pk.Rsa.pub jwk) =
+  let e = Util.get_JWK_component pub_rsa.key.e in
+  let n = Util.get_JWK_component pub_rsa.key.n in
+  let kty = Jwa.kty_to_string pub_rsa.kty in
+  let values =
+    [ Some ("e", `String e); Some ("kty", `String kty); Some ("n", `String n) ]
+  in
+  hash_values hash values
+
+let priv_rsa_to_thumbprint hash (priv_rsa : Mirage_crypto_pk.Rsa.priv jwk) =
+  pub_rsa_to_thumbprint hash (pub_of_priv_rsa priv_rsa)
+
+let oct_to_thumbprint _hash (_oct : oct) = Error `Unsafe
+
+let get_thumbprint (type a) (hash : Mirage_crypto.Hash.hash) (jwk : a t) =
+  match jwk with
+  | Rsa_pub rsa -> Ok (pub_rsa_to_thumbprint hash rsa)
+  | Rsa_priv rsa -> Ok (priv_rsa_to_thumbprint hash rsa)
+  | Oct oct -> oct_to_thumbprint hash oct
