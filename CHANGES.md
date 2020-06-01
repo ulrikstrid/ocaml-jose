@@ -1,3 +1,8 @@
+0.4.0
+--------------
+- RFC7638: Implement thumbprints (by @undu)
+- Make kid optional in the header and jwk
+
 0.3.1
 --------------
 - Add result compatability package (by @anmonteiro)
