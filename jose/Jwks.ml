@@ -21,5 +21,5 @@ let find_key jwks kid =
   Utils.RList.find_opt
     (fun (jwk : Jwk.public Jwk.t) ->
       let curr_kid = Jwk.get_kid jwk in
-      curr_kid = kid)
+      match curr_kid with Some curr_kid -> curr_kid = kid | None -> false)
     jwks.keys

@@ -4,7 +4,7 @@ type t = {
   alg : Jwa.alg;
   jku : string option;
   jwk : Jwk.public Jwk.t option;
-  kid : string;
+  kid : string option;
   x5t : string option;
   x5t256 : string option;
   typ : string option;
@@ -44,7 +44,7 @@ let of_json json =
           |> Json.to_option (fun jwk_json ->
                  Jwk.of_pub_json jwk_json |> RResult.to_opt)
           |> ROpt.flatten;
-        kid = json |> Json.member "kid" |> Json.to_string;
+        kid = json |> Json.member "kid" |> Json.to_string_option;
         x5t = json |> Json.member "x5t" |> Json.to_string_option;
         x5t256 = json |> Json.member "x5t#256" |> Json.to_string_option;
         typ = json |> Json.member "typ" |> Json.to_string_option;
@@ -62,7 +62,7 @@ let to_json t =
       Some ("alg", Jwa.alg_to_json t.alg);
       RJson.to_json_string_opt "jku" t.jku;
       ROpt.map Jwk.to_pub_json t.jwk |> ROpt.map (fun jwk -> ("jwk", jwk));
-      Some ("kid", `String t.kid);
+      RJson.to_json_string_opt "kid" t.kid;
       RJson.to_json_string_opt "x5t" t.x5t;
       RJson.to_json_string_opt "x5t#256" t.x5t256;
       RJson.to_json_string_opt "cty" t.cty;

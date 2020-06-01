@@ -36,6 +36,8 @@ module ROpt = struct
   let map fn o = match o with Some v -> Some (fn v) | None -> None
 
   let get_with_default ~default o = match o with Some v -> v | None -> default
+
+  let return x = Some x
 end
 
 module RList = struct

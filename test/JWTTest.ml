@@ -124,6 +124,12 @@ let jwt_suite, _ =
               check_result_string "JWT is correctly created"
                 (Ok Fixtures.oct_jwt_string)
                 (CCResult.map Jwt.to_string jwt_r));
+          Alcotest.test_case "Can parse JWT without kid" `Quick (fun () ->
+              let jwt =
+                Jose.Jwt.of_string Fixtures.jwt_without_kid |> CCResult.get_exn
+              in
+              check_string "JWT was parsed correctly without kid" "RS256"
+                (jwt.header.alg |> Jose.Jwa.alg_to_string));
         ] );
     ]
 

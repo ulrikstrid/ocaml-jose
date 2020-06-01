@@ -66,7 +66,7 @@ module Jwk : sig
     alg : Jwa.alg;  (** The algorithm for the key *)
     kty : Jwa.kty;  (** The key type for the key *)
     use : use;
-    kid : string;  (** Key ID *)
+    kid : string option;  (** Key ID *)
     key : 'key;  (** The key implementation *)
   }
 
@@ -210,7 +210,7 @@ module Jwk : sig
   Utils to get different data from a JWK
   *)
 
-  val get_kid : 'a t -> string
+  val get_kid : 'a t -> string option
   (** [get_kid jwk] is a convencience function to get the kid string *)
 
   val get_kty : 'a t -> Jwa.kty
@@ -271,7 +271,7 @@ module Header : sig
     alg : Jwa.alg;
     jku : string option;
     jwk : Jwk.public Jwk.t option;
-    kid : string;
+    kid : string option;
     x5t : string option;
     x5t256 : string option;
     typ : string option;

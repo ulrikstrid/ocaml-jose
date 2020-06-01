@@ -32,7 +32,8 @@ let check_result_string = Alcotest.(check (result string result_t))
 
 let check_result_bool = Alcotest.(check (result bool result_t))
 
-let check_option_string = Alcotest.(check (option string))
+let check_option_string name expected actual =
+  Alcotest.(check (option string)) name (Some expected) actual
 
 let check_int = Alcotest.(check int)
 

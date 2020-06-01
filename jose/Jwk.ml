@@ -17,10 +17,11 @@ module Util = struct
 
   let get_RSA_kid ~e ~n =
     `Assoc [ ("e", `String e); ("kty", `String "RSA"); ("n", `String n) ]
-    |> kid_of_json
+    |> kid_of_json |> ROpt.return
 
   let get_OCT_kid k =
-    `Assoc [ ("k", `String k); ("kty", `String "oct") ] |> kid_of_json
+    `Assoc [ ("k", `String k); ("kty", `String "oct") ]
+    |> kid_of_json |> ROpt.return
 
   let get_JWK_x5t fingerprint =
     fingerprint |> Cstruct.to_bytes |> Bytes.to_string
@@ -61,7 +62,7 @@ type 'key jwk = {
   alg : Jwa.alg;
   kty : Jwa.kty;
   use : use;
-  kid : string;
+  kid : string option;
   key : 'key;
 }
 
@@ -141,13 +142,15 @@ let to_priv_pem (jwk : priv t) =
   | _ -> Error `Not_rsa
 
 let oct_to_json (oct : oct) =
-  `Assoc
+  let values =
     [
-      ("alg", Jwa.alg_to_json oct.alg);
-      ("kty", `String (Jwa.kty_to_string oct.kty));
-      ("k", `String oct.key);
-      ("kid", `String oct.kid);
+      Some ("alg", Jwa.alg_to_json oct.alg);
+      Some ("kty", `String (Jwa.kty_to_string oct.kty));
+      Some ("k", `String oct.key);
+      RJson.to_json_string_opt "kid" oct.kid;
     ]
+  in
+  `Assoc (RList.filter_map (fun x -> x) values)
 
 let pub_rsa_to_json pub_rsa =
   (* Should I make this a result? It feels like our well-formed key should always be able to become a JSON *)
@@ -160,7 +163,7 @@ let pub_rsa_to_json pub_rsa =
       Some ("e", `String e);
       Some ("n", `String n);
       Some ("kty", `String (Jwa.kty_to_string pub_rsa.kty));
-      Some ("kid", `String pub_rsa.kid);
+      RJson.to_json_string_opt "kid" pub_rsa.kid;
       Some ("use", `String (use_to_string pub_rsa.use));
       RJson.to_json_string_opt "x5t"
         ( Util.get_JWK_x5t (X509.Public_key.fingerprint ~hash:`SHA1 public_key)
@@ -204,7 +207,7 @@ let priv_rsa_to_priv_json (priv_rsa : priv_rsa) : Yojson.Safe.t =
       Some ("qi", `String qi);
       Some ("kty", `String (priv_rsa.kty |> Jwa.kty_to_string));
       Some ("use", `String (use_to_string priv_rsa.use));
-      Some ("kid", `String priv_rsa.kid);
+      RJson.to_json_string_opt "kid" priv_rsa.kid;
     ]
   in
   `Assoc (RList.filter_map (fun x -> x) values)
@@ -242,7 +245,7 @@ let pub_rsa_of_json json : (public t, 'error) result =
              json |> Json.member "use" |> Json.to_string_option
              |> ROpt.map use_of_string
            in
-           let kid = json |> Json.member "kid" |> Json.to_string in
+           let kid = json |> Json.member "kid" |> Json.to_string_option in
            let kty = `RSA in
            match (alg, use) with
            | Some alg, Some use -> Ok (Rsa_pub { alg; kty; use; key; kid })
@@ -278,7 +281,7 @@ let priv_rsa_of_json json : (priv t, 'error) result =
              json |> Json.member "use" |> Json.to_string_option
              |> ROpt.map use_of_string
            in
-           let kid = json |> Json.member "kid" |> Json.to_string in
+           let kid = json |> Json.member "kid" |> Json.to_string_option in
            let kty = `RSA in
            match (alg, use) with
            | Some alg, Some use -> Ok (Rsa_priv { alg; kty; use; key; kid })
@@ -306,7 +309,7 @@ let oct_of_json json =
              |> ROpt.map use_of_string
              |> ROpt.get_with_default ~default:(use_of_alg alg);
            key = json |> Json.member "k" |> Json.to_string;
-           kid = json |> Json.member "kid" |> Json.to_string;
+           kid = json |> Json.member "kid" |> Json.to_string_option;
          })
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 

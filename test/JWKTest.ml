@@ -16,7 +16,7 @@ let jwk_suite, _ =
               check_string "correct kty"
                 (Jose.Jwa.kty_to_string Fixtures.public_jwk_kty)
                 (get_kty jwk |> Jose.Jwa.kty_to_string);
-              check_string "correct kid" Fixtures.public_jwk_kid
+              check_option_string "correct kid" Fixtures.public_jwk_kid
                 (Jose.Jwk.get_kid jwk));
           Alcotest.test_case "pub - Roundtrip rsa" `Quick (fun () ->
               let pub_cert =
@@ -30,7 +30,7 @@ let jwk_suite, _ =
                 Jose.Jwk.of_pub_json_string Fixtures.public_jwk_string
                 |> CCResult.get_exn
               in
-              check_string "correct kid" Fixtures.public_jwk_kid
+              check_option_string "correct kid" Fixtures.public_jwk_kid
                 (Jose.Jwk.get_kid jwk);
               check_string "correct kty"
                 (Fixtures.public_jwk_kty |> Jose.Jwa.kty_to_string)
@@ -43,7 +43,8 @@ let jwk_suite, _ =
               let jwk = make_oct Fixtures.oct_key_string in
               let[@ocaml.warning "-8"] (Oct oct) = jwk in
               check_string "correct k" Fixtures.oct_jwk_pub_k oct.key;
-              check_string "correct kid" Fixtures.oct_jwk_pub_kid (get_kid jwk));
+              check_option_string "correct kid" Fixtures.oct_jwk_pub_kid
+                (get_kid jwk));
           Alcotest.test_case "pub - to_pub_json_string oct" `Quick (fun () ->
               check_string "correct jwk" Fixtures.oct_jwk_string
                 (Jose.Jwk.to_pub_json_string
@@ -83,7 +84,7 @@ let jwk_suite, _ =
               let jwk =
                 of_priv_pem Fixtures.rsa_test_priv |> CCResult.get_exn
               in
-              check_string "correct kid" Fixtures.private_jwk_kid
+              check_option_string "correct kid" Fixtures.private_jwk_kid
                 (Jose.Jwk.get_kid jwk);
               check_string "correct kty"
                 (Jose.Jwa.kty_to_string Fixtures.private_jwk_kty)
@@ -94,7 +95,8 @@ let jwk_suite, _ =
                 of_priv_json_string Fixtures.private_jwk_string
                 |> CCResult.get_exn
               in
-              check_string "correct kid" Fixtures.private_jwk_kid (get_kid jwk);
+              check_option_string "correct kid" Fixtures.private_jwk_kid
+                (get_kid jwk);
               check_string "correct kty"
                 (Fixtures.private_jwk_kty |> Jose.Jwa.kty_to_string)
                 (jwk |> get_kty |> Jose.Jwa.kty_to_string);
@@ -127,7 +129,8 @@ let jwk_suite, _ =
               let jwk = make_oct Fixtures.oct_key_string in
               let[@ocaml.warning "-8"] (Oct oct) = jwk in
               check_string "correct k" Fixtures.oct_jwk_priv_k oct.key;
-              check_string "correct kid" Fixtures.oct_jwk_priv_kid (get_kid jwk));
+              check_option_string "correct kid" Fixtures.oct_jwk_priv_kid
+                (get_kid jwk));
           Alcotest.test_case "priv - to_priv_json_string oct" `Quick (fun () ->
               check_result_string "correct jwk" (Ok Fixtures.oct_jwk_string)
                 ( Jose.Jwk.of_priv_json_string Fixtures.oct_jwk_string

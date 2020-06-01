@@ -32,14 +32,10 @@ let jwks_suite, _ =
             (fun () ->
               let jwks = Jose.Jwks.of_string expected_jwks_string in
               let jwk =
-                Jose.Jwks.find_key jwks Fixtures.public_jwk_kid
-                |> CCResult.of_opt
-                |> function
-                | Ok a -> Ok a
-                | Error s -> Error (`Msg s)
+                Jose.Jwks.find_key jwks Fixtures.public_jwk_kid |> CCOpt.get_exn
               in
-              check_result_string "correct kid" (Ok Fixtures.public_jwk_kid)
-                (CCResult.map Jose.Jwk.get_kid jwk));
+              check_option_string "correct kid" Fixtures.public_jwk_kid
+                (Jose.Jwk.get_kid jwk));
           Alcotest.test_case "Parses without alg" `Quick (fun () ->
               let jwks =
                 Jose.Jwks.of_string Fixtures.jwks_string_from_oidc_validation
@@ -49,7 +45,7 @@ let jwks_suite, _ =
           Alcotest.test_case "Can get correct JWK from Microsoft" `Quick
             (fun () ->
               let jwks = Jose.Jwks.of_string microsoft_jwks_string in
-              check_string "Should find key" microsoft_jwk_kid
+              check_option_string "Should find key" microsoft_jwk_kid
                 ( Jose.Jwks.find_key jwks microsoft_jwk_kid
                 |> CCOpt.get_exn |> Jose.Jwk.get_kid ));
         ] );
