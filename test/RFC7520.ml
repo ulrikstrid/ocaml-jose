@@ -219,7 +219,9 @@ let jwe_rsa_tests =
           let jwe = Jose.Jwe.decrypt jwe_aes_hmac_sha2_5_1 ~jwk in
           check_result_string "correct kid in header"
             (Ok "frodo.baggins@hobbiton.example")
-            (CCResult.map (fun jwe -> jwe.Jose.Jwe.header.kid |> CCOpt.get_exn) jwe);
+            (CCResult.map
+               (fun jwe -> jwe.Jose.Jwe.header.kid |> CCOpt.get_exn)
+               jwe);
           check_result_string "correct alg in header" (Ok "RSA1_5")
             (CCResult.map
                (fun jwe -> Jose.Jwa.alg_to_string jwe.Jose.Jwe.header.alg)
@@ -258,7 +260,9 @@ let jwe_rsa_tests =
           let jwe = Jose.Jwe.decrypt jwe_rsa_oaep_aes_gcm_5_2 ~jwk in
           check_result_string "correct kid in header"
             (Ok "samwise.gamgee@hobbiton.example")
-            (CCResult.map (fun jwe -> jwe.Jose.Jwe.header.kid |> CCOpt.get_exn) jwe);
+            (CCResult.map
+               (fun jwe -> jwe.Jose.Jwe.header.kid |> CCOpt.get_exn)
+               jwe);
           check_result_string "correct alg in header" (Ok "RSA-OAEP")
             (CCResult.map
                (fun jwe -> Jose.Jwa.alg_to_string jwe.Jose.Jwe.header.alg)
