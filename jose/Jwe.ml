@@ -81,15 +81,18 @@ let encrypt_payload ?enc ~cek ~iv ~aad payload =
       in
       Ok (Cstruct.to_string data, computed_auth_tag)
   | Some `A256GCM ->
+      let module GCM = Mirage_crypto.Cipher_block.AES.GCM in
       let cek = Cstruct.of_string cek in
-      let key = Mirage_crypto.Cipher_block.AES.GCM.of_secret cek in
+      let key = GCM.of_secret cek in
       let adata = Cstruct.of_string aad in
-      Mirage_crypto.Cipher_block.AES.GCM.authenticate_encrypt ~key ~nonce:iv
-        ~adata
-        (Cstruct.of_string payload)
-      |> fun message ->
-      let ciphertext = Cstruct.to_string message in
-      Ok (ciphertext, "" (* tag_string *))
+      GCM.authenticate_encrypt ~key ~nonce:iv ~adata (Cstruct.of_string payload)
+      |> fun cdata ->
+      let cipher, tag_data =
+        Cstruct.split cdata (Cstruct.len cdata - GCM.tag_size)
+      in
+      let ciphertext = Cstruct.to_string cipher in
+      let tag_string = Cstruct.to_string tag_data in
+      Ok (ciphertext, tag_string)
   | None -> Error `Missing_enc
   | _ -> Error `Unsupported_enc
 
@@ -184,9 +187,11 @@ let decrypt_ciphertext enc ~cek ~iv ~auth_tag ~aad ciphertext =
         |> Pkcs7.unpad
         >>= fun data -> Ok (Cstruct.to_string data)
   | Some `A256GCM ->
+      let module GCM = Mirage_crypto.Cipher_block.AES.GCM in
       let cek = Cstruct.of_string cek in
-      let key = Mirage_crypto.Cipher_block.AES.GCM.of_secret cek in
+      let key = GCM.of_secret cek in
       let adata = Cstruct.of_string aad in
+      let encrypted = Cstruct.append encrypted (Cstruct.of_string auth_tag) in
       Mirage_crypto.Cipher_block.AES.GCM.authenticate_decrypt ~key ~nonce:iv
         ~adata encrypted
       |> fun message ->
