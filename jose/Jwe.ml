@@ -84,12 +84,12 @@ let encrypt_payload ?enc ~cek ~iv ~aad payload =
       let cek = Cstruct.of_string cek in
       let key = Mirage_crypto.Cipher_block.AES.GCM.of_secret cek in
       let adata = Cstruct.of_string aad in
-      Mirage_crypto.Cipher_block.AES.GCM.encrypt ~key ~iv ~adata
+      Mirage_crypto.Cipher_block.AES.GCM.authenticate_encrypt ~key ~nonce:iv
+        ~adata
         (Cstruct.of_string payload)
-      |> fun { message; tag } ->
-      let tag_string = Cstruct.to_string tag in
+      |> fun message ->
       let ciphertext = Cstruct.to_string message in
-      Ok (ciphertext, tag_string)
+      Ok (ciphertext, "" (* tag_string *))
   | None -> Error `Missing_enc
   | _ -> Error `Unsupported_enc
 
@@ -187,11 +187,12 @@ let decrypt_ciphertext enc ~cek ~iv ~auth_tag ~aad ciphertext =
       let cek = Cstruct.of_string cek in
       let key = Mirage_crypto.Cipher_block.AES.GCM.of_secret cek in
       let adata = Cstruct.of_string aad in
-      Mirage_crypto.Cipher_block.AES.GCM.decrypt ~key ~iv ~adata encrypted
-      |> fun { message; tag } ->
-      let tag_string = Cstruct.to_string tag in
-      if tag_string = auth_tag then Ok (Cstruct.to_string message)
-      else Error (`Msg "invalid auth tag")
+      Mirage_crypto.Cipher_block.AES.GCM.authenticate_decrypt ~key ~nonce:iv
+        ~adata encrypted
+      |> fun message ->
+      ROpt.(
+        map (fun x -> Ok (Cstruct.to_string x)) message
+        |> get_with_default ~default:(Error (`Msg "invalid auth tag")))
   | _ -> Error (`Msg "unsupported encryption")
 
 let decrypt ~(jwk : Jwk.priv Jwk.t) jwe =
