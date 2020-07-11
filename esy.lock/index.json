@@ -1,5 +1,5 @@
 {
-  "checksum": "27bf13622a99fc4c11da045cdb60ceb9",
+  "checksum": "540db8b35093225417d533bb02883960",
   "root": "@reason-native-web/jose@link-dev:./package.json",
   "node": {
     "yarn-pkg-config@github:esy-ocaml/yarn-pkg-config#db3a0b63883606dd57c54a7158d560d6cba8cd79@d41d8cd9": {
