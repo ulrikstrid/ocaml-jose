@@ -47,8 +47,6 @@ stages:
       CACHE_FOLDER: $(Pipeline.Workspace)/cache
     strategy:
       matrix:
-        4_07_1:
-          OCAML_VERSION: 4.07.1
         4_08_1:
           OCAML_VERSION: 4.08.1
         4_09_0:
