@@ -20,7 +20,7 @@
    (base64 (>= 3.0.0))
    (dune (>= 1.11))
    (eqaf (>= 0.7))
-   (mirage-crypto (and (>= 0.6.0 ) (< 0.8.0)))
+   (mirage-crypto (>= 0.8.1))
    (x509 (>= 0.10.0))
    (cstruct (>= 4.0.0))
    astring
