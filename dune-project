@@ -16,7 +16,7 @@
  (synopsis "JOSE implementation for OCaml and ReasonML")
  (description "JavaScript Object Signing and Encryption built ontop of pure OCaml libs")
  (depends
-   (ocaml (>= 4.07.0))
+   (ocaml (>= 4.08.0))
    (base64 (>= 3.0.0))
    (dune (>= 1.11))
    (eqaf (>= 0.7))
