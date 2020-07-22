@@ -53,7 +53,11 @@ let verify_internal (type a) ~(jwk : a Jwk.t) t =
          let token_hash =
            input_str |> Cstruct.of_string |> Mirage_crypto.Hash.SHA256.digest
          in
-         Cstruct.equal message token_hash)
+         (* From RFC7518§3.2:
+          *   The comparison of the computed HMAC value to the JWS Signature
+          *   value MUST be done in a constant-time manner to thwart timing
+          *   attacks. *)
+         Eqaf_cstruct.equal message token_hash)
 
 let validate (type a) ~(jwk : a Jwk.t) t =
   let header = t.header in
