@@ -19,6 +19,7 @@
     "@opam/base64": ">=3.0.0",
     "@opam/cstruct": ">=4.0.0",
     "@opam/dune": ">=1.11.0",
+    "@opam/eqaf": ">=0.7",
     "@opam/mirage-crypto": ">=0.6.0",
     "@opam/mirage-crypto-pk": ">=0.6.0",
     "@opam/mirage-crypto-rng": ">=0.6.0",
