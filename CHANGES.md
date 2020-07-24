@@ -1,3 +1,8 @@
+0.5.0
+--------------
+- JWS: compare computed HMAC signatures in constant-time (by @anmonteiro)
+- Adapt to Mirage-crypto 0.8.1, drops support for OCaml < 4.8.0 (breaking) (by @anmonteiro)
+
 0.4.0
 --------------
 - RFC7638: Implement thumbprints (by @undu)

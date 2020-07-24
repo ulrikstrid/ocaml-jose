@@ -1,6 +1,6 @@
 {
   "name": "@reason-native-web/jose",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "JOSE implementation in native Reason",
   "esy": {
     "build": "dune build -p jose",
