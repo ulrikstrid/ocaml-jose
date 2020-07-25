@@ -44,6 +44,7 @@ let alg_of_use_and_kty ?(use : use = `Sig) (kty : Jwa.kty) =
   | `Enc, `oct -> `Unsupported "encryption with oct is not supported yet"
   | _, `EC -> `Unsupported "Eliptic curves are not supported yet"
   | `Unsupported u, _ -> `Unsupported ("We don't know what to do with use: " ^ u)
+  | _, `Unsupported k -> `Unsupported ("We don't know what to do with kty: " ^ k)
 
 let use_of_alg (alg : Jwa.alg) =
   match alg with

@@ -31,7 +31,8 @@ module Jwa : sig
   type kty =
     [ `oct  (** Octet sequence (used to represent symmetric keys) *)
     | `RSA  (** RSA {{: https://tools.ietf.org/html/rfc3447} Link to RFC} *)
-    | `EC  (** Elliptic Curve *) ]
+    | `EC  (** Elliptic Curve *)
+    | `Unsupported of string ]
   (** {{: https://tools.ietf.org/html/rfc7518#section-6.1 } Link to RFC } *)
 
   val kty_to_string : kty -> string

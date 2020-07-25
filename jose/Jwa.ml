@@ -1,18 +1,20 @@
 type kty =
   [ `oct  (** Octet sequence (used to represent symmetric keys) *)
   | `RSA  (** RSA  *)
-  | `EC  (** Elliptic Curve *) ]
+  | `EC  (** Elliptic Curve *)
+  | `Unsupported of string ]
 
 let kty_to_string : kty -> string = function
   | `oct -> "oct"
   | `RSA -> "RSA"
   | `EC -> "EC"
+  | `Unsupported str -> str
 
 let kty_of_string : string -> kty = function
   | "oct" -> `oct
   | "RSA" -> `RSA
   | "EC" -> `EC
-  | str -> raise (Failure ("Unsupported kty: " ^ str))
+  | str -> `Unsupported str
 
 type alg =
   [ `RS256  (** HMAC using SHA-256 *)
