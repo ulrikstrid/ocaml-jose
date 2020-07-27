@@ -1,6 +1,6 @@
 0.5.1
 --------------
-- JWA: Add Unsupported option and stop raising when encountering unknown `kty` (bu @ulrikstrid)
+- JWA: Add Unsupported option and stop raising when encountering unknown `kty` (by @ulrikstrid)
 
 0.5.0
 --------------
