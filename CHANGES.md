@@ -1,3 +1,7 @@
+0.5.1
+--------------
+- JWA: Add Unsupported option and stop raising when encountering unknown `kty` (bu @ulrikstrid)
+
 0.5.0
 --------------
 - JWS: compare computed HMAC signatures in constant-time (by @anmonteiro)
