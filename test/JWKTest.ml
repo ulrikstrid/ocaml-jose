@@ -7,7 +7,7 @@ let get_string_alg jwk : string =
 let jwk_suite, _ =
   Junit_alcotest.run_and_report ~package:"jose" "JWK"
     [
-      ( "JwkP",
+      ( "JWK",
         [
           Alcotest.test_case "pub - Creates a correct JWK from pem" `Quick
             (fun () ->

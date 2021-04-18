@@ -10,6 +10,6 @@ let () = Jbuild_plugin.V1.send @@ {|
 (library
  (name Jose)
  (public_name jose)
- (libraries astring eqaf yojson mirage-crypto mirage-crypto-pk x509 base64 zarith)
+ (libraries astring eqaf yojson mirage-crypto mirage-crypto-pk mirage-crypto-ec x509 base64 zarith)
  |} ^ preprocess ^ {|)
 |}

@@ -1,4 +1,4 @@
-(lang dune 1.11)
+(lang dune 2.8)
 (name jose)
 (license MIT)
 (source (github ulrikstrid/reason-jose))
@@ -8,8 +8,6 @@
 (maintainers "ulrik.strid@outlook.com")
 
 (generate_opam_files true)
-
-(using fmt 1.2)
 
 (package
  (name jose)

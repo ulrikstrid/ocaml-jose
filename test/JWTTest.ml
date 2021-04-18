@@ -45,7 +45,7 @@ let jwt_suite, _ =
               let payload =
                 Jwt.empty_payload |> Jwt.add_claim "sub" (`String "tester")
               in
-              let jwt_r = Jwt.sign ~header:(Obj.magic header) ~payload jwk in
+              let jwt_r = Jwt.sign ~header ~payload jwk in
               check_result_string "JWT is correctly created"
                 (Ok Fixtures.external_jwt_string)
                 (CCResult.map Jwt.to_string jwt_r));
@@ -66,7 +66,7 @@ let jwt_suite, _ =
                 Jwt.empty_payload |> Jwt.add_claim "sub" (`String "tester")
               in
               let jwk = Jwk.make_oct Fixtures.oct_key_string in
-              let jwt_r = Jwt.sign ~header:(Obj.magic header) ~payload jwk in
+              let jwt_r = Jwt.sign ~header ~payload jwk in
               check_result_string "JWT is correctly created"
                 (Ok Fixtures.oct_jwt_string)
                 (CCResult.map Jwt.to_string jwt_r));
@@ -81,7 +81,7 @@ let jwt_suite, _ =
                 Jwt.empty_payload |> Jwt.add_claim "sub" (`String "tester")
               in
               let jwt_r =
-                Jwt.sign ~header:(Obj.magic header) ~payload jwk
+                Jwt.sign ~header ~payload jwk
                 |> CCResult.flat_map (Jwt.validate ~jwk)
               in
               check_result_string "JWT is correctly created"
@@ -101,7 +101,7 @@ let jwt_suite, _ =
                 Jwt.empty_payload |> Jwt.add_claim "sub" (`String "tester")
               in
               let jwt_r =
-                Jwt.sign ~header:(Obj.magic header) ~payload jwk
+                Jwt.sign ~header ~payload jwk
                 |> CCResult.flat_map (Jwt.validate ~jwk:pub_jwk)
               in
               check_result_string "JWT is correctly created"
@@ -109,16 +109,13 @@ let jwt_suite, _ =
                 (CCResult.map Jwt.to_string jwt_r));
           Alcotest.test_case "Can validate my own OCT JWT" `Quick (fun () ->
               let open Jose in
-              let header =
-                Header.make_header ~typ:"JWT"
-                  (Jose.Jwk.make_oct ~use:`Sig Fixtures.oct_key_string)
-              in
+              let jwk = Jwk.make_oct ~use:`Sig Fixtures.oct_key_string in
+              let header = Header.make_header ~typ:"JWT" jwk in
               let payload =
                 Jwt.empty_payload |> Jwt.add_claim "sub" (`String "tester")
               in
-              let jwk = Jwk.make_oct Fixtures.oct_key_string in
               let jwt_r =
-                Jwt.sign ~header:(Obj.magic header) ~payload jwk
+                Jwt.sign ~header ~payload jwk
                 |> CCResult.flat_map (Jwt.validate ~jwk)
               in
               check_result_string "JWT is correctly created"

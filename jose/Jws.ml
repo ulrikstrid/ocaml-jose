@@ -24,7 +24,9 @@ let verify_RS256 (type a) ~(jwk : a Jwk.t) str =
       let pub_jwk = Jwk.pub_of_priv_rsa jwk in
       Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:pub_jwk.key str
   | Jwk.Rsa_pub jwk -> Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:jwk.key str
-  | Jwk.Oct _ -> None )
+  | Jwk.Oct _ -> None
+  | Jwk.Es256_pub _ -> None
+  | Jwk.Es256_priv _ -> None )
   |> function
   | None -> Error `Invalid_signature
   | Some message -> Ok message
@@ -35,6 +37,13 @@ let verify_HS256 (type a) ~(jwk : a Jwk.t) str =
       Mirage_crypto.Hash.SHA256.hmac ~key:(Cstruct.of_string jwk.key) str
       |> RResult.return
   | _ -> Error (`Msg "JWK doesn't match")
+
+let verify_ES256 (type a) ~(jwk : a Jwk.t) str =
+  match jwk with
+  | Jwk.Es256_priv jwk ->
+    let pub_jwk = Jwk.pub_of_priv_es256 jwk in
+    Mirage_crypto_ec.P256.Dsa.verify ~key:pub_jwk.key str
+  | _ -> raise (Invalid_argument "alg")
 
 let verify_jwk (type a) ~(jwk : a Jwk.t) str =
   match Jwk.get_alg jwk with
@@ -64,6 +73,7 @@ let validate (type a) ~(jwk : a Jwk.t) t =
   ( match header.alg with
   | `RS256 -> Ok header.alg
   | `HS256 -> Ok header.alg
+  | `ES256 -> Ok header.alg
   | `Unsupported _ | `RSA_OAEP | `RSA1_5 | `None ->
       Error (`Msg "alg must be RS256 or HS256") )
   |> RResult.flat_map (fun _ -> verify_internal ~jwk t)
@@ -75,10 +85,17 @@ let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
     match jwk with
     | Jwk.Rsa_priv { key; _ } ->
         Ok (fun x -> Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key x)
+    | Jwk.Es256_priv { key; _ } ->
+        Ok (function
+        | `Message x ->
+            let message = Mirage_crypto.Hash.SHA256.digest x in
+            let r, s = Mirage_crypto_ec.P256.Dsa.sign ~key message in
+              Cstruct.append r s
+        | `Digest _ -> raise (Invalid_argument "Digest")
+        )
     | Jwk.Oct oct ->
         Jwk.oct_to_sign_key oct
-        |> RResult.map (fun key ->
-             function
+        |> RResult.map (fun key -> function
              | `Message x -> Mirage_crypto.Hash.SHA256.hmac ~key x
              | `Digest _ -> raise (Invalid_argument "Digest"))
   in

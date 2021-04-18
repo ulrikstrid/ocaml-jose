@@ -64,5 +64,10 @@ let validate (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
   |> RResult.map of_jws
 
 let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
-  Jws.sign ~header ~payload:(Yojson.Safe.to_string payload) jwk
-  |> RResult.map of_jws
+  let payload =
+    try Ok (Yojson.Safe.to_string payload)
+    with _ -> Error (`Msg "Can't serialize payload")
+  in
+  match payload with
+  | Ok payload -> Jws.sign ~header ~payload jwk |> RResult.map of_jws
+  | Error e -> Error e

@@ -101,7 +101,9 @@ let encrypt_cek (type a) alg (cek : string) ~(jwk : a Jwk.t) =
   ( match jwk with
   | Rsa_priv rsa -> Ok (Mirage_crypto_pk.Rsa.pub_of_priv rsa.key)
   | Rsa_pub rsa -> Ok rsa.key
-  | Oct _ -> Error `Unsupported_kty )
+  | Oct _ -> Error `Unsupported_kty
+  | Es256_priv _ -> Error `Unsupported_kty
+  | Es256_pub _ -> Error `Unsupported_kty )
   >>= fun key ->
   match alg with
   | `RSA1_5 ->

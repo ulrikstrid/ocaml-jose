@@ -12,7 +12,7 @@ bug-reports: "https://github.com/ulrikstrid/reason-jose/issues"
 depends: [
   "ocaml" {>= "4.08.0"}
   "base64" {>= "3.0.0"}
-  "dune" {>= "1.11"}
+  "dune" {>= "2.8" & >= "1.11"}
   "eqaf" {>= "0.7"}
   "mirage-crypto" {>= "0.8.1"}
   "x509" {>= "0.10.0"}
@@ -27,9 +27,10 @@ depends: [
   "junit" {with-test}
   "junit_alcotest" {with-test}
   "lwt" {with-test}
+  "odoc" {with-doc}
 ]
 build: [
-  ["dune" "subst"] {pinned}
+  ["dune" "subst"] {dev}
   [
     "dune"
     "build"
