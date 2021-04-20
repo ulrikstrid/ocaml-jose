@@ -19,14 +19,14 @@ let to_string t =
   header_str ^ "." ^ payload_str ^ "." ^ t.signature
 
 let verify_RS256 (type a) ~(jwk : a Jwk.t) str =
-  ( match jwk with
+  (match jwk with
   | Jwk.Rsa_priv jwk ->
       let pub_jwk = Jwk.pub_of_priv_rsa jwk in
       Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:pub_jwk.key str
   | Jwk.Rsa_pub jwk -> Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:jwk.key str
   | Jwk.Oct _ -> None
   | Jwk.Es256_pub _ -> None
-  | Jwk.Es256_priv _ -> None )
+  | Jwk.Es256_priv _ -> None)
   |> function
   | None -> Error `Invalid_signature
   | Some message -> Ok message
@@ -38,26 +38,43 @@ let verify_HS256 (type a) ~(jwk : a Jwk.t) str =
       |> RResult.return
   | _ -> Error (`Msg "JWK doesn't match")
 
-let verify_ES256 (type a) ~(jwk : a Jwk.t) str =
-  match jwk with
-  | Jwk.Es256_priv jwk ->
-    let pub_jwk = Jwk.pub_of_priv_es256 jwk in
-    Mirage_crypto_ec.P256.Dsa.verify ~key:pub_jwk.key str
-  | _ -> raise (Invalid_argument "alg")
+let verify_ES256 (type a) ~(jwk : a Jwk.t) ~input_str msg =
+  if Cstruct.length msg != 64 then Error `Invalid_signature
+  else
+    let r, s = Cstruct.split msg 32 in
+    let () =
+      Printf.printf "r: %i, s: %i\n" (Cstruct.length r) (Cstruct.length s)
+    in
+    let message =
+      Mirage_crypto.Hash.SHA256.digest (Cstruct.of_string input_str)
+    in
+    match jwk with
+    | Jwk.Es256_pub pub_jwk ->
+        if Mirage_crypto_ec.P256.Dsa.verify ~key:pub_jwk.key (r, s) message then
+          Ok msg
+        else Error `Invalid_signature
+    | Jwk.Es256_priv jwk ->
+        let pub_jwk = Jwk.pub_of_priv_es256 jwk in
+        if Mirage_crypto_ec.P256.Dsa.verify ~key:pub_jwk.key (r, s) message then
+          Ok msg
+        else Error `Invalid_signature
+    | _ -> raise (Invalid_argument "alg")
 
-let verify_jwk (type a) ~(jwk : a Jwk.t) str =
+let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str str =
   match Jwk.get_alg jwk with
   | `RS256 -> verify_RS256 ~jwk str
   | `HS256 -> verify_HS256 ~jwk str
+  | `ES256 -> verify_ES256 ~jwk ~input_str str
   | `None -> Ok str
   | _ -> Error (`Msg "alg not supported")
 
 let verify_internal (type a) ~(jwk : a Jwk.t) t =
   let header_str = Header.to_string t.header in
-  let input_str = header_str ^ "." ^ t.payload in
+  let payload_str = RBase64.url_encode_string t.payload in
+  let input_str = header_str ^ "." ^ payload_str in
   t.signature |> RBase64.url_decode
   |> RResult.map Cstruct.of_string
-  |> RResult.flat_map (verify_jwk ~jwk)
+  |> RResult.flat_map (verify_jwk ~jwk ~input_str)
   |> RResult.map (fun message ->
          let token_hash =
            input_str |> Cstruct.of_string |> Mirage_crypto.Hash.SHA256.digest
@@ -70,12 +87,12 @@ let verify_internal (type a) ~(jwk : a Jwk.t) t =
 
 let validate (type a) ~(jwk : a Jwk.t) t =
   let header = t.header in
-  ( match header.alg with
+  (match header.alg with
   | `RS256 -> Ok header.alg
   | `HS256 -> Ok header.alg
   | `ES256 -> Ok header.alg
   | `Unsupported _ | `RSA_OAEP | `RSA1_5 | `None ->
-      Error (`Msg "alg must be RS256 or HS256") )
+      Error (`Msg "alg must be RS256 or HS256"))
   |> RResult.flat_map (fun _ -> verify_internal ~jwk t)
   |> RResult.map (fun _ -> t)
 
@@ -86,13 +103,13 @@ let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
     | Jwk.Rsa_priv { key; _ } ->
         Ok (fun x -> Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key x)
     | Jwk.Es256_priv { key; _ } ->
-        Ok (function
-        | `Message x ->
-            let message = Mirage_crypto.Hash.SHA256.digest x in
-            let r, s = Mirage_crypto_ec.P256.Dsa.sign ~key message in
+        Ok
+          (function
+          | `Message x ->
+              let message = Mirage_crypto.Hash.SHA256.digest x in
+              let r, s = Mirage_crypto_ec.P256.Dsa.sign ~key message in
               Cstruct.append r s
-        | `Digest _ -> raise (Invalid_argument "Digest")
-        )
+          | `Digest _ -> raise (Invalid_argument "Digest"))
     | Jwk.Oct oct ->
         Jwk.oct_to_sign_key oct
         |> RResult.map (fun key -> function

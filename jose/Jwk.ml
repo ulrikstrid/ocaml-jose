@@ -15,17 +15,16 @@ module Util = struct
     |> Mirage_crypto.Hash.SHA256.digest |> Cstruct.to_bytes |> Bytes.to_string
     |> RBase64.url_encode_string
 
-  let get_RSA_kid ~e ~n =
-    `Assoc [ ("e", `String e); ("kty", `String "RSA"); ("n", `String n) ]
-    |> kid_of_json |> ROpt.return
-
-  let get_OCT_kid k =
-    `Assoc [ ("k", `String k); ("kty", `String "oct") ]
-    |> kid_of_json |> ROpt.return
-
   let get_JWK_x5t fingerprint =
     fingerprint |> Cstruct.to_bytes |> Bytes.to_string
     |> RBase64.url_encode ~len:20
+
+  let get_ES256_x_y key =
+    let point = Mirage_crypto_ec.P256.Dsa.pub_to_cstruct key in
+    let x_cs, y_cs = Cstruct.(split (shift point 1) 32) in
+    let x = x_cs |> Cstruct.to_string |> RBase64.url_encode_string in
+    let y = y_cs |> Cstruct.to_string |> RBase64.url_encode_string in
+    (x, y)
 end
 
 type use = [ `Sig | `Enc | `Unsupported of string ]
@@ -40,6 +39,7 @@ let alg_of_use_and_kty ?(use : use = `Sig) (kty : Jwa.kty) =
   match (use, kty) with
   | `Sig, `oct -> `HS256
   | `Sig, `RSA -> `RS256
+  | `Sig, `EC -> `ES256
   | `Enc, `RSA -> `RSA_OAEP
   | `Enc, `oct -> `Unsupported "encryption with oct is not supported yet"
   | _, `EC -> `Unsupported "Eliptic curves are not supported yet"
@@ -94,7 +94,12 @@ let get_alg (type a) (t : a t) : Jwa.alg =
   | Oct oct -> oct.alg
 
 let get_kty (type a) (t : a t) =
-  match t with Rsa_priv _ -> `RSA | Rsa_pub _ -> `RSA | Es256_priv _ -> `EC | Es256_pub _ -> `EC | Oct _ -> `oct
+  match t with
+  | Rsa_priv _ -> `RSA
+  | Rsa_pub _ -> `RSA
+  | Es256_priv _ -> `EC
+  | Es256_pub _ -> `EC
+  | Oct _ -> `oct
 
 let get_kid (type a) (t : a t) =
   match t with
@@ -104,26 +109,73 @@ let get_kid (type a) (t : a t) =
   | Es256_pub es -> es.kid
   | Oct oct -> oct.kid
 
-let make_oct ?(use : use = `Sig) (str : string) : priv t =
+let make_kid (type a) (t : a t) =
+  let kid =
+    match t with
+    | Rsa_priv rsa_priv ->
+        let e = Util.get_JWK_component rsa_priv.key.e in
+        let n = Util.get_JWK_component rsa_priv.key.n in
+        `Assoc [ ("e", `String e); ("kty", `String "RSA"); ("n", `String n) ]
+        |> Util.kid_of_json
+    | Rsa_pub rsa_pub ->
+        let e = Util.get_JWK_component rsa_pub.key.e in
+        let n = Util.get_JWK_component rsa_pub.key.n in
+        `Assoc [ ("e", `String e); ("kty", `String "RSA"); ("n", `String n) ]
+        |> Util.kid_of_json
+    | Es256_priv es ->
+        let x, y =
+          Util.get_ES256_x_y (Mirage_crypto_ec.P256.Dsa.pub_of_priv es.key)
+        in
+        `Assoc
+          [
+            ("crv", `String "P-256");
+            ("kty", `String "EC");
+            ("x", `String x);
+            ("y", `String y);
+          ]
+        |> Util.kid_of_json
+    | Es256_pub es ->
+        let x, y = Util.get_ES256_x_y es.key in
+        `Assoc
+          [
+            ("crv", `String "P-256");
+            ("kty", `String "EC");
+            ("x", `String x);
+            ("y", `String y);
+          ]
+        |> Util.kid_of_json
+    | Oct oct ->
+        `Assoc [ ("k", `String oct.key); ("kty", `String "oct") ]
+        |> Util.kid_of_json
+  in
+  Some kid
+
+let make_oct ?(use : use = `Sig) (str : string) : 'a t =
   (* Should we make this just return a result intead? *)
   let key = RBase64.url_encode_string str in
-  Oct { kty = `oct; use; alg = `HS256; key; kid = Util.get_OCT_kid key }
+  let jwk = { kty = `oct; use; alg = `HS256; key; kid = None } in
+  Oct { jwk with kid = make_kid (Oct jwk) }
 
 let make_priv_rsa ?(use : use = `Sig) (rsa_priv : Mirage_crypto_pk.Rsa.priv) :
     priv t =
   let kty : Jwa.kty = `RSA in
   let alg = alg_of_use_and_kty ~use kty in
-  let e = Util.get_JWK_component rsa_priv.e in
-  let n = Util.get_JWK_component rsa_priv.n in
-  Rsa_priv { alg; kty; use; key = rsa_priv; kid = Util.get_RSA_kid ~e ~n }
+  let jwk = { alg; kty; use; key = rsa_priv; kid = None } in
+  Rsa_priv { jwk with kid = make_kid (Rsa_priv jwk) }
+
+let make_priv_es256 ?(use : use = `Sig)
+    (es256_priv : Mirage_crypto_ec.P256.Dsa.priv) : priv t =
+  let kty : Jwa.kty = `EC in
+  let alg = alg_of_use_and_kty ~use kty in
+  let jwk = { alg; kty; use; key = es256_priv; kid = None } in
+  Es256_priv { jwk with kid = make_kid (Es256_priv jwk) }
 
 let make_pub_rsa ?(use : use = `Sig) (rsa_pub : Mirage_crypto_pk.Rsa.pub) :
     public t =
   let kty : Jwa.kty = `RSA in
   let alg = alg_of_use_and_kty ~use kty in
-  let e = Util.get_JWK_component rsa_pub.e in
-  let n = Util.get_JWK_component rsa_pub.n in
-  Rsa_pub { alg; kty; use; key = rsa_pub; kid = Util.get_RSA_kid ~e ~n }
+  let jwk = { alg; kty; use; key = rsa_pub; kid = None } in
+  Rsa_pub { jwk with kid = make_kid (Rsa_pub jwk) }
 
 let of_pub_pem ?(use : use = `Sig) pem : (public t, [> `Not_rsa ]) result =
   Cstruct.of_string pem |> X509.Public_key.decode_pem
@@ -144,9 +196,10 @@ let to_pub_pem (type a) (jwk : a t) =
 
 let of_priv_pem ?(use : use = `Sig) pem : (priv t, [> `Not_rsa ]) result =
   Cstruct.of_string pem |> X509.Private_key.decode_pem
-  |> RResult.flat_map (function 
-    | `RSA pub_key -> Ok (make_priv_rsa ~use pub_key)
-    | _ -> Error `Not_rsa)
+  |> RResult.flat_map (function
+       | `RSA priv_key -> Ok (make_priv_rsa ~use priv_key)
+       | `P256 priv_key -> Ok (make_priv_es256 ~use priv_key)
+       | _ -> Error `Not_rsa)
 
 let to_priv_pem (jwk : priv t) =
   match jwk with
@@ -179,23 +232,17 @@ let pub_rsa_to_json pub_rsa =
       RJson.to_json_string_opt "kid" pub_rsa.kid;
       Some ("use", `String (use_to_string pub_rsa.use));
       RJson.to_json_string_opt "x5t"
-        ( Util.get_JWK_x5t (X509.Public_key.fingerprint ~hash:`SHA1 public_key)
-        |> RResult.to_opt );
+        (Util.get_JWK_x5t (X509.Public_key.fingerprint ~hash:`SHA1 public_key)
+        |> RResult.to_opt);
     ]
   in
   `Assoc (RList.filter_map (fun x -> x) values)
 
 let pub_of_priv_rsa (priv_rsa : priv_rsa) : pub_rsa =
-  {
-    priv_rsa with
-    key = Mirage_crypto_pk.Rsa.pub_of_priv priv_rsa.key;
-  }
+  { priv_rsa with key = Mirage_crypto_pk.Rsa.pub_of_priv priv_rsa.key }
 
 let pub_of_priv_es256 (priv_es256 : priv_es256) : pub_es256 =
-  {
-    priv_es256 with
-    key = Mirage_crypto_ec.P256.Dsa.pub_of_priv priv_es256.key;
-  }
+  { priv_es256 with key = Mirage_crypto_ec.P256.Dsa.pub_of_priv priv_es256.key }
 
 let priv_rsa_to_pub_json (priv_rsa : priv_rsa) =
   pub_rsa_to_json (pub_of_priv_rsa priv_rsa)
@@ -245,15 +292,21 @@ let pub_es256_to_pub_json (pub_es256 : pub_es256) : Yojson.Safe.t =
     ]
   in
   `Assoc (RList.filter_map (fun x -> x) values)
+
 let priv_es256_to_pub_json (priv_es256 : priv_es256) : Yojson.Safe.t =
   pub_of_priv_es256 priv_es256 |> pub_es256_to_pub_json
 
 let priv_es256_to_priv_json (priv_es256 : priv_es256) : Yojson.Safe.t =
-  let point = Mirage_crypto_ec.P256.Dsa.(pub_to_cstruct (priv_es256.key |> pub_of_priv)) in
+  let point =
+    Mirage_crypto_ec.P256.Dsa.(pub_to_cstruct (priv_es256.key |> pub_of_priv))
+  in
   let x_cs, y_cs = Cstruct.(split (shift point 1) 32) in
   let x = x_cs |> Cstruct.to_string |> RBase64.url_encode_string in
   let y = y_cs |> Cstruct.to_string |> RBase64.url_encode_string in
-  let d = Mirage_crypto_ec.P256.Dsa.priv_to_cstruct priv_es256.key |> Cstruct.to_string |> RBase64.url_encode_string in
+  let d =
+    Mirage_crypto_ec.P256.Dsa.priv_to_cstruct priv_es256.key
+    |> Cstruct.to_string |> RBase64.url_encode_string
+  in
   let values =
     [
       Some ("alg", Jwa.alg_to_json priv_es256.alg);
@@ -394,6 +447,12 @@ let of_priv_json json : (priv t, 'error) result =
 let of_priv_json_string str : (priv t, 'error) result =
   Yojson.Safe.from_string str |> of_priv_json
 
+let pub_of_priv (jwk : priv t) : public t =
+  match jwk with
+  | Oct oct -> Oct oct
+  | Rsa_priv rsa -> Rsa_pub (pub_of_priv_rsa rsa)
+  | Es256_priv es -> Es256_pub (pub_of_priv_es256 es)
+
 let oct_to_sign_key (oct : oct) : (Cstruct.t, [> `Msg of string ]) result =
   RBase64.url_decode oct.key |> RResult.map Cstruct.of_string
 
@@ -416,10 +475,10 @@ let priv_rsa_to_thumbprint hash (priv_rsa : Mirage_crypto_pk.Rsa.priv jwk) =
 
 let oct_to_thumbprint _hash (_oct : oct) = Error `Unsafe
 
-let pub_ec_to_thumbprint _hash (pub_es256: pub_es256) =
-  X509.Public_key.id (`P256 pub_es256.key) |> Cstruct.to_string 
+let pub_ec_to_thumbprint _hash (pub_es256 : pub_es256) =
+  X509.Public_key.id (`P256 pub_es256.key) |> Cstruct.to_string
 
-let priv_es256_to_thumbprint hash (priv_es256: priv_es256) =
+let priv_es256_to_thumbprint hash (priv_es256 : priv_es256) =
   pub_of_priv_es256 priv_es256 |> pub_ec_to_thumbprint hash
 
 let get_thumbprint (type a) (hash : Mirage_crypto.Hash.hash) (jwk : a t) =

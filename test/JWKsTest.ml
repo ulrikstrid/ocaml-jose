@@ -46,8 +46,8 @@ let jwks_suite, _ =
             (fun () ->
               let jwks = Jose.Jwks.of_string microsoft_jwks_string in
               check_option_string "Should find key" microsoft_jwk_kid
-                ( Jose.Jwks.find_key jwks microsoft_jwk_kid
-                |> CCOpt.get_exn |> Jose.Jwk.get_kid ));
+                (Jose.Jwks.find_key jwks microsoft_jwk_kid
+                |> CCOpt.get_exn |> Jose.Jwk.get_kid));
         ] );
     ]
 

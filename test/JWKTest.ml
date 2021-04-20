@@ -122,8 +122,8 @@ let jwk_suite, _ =
           Alcotest.test_case "priv - to_priv_json_string rsa" `Quick (fun () ->
               let trimed_json = trim_json_string Fixtures.private_jwk_string in
               check_result_string "matches private_jwk_string" (Ok trimed_json)
-                ( Jose.Jwk.of_priv_json_string Fixtures.private_jwk_string
-                |> CCResult.map Jose.Jwk.to_priv_json_string ));
+                (Jose.Jwk.of_priv_json_string Fixtures.private_jwk_string
+                |> CCResult.map Jose.Jwk.to_priv_json_string));
           Alcotest.test_case "priv - oct_of_string" `Quick (fun () ->
               let open Jose.Jwk in
               let jwk = make_oct Fixtures.oct_key_string in
@@ -133,8 +133,8 @@ let jwk_suite, _ =
                 (get_kid jwk));
           Alcotest.test_case "priv - to_priv_json_string oct" `Quick (fun () ->
               check_result_string "correct jwk" (Ok Fixtures.oct_jwk_string)
-                ( Jose.Jwk.of_priv_json_string Fixtures.oct_jwk_string
-                |> CCResult.map Jose.Jwk.to_priv_json_string ));
+                (Jose.Jwk.of_priv_json_string Fixtures.oct_jwk_string
+                |> CCResult.map Jose.Jwk.to_priv_json_string));
           Alcotest.test_case "priv - of_priv_json_string oct" `Quick (fun () ->
               let jwk =
                 Jose.Jwk.of_priv_json_string Fixtures.oct_jwk_string

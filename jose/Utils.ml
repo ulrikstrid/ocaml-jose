@@ -45,7 +45,7 @@ module RList = struct
     let rec aux accu = function
       | [] -> List.rev accu
       | x :: l -> (
-          match f x with None -> aux accu l | Some v -> aux (v :: accu) l )
+          match f x with None -> aux accu l | Some v -> aux (v :: accu) l)
     in
     aux []
 

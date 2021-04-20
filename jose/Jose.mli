@@ -7,7 +7,7 @@ module Jwa : sig
   type alg =
     [ `RS256  (** HMAC using SHA-256 *)
     | `HS256  (** RSASSA-PKCS1-v1_5 using SHA-256 *)
-    | `ES256 (** ECDSA using P-256 and SHA-256 *)
+    | `ES256  (** ECDSA using P-256 and SHA-256 *)
     | `RSA_OAEP  (** RSAES OAEP using default parameters *)
     | `RSA1_5  (** RSA PKCS 1 *)
     | `None
@@ -83,13 +83,11 @@ module Jwk : sig
 
   [oct] will in most cases be a private key but there are some cases where it will be considered public, eg. if you parse a public JSON *)
 
-
   type priv_es256 = Mirage_crypto_ec.P256.Dsa.priv jwk
   (** [es256] represents a public JWK with [kty] [`EC] and a [P256.pub] key *)
 
   type pub_es256 = Mirage_crypto_ec.P256.Dsa.pub jwk
   (** [es256] represents a private JWK with [kty] [`EC] and a [P256.priv] key *)
-
 
   (**
     [t] describes a JSON Web Key which can be either [public] or [private]
@@ -216,6 +214,13 @@ module Jwk : sig
   (**
     [to_priv_json_string t] takes a [priv t] and returns a JSON string representation
     *)
+
+  val pub_of_priv : priv t -> public t
+  (**
+    [pub_of_priv t] takes a [priv t] and returns the coresponding public key.
+
+    When using it on [Oct] keys it will just return the same as it's a symetric key.
+  *)
 
   (**
   {1 Utils }
