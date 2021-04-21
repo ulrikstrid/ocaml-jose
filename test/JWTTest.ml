@@ -162,6 +162,42 @@ let jwt_suite, _ =
               check_result_string "JWT is correctly created"
                 (Ok Fixtures.es256_jwt_string)
                 (CCResult.map Jwt.to_string jwt_r));
+          Alcotest.test_case "Can validate my own EC JWT (pub es256)" `Quick
+            (fun () ->
+              let open Jose in
+              let jwk =
+                Jwk.of_priv_pem Fixtures.es256_test_priv |> CCResult.get_exn
+              in
+              let pub_jwk = Jwk.pub_of_priv jwk in
+              let header = Header.make_header ~typ:"JWT" jwk in
+              let payload =
+                Jwt.empty_payload |> Jwt.add_claim "sub" (`String "tester")
+              in
+              let jwt_r =
+                Jwt.sign ~header ~payload jwk
+                |> CCResult.flat_map (Jwt.validate ~jwk:pub_jwk)
+              in
+              check_result_string "JWT is correctly created"
+                (Ok Fixtures.es256_jwt_string)
+                (CCResult.map Jwt.to_string jwt_r));
+          Alcotest.test_case "Can validate my own EC JWT (pub es512)" `Quick
+            (fun () ->
+              let open Jose in
+              let jwk =
+                Jwk.of_priv_pem Fixtures.es512_test_priv |> CCResult.get_exn
+              in
+              let pub_jwk = Jwk.pub_of_priv jwk in
+              let header = Header.make_header ~typ:"JWT" jwk in
+              let payload =
+                Jwt.empty_payload |> Jwt.add_claim "sub" (`String "tester")
+              in
+              let jwt_r =
+                Jwt.sign ~header ~payload jwk
+                |> CCResult.flat_map (Jwt.validate ~jwk:pub_jwk)
+              in
+              check_result_string "JWT is correctly created"
+                (Ok Fixtures.es512_jwt_string)
+                (CCResult.map Jwt.to_string jwt_r));
           Alcotest.test_case "Can parse JWT without kid" `Quick (fun () ->
               let jwt =
                 Jose.Jwt.of_string Fixtures.jwt_without_kid |> CCResult.get_exn

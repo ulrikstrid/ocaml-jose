@@ -20,6 +20,7 @@ type alg =
   [ `RS256  (** HMAC using SHA-256 *)
   | `HS256  (** RSASSA-PKCS1-v1_5 using SHA-256 *)
   | `ES256  (** ECDSA using P-256 and SHA-256 *)
+  | `ES512  (** ECDSA using P-521 and SHA-512 *)
   | `RSA_OAEP  (** RSAES OAEP using default parameters *)
   | `RSA1_5  (** RSA PKCS 1 *)
   | `None
@@ -29,6 +30,7 @@ let alg_to_string = function
   | `RS256 -> "RS256"
   | `HS256 -> "HS256"
   | `ES256 -> "ES256"
+  | `ES512 -> "ES512"
   | `RSA_OAEP -> "RSA-OAEP"
   | `RSA1_5 -> "RSA1_5"
   | `None -> "none"
@@ -38,6 +40,7 @@ let alg_of_string = function
   | "RS256" -> `RS256
   | "HS256" -> `HS256
   | "ES256" -> `ES256
+  | "ES512" -> `ES512
   | "RSA-OAEP" -> `RSA_OAEP
   | "RSA1_5" -> `RSA1_5
   | "none" -> `None

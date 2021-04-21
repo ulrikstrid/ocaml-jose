@@ -26,7 +26,9 @@ let verify_RS256 (type a) ~(jwk : a Jwk.t) str =
   | Jwk.Rsa_pub jwk -> Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:jwk.key str
   | Jwk.Oct _ -> None
   | Jwk.Es256_pub _ -> None
-  | Jwk.Es256_priv _ -> None)
+  | Jwk.Es256_priv _ -> None
+  | Jwk.Es512_pub _ -> None
+  | Jwk.Es512_priv _ -> None)
   |> function
   | None -> Error `Invalid_signature
   | Some message -> Ok message
@@ -38,33 +40,50 @@ let verify_HS256 (type a) ~(jwk : a Jwk.t) str =
       |> RResult.return
   | _ -> Error (`Msg "JWK doesn't match")
 
-let verify_ES256 (type a) ~(jwk : a Jwk.t) ~input_str msg =
-  if Cstruct.length msg != 64 then Error `Invalid_signature
-  else
-    let r, s = Cstruct.split msg 32 in
-    let () =
-      Printf.printf "r: %i, s: %i\n" (Cstruct.length r) (Cstruct.length s)
-    in
-    let message =
-      Mirage_crypto.Hash.SHA256.digest (Cstruct.of_string input_str)
-    in
-    match jwk with
-    | Jwk.Es256_pub pub_jwk ->
-        if Mirage_crypto_ec.P256.Dsa.verify ~key:pub_jwk.key (r, s) message then
-          Ok msg
-        else Error `Invalid_signature
-    | Jwk.Es256_priv jwk ->
-        let pub_jwk = Jwk.pub_of_priv_es256 jwk in
-        if Mirage_crypto_ec.P256.Dsa.verify ~key:pub_jwk.key (r, s) message then
-          Ok msg
-        else Error `Invalid_signature
-    | _ -> raise (Invalid_argument "alg")
+let verify_ES (type a) ~(jwk : a Jwk.t) ~input_str msg =
+  match jwk with
+  | Jwk.Es256_pub pub_jwk ->
+      let r, s = Cstruct.split msg 32 in
+      let message =
+        Mirage_crypto.Hash.SHA256.digest (Cstruct.of_string input_str)
+      in
+      if Mirage_crypto_ec.P256.Dsa.verify ~key:pub_jwk.key (r, s) message then
+        Ok msg
+      else Error `Invalid_signature
+  | Jwk.Es256_priv jwk ->
+      let r, s = Cstruct.split msg 32 in
+      let message =
+        Mirage_crypto.Hash.SHA256.digest (Cstruct.of_string input_str)
+      in
+      let pub_jwk = Jwk.pub_of_priv_es256 jwk in
+      if Mirage_crypto_ec.P256.Dsa.verify ~key:pub_jwk.key (r, s) message then
+        Ok msg
+      else Error `Invalid_signature
+  | Jwk.Es512_pub pub_jwk ->
+      let r, s = Cstruct.split msg 66 in
+      let message =
+        Mirage_crypto.Hash.SHA512.digest (Cstruct.of_string input_str)
+      in
+      if Mirage_crypto_ec.P521.Dsa.verify ~key:pub_jwk.key (r, s) message then
+        Ok msg
+      else Error `Invalid_signature
+  | Jwk.Es512_priv jwk ->
+      let r, s = Cstruct.split msg 6 in
+      let message =
+        Mirage_crypto.Hash.SHA512.digest (Cstruct.of_string input_str)
+      in
+      let pub_jwk = Jwk.pub_of_priv_es512 jwk in
+      if Mirage_crypto_ec.P521.Dsa.verify ~key:pub_jwk.key (r, s) message then
+        Ok msg
+      else Error `Invalid_signature
+  | _ -> raise (Invalid_argument "alg")
 
 let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str str =
   match Jwk.get_alg jwk with
   | `RS256 -> verify_RS256 ~jwk str
   | `HS256 -> verify_HS256 ~jwk str
-  | `ES256 -> verify_ES256 ~jwk ~input_str str
+  | `ES256 -> verify_ES ~jwk ~input_str str
+  | `ES512 -> verify_ES ~jwk ~input_str str
   | `None -> Ok str
   | _ -> Error (`Msg "alg not supported")
 
@@ -91,8 +110,9 @@ let validate (type a) ~(jwk : a Jwk.t) t =
   | `RS256 -> Ok header.alg
   | `HS256 -> Ok header.alg
   | `ES256 -> Ok header.alg
+  | `ES512 -> Ok header.alg
   | `Unsupported _ | `RSA_OAEP | `RSA1_5 | `None ->
-      Error (`Msg "alg must be RS256 or HS256"))
+      Error (`Msg "alg not supported for signing"))
   |> RResult.flat_map (fun _ -> verify_internal ~jwk t)
   |> RResult.map (fun _ -> t)
 
@@ -108,6 +128,14 @@ let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
           | `Message x ->
               let message = Mirage_crypto.Hash.SHA256.digest x in
               let r, s = Mirage_crypto_ec.P256.Dsa.sign ~key message in
+              Cstruct.append r s
+          | `Digest _ -> raise (Invalid_argument "Digest"))
+    | Jwk.Es512_priv { key; _ } ->
+        Ok
+          (function
+          | `Message x ->
+              let message = Mirage_crypto.Hash.SHA512.digest x in
+              let r, s = Mirage_crypto_ec.P521.Dsa.sign ~key message in
               Cstruct.append r s
           | `Digest _ -> raise (Invalid_argument "Digest"))
     | Jwk.Oct oct ->
