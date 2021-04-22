@@ -1,6 +1,25 @@
 (* These tests are based on rfc7520, https://tools.ietf.org/html/rfc7520 *)
 open Helpers
 
+(* https://tools.ietf.org/html/rfc7520#section-3.1 *)
+let ec_pub_json =
+  {|{"kty": "EC",
+"kid": "bilbo.baggins@hobbiton.example",
+"use": "sig",
+"crv": "P-521",
+"x": "AHKZLLOsCOzz5cY97ewNUajB957y-C-U88c3v13nmGZx6sYl_oJXu9A5RkTKqjqvjyekWF-7ytDyRXYgCF5cj0Kt",
+"y": "AdymlHvOiLxXkEhayXQnNCvDX4h9htZaCJN34kfmC6pV5OhQHiraVySsUdaQkAgDPrwQrJmbnX9cwlGfP-HqHZR1"}|}
+
+(* https://tools.ietf.org/html/rfc7520#section-3.1 *)
+let ec_priv_sig_json =
+  {|{"kty": "EC",
+"kid": "bilbo.baggins@hobbiton.example",
+"use": "sig",
+"crv": "P-521",
+"x": "AHKZLLOsCOzz5cY97ewNUajB957y-C-U88c3v13nmGZx6sYl_oJXu9A5RkTKqjqvjyekWF-7ytDyRXYgCF5cj0Kt",
+"y": "AdymlHvOiLxXkEhayXQnNCvDX4h9htZaCJN34kfmC6pV5OhQHiraVySsUdaQkAgDPrwQrJmbnX9cwlGfP-HqHZR1",
+"d": "AAhRON2r9cqXX1hg-RoI6R1tX5p2rUAYdmpHZoC1XNM56KtscrX6zbKipQrCW9CGZH3T4ubpnoTKLDYJ_fF3_rJt"}|}
+
 (* https://tools.ietf.org/html/rfc7520#section-3.3 *)
 let rsa_pub_json =
   {|{"kty": "RSA",
@@ -39,12 +58,6 @@ let oct_enc_json =
 "alg": "A256GCM",
 "k": "AAPapAv4LbFbiVawEjagUBluYqN5rhna-8nuldDvOx8"}|}
 
-(* https://tools.ietf.org/html/rfc7520#section-4.1 *)
-let rsa_jws =
-  {|eyJhbGciOiJSUzI1NiIsImtpZCI6ImJpbGJvLmJhZ2dpbnNAaG9iYml0b24uZXhhbXBsZSJ9.SXTigJlzIGEgZGFuZ2Vyb3VzIGJ1c2luZXNzLCBGcm9kbywgZ29pbmcgb3V0IHlvdXIgZG9vci4gWW91IHN0ZXAgb250byB0aGUgcm9hZCwgYW5kIGlmIHlvdSBkb24ndCBrZWVwIHlvdXIgZmVldCwgdGhlcmXigJlzIG5vIGtub3dpbmcgd2hlcmUgeW91IG1pZ2h0IGJlIHN3ZXB0IG9mZiB0by4.MRjdkly7_-oTPTS3AXP41iQIGKa80A0ZmTuV5MEaHoxnW2e5CZ5NlKtainoFmKZopdHM1O2U4mwzJdQx996ivp83xuglII7PNDi84wnB-BDkoBwA78185hX-Es4JIwmDLJK3lfWRa-XtL0RnltuYv746iYTh_qHRD68BNt1uSNCrUCTJDt5aAE6x8wW1Kt9eRo4QPocSadnHXFxnt8Is9UzpERV0ePPQdLuW3IS_de3xyIrDaLGdjluPxUAhb6L2aXic1U12podGU0KLUQSE_oI-ZnmKJ3F4uOZDnd6QZWJushZ41Axf_fcIe8u9ipH84ogoree7vjbU5y18kDquDg|}
-
-let rsa_jws_header = {|{"alg":"RS256","kid":"bilbo.baggins@hobbiton.example"}|}
-
 let jws_payload =
   "It\xe2\x80\x99s a dangerous business, Frodo, going out your door. You step \
    onto the road, and if you don't keep your feet, there\xe2\x80\x99s no \
@@ -56,6 +69,12 @@ let jwe_payload =
    yours\xe2\x80\x93closer than you keep it yourself. But you cannot trust us \
    to let you face trouble alone, and go off without a word. We are your \
    friends, Frodo."
+
+(* https://tools.ietf.org/html/rfc7520#section-4.1 *)
+let rsa_jws =
+  {|eyJhbGciOiJSUzI1NiIsImtpZCI6ImJpbGJvLmJhZ2dpbnNAaG9iYml0b24uZXhhbXBsZSJ9.SXTigJlzIGEgZGFuZ2Vyb3VzIGJ1c2luZXNzLCBGcm9kbywgZ29pbmcgb3V0IHlvdXIgZG9vci4gWW91IHN0ZXAgb250byB0aGUgcm9hZCwgYW5kIGlmIHlvdSBkb24ndCBrZWVwIHlvdXIgZmVldCwgdGhlcmXigJlzIG5vIGtub3dpbmcgd2hlcmUgeW91IG1pZ2h0IGJlIHN3ZXB0IG9mZiB0by4.MRjdkly7_-oTPTS3AXP41iQIGKa80A0ZmTuV5MEaHoxnW2e5CZ5NlKtainoFmKZopdHM1O2U4mwzJdQx996ivp83xuglII7PNDi84wnB-BDkoBwA78185hX-Es4JIwmDLJK3lfWRa-XtL0RnltuYv746iYTh_qHRD68BNt1uSNCrUCTJDt5aAE6x8wW1Kt9eRo4QPocSadnHXFxnt8Is9UzpERV0ePPQdLuW3IS_de3xyIrDaLGdjluPxUAhb6L2aXic1U12podGU0KLUQSE_oI-ZnmKJ3F4uOZDnd6QZWJushZ41Axf_fcIe8u9ipH84ogoree7vjbU5y18kDquDg|}
+
+let rsa_jws_header = {|{"alg":"RS256","kid":"bilbo.baggins@hobbiton.example"}|}
 
 let rsa_jws_signature =
   "MRjdkly7_-oTPTS3AXP41iQIGKa80A0ZmTuV5MEaHoxnW2e5CZ5NlKtainoFmKZopdHM1O2U4mwzJdQx996ivp83xuglII7PNDi84wnB-BDkoBwA78185hX-Es4JIwmDLJK3lfWRa-XtL0RnltuYv746iYTh_qHRD68BNt1uSNCrUCTJDt5aAE6x8wW1Kt9eRo4QPocSadnHXFxnt8Is9UzpERV0ePPQdLuW3IS_de3xyIrDaLGdjluPxUAhb6L2aXic1U12podGU0KLUQSE_oI-ZnmKJ3F4uOZDnd6QZWJushZ41Axf_fcIe8u9ipH84ogoree7vjbU5y18kDquDg"
@@ -91,6 +110,75 @@ let jws_rsa_tests =
                    Jose.Jws.sign ~header ~payload:jws_payload jwk)
           in
           check_result_string "correct jws string" (Ok rsa_jws)
+            (CCResult.map Jose.Jws.to_string jws));
+    ] )
+
+(* https://tools.ietf.org/html/rfc7520#section-4.3 *)
+
+let ecdsa_jws_header =
+  {|{"alg":"ES512","kid":"bilbo.baggins@hobbiton.example"}|}
+
+let ecdsa_jws_header_base64 =
+  "eyJhbGciOiJFUzUxMiIsImtpZCI6ImJpbGJvLmJhZ2dpbnNAaG9iYml0b24uZXhhbXBsZSJ9"
+
+let ecdsa_jws_payload_base64 =
+  "SXTigJlzIGEgZGFuZ2Vyb3VzIGJ1c2luZXNzLCBGcm9kbywgZ29pbmcgb3V0IHlvdXIgZG9vci4gWW91IHN0ZXAgb250byB0aGUgcm9hZCwgYW5kIGlmIHlvdSBkb24ndCBrZWVwIHlvdXIgZmVldCwgdGhlcmXigJlzIG5vIGtub3dpbmcgd2hlcmUgeW91IG1pZ2h0IGJlIHN3ZXB0IG9mZiB0by4"
+
+let ecdsa_jws_signature_base64 =
+  "AE_R_YZCChjn4791jSQCrdPZCNYqHXCTZH0-JZGYNlaAjP2kqaluUIIUnC9qvbu9Plon7KRTzoNEuT4Va2cmL1eJAQy3mtPBu_u_sDDyYjnAMDxXPn7XrT0lw-kvAD890jl8e2puQens_IEKBpHABlsbEPX6sFY8OcGDqoRuBomu9xQ2"
+
+let ecdsa_jws =
+  Printf.sprintf "%s.%s.%s" ecdsa_jws_header_base64 ecdsa_jws_payload_base64
+    ecdsa_jws_signature_base64
+
+let jws_ecdsa_tests =
+  ( "JWS ECDSA",
+    [
+      Alcotest.test_case "Can verify jws" `Quick (fun () ->
+          let () = print_endline ecdsa_jws in
+          let jwk =
+            Jose.Jwk.of_pub_json_string ec_pub_json
+            |> CCResult.map_err (function
+                 | `Msg m ->
+                     print_endline m;
+                     `Msg m
+                 | `Json_parse_failed m ->
+                     print_endline m;
+                     `Json_parse_failed m
+                 | `Missing_use_and_alg ->
+                     print_endline "Missing_use_and_alg";
+                     `Missing_use_and_alg
+                 | `Unsupported_kty ->
+                     print_endline "Unsupported_kty";
+                     `Unsupported_kty
+                 | x -> x)
+            |> CCResult.get_exn
+          in
+          let jws = Jose.Jws.of_string ecdsa_jws in
+          let validated_jws = CCResult.flat_map (Jose.Jws.validate ~jwk) jws in
+          check_result_string "correct payload" (Ok jws_payload)
+            (CCResult.map (fun jws -> Jose.Jws.(jws.payload)) validated_jws);
+          check_result_string "correct signature"
+            (Ok ecdsa_jws_signature_base64)
+            (CCResult.map (fun jws -> Jose.Jws.(jws.signature)) validated_jws);
+          check_result_string "correct header" (Ok ecdsa_jws_header)
+            (CCResult.map
+               (fun jws ->
+                 Jose.Jws.(jws.header)
+                 |> Jose.Header.to_json |> Yojson.Safe.to_string)
+               validated_jws));
+      Alcotest.test_case "Generates the same JWS" `Quick (fun () ->
+          let jwk = Jose.Jwk.of_priv_json_string ec_priv_sig_json in
+          let header =
+            Jose.Header.of_json @@ Yojson.Safe.from_string ecdsa_jws_header
+            |> CCResult.map_err (fun (`Msg e) -> `Msg ("header: " ^ e))
+          in
+          let jws =
+            CCResult.both jwk header
+            |> CCResult.flat_map (fun (jwk, header) ->
+                   Jose.Jws.sign ~header ~payload:jws_payload jwk)
+          in
+          check_result_string "correct jws string" (Ok ecdsa_jws)
             (CCResult.map Jose.Jws.to_string jws));
     ] )
 
@@ -297,6 +385,6 @@ let jwe_rsa_tests =
 (* Begin tests *)
 let rfc_suite, _ =
   Junit_alcotest.run_and_report ~package:"jose" "RFC7520"
-    [ jws_rsa_tests; jws_oct_tests; jwe_rsa_tests ]
+    [ jws_rsa_tests; jws_ecdsa_tests; jws_oct_tests; jwe_rsa_tests ]
 
 let suite = rfc_suite
