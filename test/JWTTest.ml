@@ -204,6 +204,44 @@ let jwt_suite, _ =
               in
               check_string "JWT was parsed correctly without kid" "RS256"
                 (jwt.header.alg |> Jose.Jwa.alg_to_string));
+          Alcotest.test_case "rfc7515 A.3" `Quick (fun () ->
+              let jwk_str =
+                {|{"kty":"EC",
+"crv":"P-256",
+"x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+"y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
+"d":"jpsQnnGQmL-YBIffH1136cspYG6-0iY7X1fCE9-E9LI"
+}|}
+              in
+              let payload_str =
+                {|{"iss":"joe",
+"exp":1300819380,
+"http://example.com/is_root":true}|}
+              in
+              let expected_str =
+                {|eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q|}
+              in
+              let jwk =
+                Jose.Jwk.of_priv_json_string jwk_str |> CCResult.get_exn
+              in
+              let header = Jose.Header.make_header ~alg:`ES256 jwk in
+              print_endline "jwk";
+              let payload = Yojson.Safe.from_string payload_str in
+              print_endline "payload";
+              let jwt =
+                Jose.Jwt.sign ~header ~payload jwk
+                |> CCResult.map Jose.Jwt.to_string
+              in
+              let _ =
+                Jose.Jwt.of_string expected_str
+                |> CCResult.flat_map (Jose.Jwt.validate ~jwk)
+                |> CCResult.map (fun (jwt : Jose.Jwt.t) ->
+                       Yojson.Safe.to_string jwt.payload)
+                |> check_result_string "Validated payload is correct"
+                     (Ok payload_str)
+              in
+              check_result_string "JWT is correctly created" (Ok expected_str)
+                jwt);
         ] );
     ]
 
