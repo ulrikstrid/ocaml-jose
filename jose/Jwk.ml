@@ -26,12 +26,44 @@ module Util = struct
     let y = y_cs |> Cstruct.to_string |> RBase64.url_encode_string in
     (x, y)
 
+  let make_ES256_of_x_y (x, y) =
+    let x = RBase64.url_decode x |> RResult.map Cstruct.of_string in
+    let y = RBase64.url_decode y |> RResult.map Cstruct.of_string in
+    RResult.both x y
+    |> RResult.map (fun (x, y) ->
+           let four = Cstruct.create 1 in
+           Cstruct.set_uint8 four 0 4;
+           let point = Cstruct.concat [ four; x; y ] in
+           let k = Mirage_crypto_ec.P256.Dsa.pub_of_cstruct point in
+           (*
+           let _ =
+             Format.printf "%a" Mirage_crypto_ec.pp_error (Result.get_error k)
+           in
+           *)
+           k |> Result.get_ok)
+
   let get_ES512_x_y key =
     let point = Mirage_crypto_ec.P521.Dsa.pub_to_cstruct key in
     let x_cs, y_cs = Cstruct.(split (shift point 1) 66) in
     let x = x_cs |> Cstruct.to_string |> RBase64.url_encode_string in
     let y = y_cs |> Cstruct.to_string |> RBase64.url_encode_string in
     (x, y)
+
+  let make_ES512_of_x_y (x, y) =
+    let x = RBase64.url_decode x |> RResult.map Cstruct.of_string in
+    let y = RBase64.url_decode y |> RResult.map Cstruct.of_string in
+    RResult.both x y
+    |> RResult.map (fun (x, y) ->
+           let four = Cstruct.create 1 in
+           Cstruct.set_uint8 four 0 4;
+           let point = Cstruct.concat [ four; x; y ] in
+           let k = Mirage_crypto_ec.P521.Dsa.pub_of_cstruct point in
+           (*
+           let _ =
+             Format.printf "%a" Mirage_crypto_ec.pp_error (Result.get_error k)
+           in
+           *)
+           k |> Result.get_ok)
 end
 
 type use = [ `Sig | `Enc | `Unsupported of string ]
@@ -46,7 +78,7 @@ let alg_of_use_and_kty ?(use : use = `Sig) (kty : Jwa.kty) =
   match (use, kty) with
   | `Sig, `oct -> `HS256
   | `Sig, `RSA -> `RS256
-  | `Sig, `EC -> `ES256
+  | `Sig, `EC -> `ES512
   | `Enc, `RSA -> `RSA_OAEP
   | `Enc, `oct -> `Unsupported "encryption with oct is not supported yet"
   | _, `EC -> `Unsupported "Eliptic curves are not supported yet"
@@ -208,14 +240,14 @@ let make_priv_rsa ?(use : use = `Sig) (rsa_priv : Mirage_crypto_pk.Rsa.priv) :
 let make_priv_es256 ?(use : use = `Sig)
     (es256_priv : Mirage_crypto_ec.P256.Dsa.priv) : priv t =
   let kty : Jwa.kty = `EC in
-  let alg = alg_of_use_and_kty ~use kty in
+  let alg = `ES256 in
   let jwk = { alg; kty; use; key = es256_priv; kid = None } in
   Es256_priv { jwk with kid = make_kid (Es256_priv jwk) }
 
 let make_priv_es512 ?(use : use = `Sig)
     (es512_priv : Mirage_crypto_ec.P521.Dsa.priv) : priv t =
   let kty : Jwa.kty = `EC in
-  let alg = alg_of_use_and_kty ~use kty in
+  let alg = `ES512 in
   let jwk = { alg; kty; use; key = es512_priv; kid = None } in
   Es512_priv { jwk with kid = make_kid (Es512_priv jwk) }
 
@@ -515,12 +547,109 @@ let oct_of_json json =
          })
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
+let pub_ec_of_json json =
+  let module Json = Yojson.Safe.Util in
+  try
+    let alg =
+      json |> Json.member "alg" |> Json.to_string_option
+      |> ROpt.map Jwa.alg_of_string
+    in
+    let crv = json |> Json.member "crv" |> Json.to_string in
+    let x = json |> Json.member "x" |> Json.to_string in
+    let y = json |> Json.member "y" |> Json.to_string in
+    match crv with
+    | "P-256" ->
+        Util.make_ES256_of_x_y (x, y)
+        |> RResult.map (fun key ->
+               let alg = ROpt.get_with_default ~default:`ES256 alg in
+               Es256_pub
+                 {
+                   alg;
+                   kty = `EC;
+                   (* Shortcut since that is the only thing we handle *)
+                   use =
+                     json |> Json.member "use" |> Json.to_string_option
+                     |> ROpt.map use_of_string
+                     |> ROpt.get_with_default ~default:(use_of_alg alg);
+                   key;
+                   kid = json |> Json.member "kid" |> Json.to_string_option;
+                 })
+    | "P-521" ->
+        Util.make_ES512_of_x_y (x, y)
+        |> RResult.map (fun key ->
+               let alg = ROpt.get_with_default ~default:`ES512 alg in
+               Es512_pub
+                 {
+                   alg;
+                   kty = `EC;
+                   (* Shortcut since that is the only thing we handle *)
+                   use =
+                     json |> Json.member "use" |> Json.to_string_option
+                     |> ROpt.map use_of_string
+                     |> ROpt.get_with_default ~default:(use_of_alg alg);
+                   key;
+                   kid = json |> Json.member "kid" |> Json.to_string_option;
+                 })
+    | _ -> Error (`Msg "kty and alg doesn't match")
+  with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
+
+let priv_ec_of_json json =
+  let module Json = Yojson.Safe.Util in
+  try
+    let alg =
+      json |> Json.member "alg" |> Json.to_string_option
+      |> ROpt.map Jwa.alg_of_string
+    in
+    let crv = json |> Json.member "crv" |> Json.to_string in
+    let d =
+      json |> Json.member "d" |> Json.to_string |> RBase64.url_decode
+      |> RResult.map Cstruct.of_string
+    in
+    match (crv, d) with
+    | "P-256", Ok d ->
+        let alg = ROpt.get_with_default ~default:`ES256 alg in
+        Mirage_crypto_ec.P256.Dsa.priv_of_cstruct d
+        |> RResult.map_error (fun _ -> `Msg "Could not create key")
+        |> RResult.map (fun key ->
+               Es256_priv
+                 {
+                   alg;
+                   kty = `EC;
+                   (* Shortcut since that is the only thing we handle *)
+                   use =
+                     json |> Json.member "use" |> Json.to_string_option
+                     |> ROpt.map use_of_string
+                     |> ROpt.get_with_default ~default:(use_of_alg alg);
+                   key;
+                   kid = json |> Json.member "kid" |> Json.to_string_option;
+                 })
+    | "P-521", Ok d ->
+        let alg = ROpt.get_with_default ~default:`ES512 alg in
+        Mirage_crypto_ec.P521.Dsa.priv_of_cstruct d
+        |> RResult.map_error (fun _ -> `Msg "Could not create key")
+        |> RResult.map (fun key ->
+               Es512_priv
+                 {
+                   alg;
+                   kty = `EC;
+                   (* Shortcut since that is the only thing we handle *)
+                   use =
+                     json |> Json.member "use" |> Json.to_string_option
+                     |> ROpt.map use_of_string
+                     |> ROpt.get_with_default ~default:(use_of_alg alg);
+                   key;
+                   kid = json |> Json.member "kid" |> Json.to_string_option;
+                 })
+    | _ -> Error (`Msg "kty and alg doesn't match")
+  with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
+
 let of_pub_json (json : Yojson.Safe.t) : (public t, 'error) result =
   let module Json = Yojson.Safe.Util in
   let kty = json |> Json.member "kty" |> Json.to_string |> Jwa.kty_of_string in
   match kty with
   | `RSA -> pub_rsa_of_json json
   | `oct -> oct_of_json json
+  | `EC -> pub_ec_of_json json
   | _ -> Error `Unsupported_kty
 
 let of_pub_json_string str : (public t, 'error) result =
@@ -532,6 +661,7 @@ let of_priv_json json : (priv t, 'error) result =
   match kty with
   | `RSA -> priv_rsa_of_json json
   | `oct -> oct_of_json json
+  | `EC -> priv_ec_of_json json
   | _ -> Error `Unsupported_kty
 
 let of_priv_json_string str : (priv t, 'error) result =

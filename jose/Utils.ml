@@ -9,6 +9,8 @@ module RResult = struct
 
   let return v = Ok v
 
+  let get_exn = function Ok v -> v | Error _ -> raise Not_found
+
   let both a b =
     match (a, b) with
     | Ok a, Ok b -> Ok (a, b)

@@ -22,16 +22,21 @@ let payload_of_string payload_str =
   let payload = RBase64.url_decode payload_str in
   RResult.map Yojson.Safe.from_string payload
 
-type t = { header : Header.t; payload : payload; signature : Jws.signature }
+type t = {
+  header : Header.t;
+  raw_header : string;
+  payload : payload;
+  raw_payload : string;
+  signature : Jws.signature;
+}
 
 let add_claim (claim_name : string) (claim_value : Yojson.Safe.t)
     (payload : payload) =
   `Assoc ((claim_name, claim_value) :: Yojson.Safe.Util.to_assoc payload)
 
 let to_string t =
-  let header_str = Header.to_string t.header in
-  let payload_str = payload_to_string t.payload in
-  header_str ^ "." ^ payload_str ^ "." ^ t.signature
+  let payload = RBase64.url_encode_string t.raw_payload in
+  Printf.sprintf "%s.%s.%s" t.raw_header payload t.signature
 
 let of_string token =
   String.split_on_char '.' token |> function
@@ -40,16 +45,35 @@ let of_string token =
       let payload = payload_of_string payload_str in
       RResult.both header payload
       |> RResult.flat_map (fun (header, payload) ->
-             Ok { header; payload; signature })
+             Ok
+               {
+                 header;
+                 raw_header = header_str;
+                 payload;
+                 raw_payload = RBase64.url_decode payload_str |> RResult.get_exn;
+                 (* The string is already decoded so this is fine but redundant *)
+                 signature;
+               })
   | _ -> Error (`Msg "token didn't include header, payload or signature")
 
-let to_jws t =
-  let payload = Yojson.Safe.to_string t.payload in
-  Jws.{ header = t.header; signature = t.signature; payload }
+let to_jws (t : t) =
+  Jws.
+    {
+      header = t.header;
+      raw_header = t.raw_header;
+      signature = t.signature;
+      payload = t.raw_payload;
+    }
 
 let of_jws (jws : Jws.t) =
   let payload = jws.payload |> Yojson.Safe.from_string in
-  { header = jws.header; signature = jws.signature; payload }
+  {
+    header = jws.header;
+    raw_header = jws.raw_header;
+    signature = jws.signature;
+    payload;
+    raw_payload = jws.payload;
+  }
 
 let check_exp t =
   let module Json = Yojson.Safe.Util in
@@ -59,9 +83,7 @@ let check_exp t =
   | None -> Ok t
 
 let validate (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
-  check_exp t |> RResult.map to_jws
-  |> RResult.flat_map (Jws.validate ~jwk)
-  |> RResult.map of_jws
+  Jws.validate ~jwk (to_jws t) |> RResult.map of_jws
 
 let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
   let payload =

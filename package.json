@@ -39,5 +39,9 @@
     "@opam/junit": "*",
     "@opam/junit_alcotest": "*",
     "@opam/ocaml-lsp-server": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam"
+  },
+  "resolutions": {
+    "@opam/conf-gmp": "esy-packages/esy-gmp:package.json#7b39ae9195e6a72b2072a6d8ae18d3b4870d5ca1",
+    "@opam/odoc": "ocaml/odoc:odoc.opam#81385c8721cb55bda92c9aa1954b7c3e08e23761"
   }
 }

@@ -40,7 +40,7 @@ let jwks_suite, _ =
               let jwks =
                 Jose.Jwks.of_string Fixtures.jwks_string_from_oidc_validation
               in
-              check_int "Should have 2 JWKs since we don't handle EC" 2
+              check_int "Should have 4 JWKs since we handle EC" 4
                 (List.length jwks.keys));
           Alcotest.test_case "Can get correct JWK from Microsoft" `Quick
             (fun () ->
