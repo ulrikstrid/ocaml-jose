@@ -216,7 +216,8 @@ let jwt_suite, _ =
               let payload_str =
                 {|{"iss":"joe",
 "exp":1300819380,
-"http://example.com/is_root":true}|}
+"http://example.com/is_root":true
+}|}
               in
               let expected_str =
                 {|eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q|}
@@ -224,24 +225,14 @@ let jwt_suite, _ =
               let jwk =
                 Jose.Jwk.of_priv_json_string jwk_str |> CCResult.get_exn
               in
-              let header = Jose.Header.make_header ~alg:`ES256 jwk in
-              print_endline "jwk";
-              let payload = Yojson.Safe.from_string payload_str in
-              print_endline "payload";
-              let jwt =
-                Jose.Jwt.sign ~header ~payload jwk
-                |> CCResult.map Jose.Jwt.to_string
-              in
-              let _ =
-                Jose.Jwt.of_string expected_str
-                |> CCResult.flat_map (Jose.Jwt.validate ~jwk)
-                |> CCResult.map (fun (jwt : Jose.Jwt.t) ->
-                       Yojson.Safe.to_string jwt.payload)
-                |> check_result_string "Validated payload is correct"
-                     (Ok payload_str)
-              in
-              check_result_string "JWT is correctly created" (Ok expected_str)
-                jwt);
+              Jose.Jwt.of_string expected_str
+              |> CCResult.flat_map (Jose.Jwt.validate ~jwk)
+              |> CCResult.map (fun (jwt : Jose.Jwt.t) ->
+                     Yojson.Safe.to_string jwt.payload)
+              |> check_result_string "Validated payload is correct"
+                   (Ok
+                      (payload_str |> Yojson.Safe.from_string
+                     |> Yojson.Safe.to_string)));
         ] );
     ]
 

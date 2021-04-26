@@ -345,7 +345,12 @@ end
 module Jws : sig
   type signature = string
 
-  type t = { header : Header.t; payload : string; signature : signature }
+  type t = {
+    header : Header.t;
+    raw_header : string;
+    payload : string;
+    signature : signature;
+  }
 
   val of_string : string -> (t, [> `Msg of string ]) result
 
@@ -379,7 +384,13 @@ module Jwt : sig
 
   val empty_payload : payload
 
-  type t = { header : Header.t; payload : payload; signature : Jws.signature }
+  type t = {
+    header : Header.t;
+    raw_header : string;
+    payload : payload;
+    raw_payload : string;
+    signature : Jws.signature;
+  }
 
   val add_claim : string -> Yojson.Safe.t -> payload -> payload
 

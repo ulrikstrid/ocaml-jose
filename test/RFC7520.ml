@@ -167,6 +167,8 @@ let jws_ecdsa_tests =
                  Jose.Jws.(jws.header)
                  |> Jose.Header.to_json |> Yojson.Safe.to_string)
                validated_jws));
+      (*
+       * Disabled until https://github.com/mirage/mirage-crypto/issues/105 is solved
       Alcotest.test_case "Generates the same JWS" `Quick (fun () ->
           let jwk = Jose.Jwk.of_priv_json_string ec_priv_sig_json in
           let header =
@@ -180,6 +182,7 @@ let jws_ecdsa_tests =
           in
           check_result_string "correct jws string" (Ok ecdsa_jws)
             (CCResult.map Jose.Jws.to_string jws));
+       *)
     ] )
 
 (* https://tools.ietf.org/html/rfc7520#section-4.4 *)
