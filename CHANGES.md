@@ -1,3 +1,8 @@
+0.6.0
+--------------
+- JWT/JWS/JWK: Add support for ES256 and ES512 signing via the updated mirage-crypto and x509 (by @ulrikstrid)
+- JWT: [BREAKING] JWT will not validate `exp` by default anymore (by @ulrikstrid)
+
 0.5.1
 --------------
 - JWA: Add Unsupported option and stop raising when encountering unknown `kty` (by @ulrikstrid)
