@@ -83,7 +83,7 @@ let check_exp t =
   | None -> Ok t
 
 let validate (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
-  Jws.validate ~jwk (to_jws t) |> RResult.map of_jws
+  Jws.validate ~jwk (to_jws t) |> RResult.flat_map (fun _ -> check_exp t)
 
 let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
   let payload =

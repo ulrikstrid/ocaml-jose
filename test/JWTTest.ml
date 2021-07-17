@@ -29,6 +29,24 @@ let jwt_suite, _ =
               in
               check_string "correct payload" {|{"sub":"tester"}|}
                 (Yojson.Safe.to_string jwt.payload));
+          Alcotest.test_case "Can validate expired JWT" `Quick
+            (fun () ->
+              let open Jose in
+              let jwk =
+                Jwk.of_priv_pem Fixtures.rsa_test_priv |> CCResult.get_exn
+              in
+              let pub_jwk = Jwk.pub_of_priv jwk in
+              let header = Header.make_header ~typ:"JWT" jwk in
+              let payload =
+                Jwt.empty_payload |> Jwt.add_claim "exp" (`Int 1)
+              in
+              let jwt_r =
+                Jwt.sign ~header ~payload jwk
+                |> CCResult.flat_map (Jwt.validate ~jwk:pub_jwk)
+              in
+              check_result_string "JWT expired is correctly reported"
+                (Error `Expired)
+                (CCResult.map Jwt.to_string jwt_r));
           Alcotest.test_case "Can create a JWT with RSA256" `Quick (fun () ->
               let open Jose in
               let jwk =
@@ -225,10 +243,11 @@ let jwt_suite, _ =
               let jwk =
                 Jose.Jwk.of_priv_json_string jwk_str |> CCResult.get_exn
               in
-              Jose.Jwt.of_string expected_str
-              |> CCResult.flat_map (Jose.Jwt.validate ~jwk)
-              |> CCResult.map (fun (jwt : Jose.Jwt.t) ->
-                     Yojson.Safe.to_string jwt.payload)
+              Jose.Jws.of_string expected_str
+              |> CCResult.flat_map (Jose.Jws.validate ~jwk)
+              |> CCResult.map (fun (jws : Jose.Jws.t) ->
+                   jws.payload |> Yojson.Safe.from_string
+                     |> Yojson.Safe.to_string)
               |> check_result_string "Validated payload is correct"
                    (Ok
                       (payload_str |> Yojson.Safe.from_string
