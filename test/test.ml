@@ -5,6 +5,7 @@ let () =
       [
         JWKsTest.jwks_suite;
         JWKTest.jwk_suite;
+        JWSTest.jws_suite;
         JWTTest.jwt_suite;
         JWETest.jwe_suite;
         RFC7520.suite;
