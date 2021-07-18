@@ -95,8 +95,6 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str str =
 let verify_internal (type a) ~(jwk : a Jwk.t) t =
   let payload_str = RBase64.url_encode_string t.payload in
   let input_str = Printf.sprintf "%s.%s" t.raw_header payload_str in
-  let () = print_endline input_str in
-  let () = print_endline t.signature in
   RBase64.url_decode t.signature
   |> RResult.map Cstruct.of_string
   |> RResult.flat_map (verify_jwk ~jwk ~input_str)
