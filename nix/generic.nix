@@ -3,7 +3,7 @@
 with ocamlPackages;
 
 rec {
-  oidc = buildDunePackage {
+  jose = buildDunePackage {
     pname = "jose";
     version = "0.2.0-dev";
 
@@ -15,7 +15,7 @@ rec {
 
     useDune2 = true;
 
-    buildInputs = [
+    checkInputs = [
       containers
       bisect_ppx
       alcotest
@@ -42,7 +42,7 @@ rec {
 
     meta = {
       description = "Base functions and types to work with OpenID Connect.";
-      license = stdenv.lib.licenses.bsd3;
+      # license = stdenv.lib.licenses.bsd3;
     };
   };
 }

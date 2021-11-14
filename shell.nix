@@ -1,8 +1,8 @@
+{ pkgs ? import ./nix/sources.nix { } }:
 let
-  pkgs = import ./nix/sources.nix { };
   inherit (pkgs) lib;
-  oidcPkgs = pkgs.recurseIntoAttrs (import ./nix { inherit pkgs; }).native;
-  logsPpxDrvs = lib.filterAttrs (_: value: lib.isDerivation value) oidcPkgs;
+  josePkgs = pkgs.recurseIntoAttrs (import ./nix { inherit pkgs; doCheck = true; }).native;
+  joseDrvs = lib.filterAttrs (_: value: lib.isDerivation value) josePkgs;
 
   filterDrvs = inputs:
     lib.filter
@@ -11,25 +11,23 @@ let
         # the shell. They always have `pname`
         !(lib.hasAttr "pname" drv) ||
         drv.pname == null ||
-        !(lib.any (name: name == drv.pname || name == drv.name) (lib.attrNames logsPpxDrvs)))
+        !(lib.any (name: name == drv.pname || name == drv.name) (lib.attrNames joseDrvs)))
       inputs;
 in
 with pkgs;
 
 (mkShell {
-  inputsFrom = lib.attrValues logsPpxDrvs;
+  inputsFrom = lib.attrValues joseDrvs;
   buildInputs = with ocamlPackages; [
-    merlin
     ocaml-lsp
     ocamlformat
     dune-release
     cacert
     curl
-    git
-    opam
     gnupg
   ];
 }).overrideAttrs (o: {
   propagatedBuildInputs = filterDrvs o.propagatedBuildInputs;
   buildInputs = filterDrvs o.buildInputs;
+  checkInputs = filterDrvs o.checkInputs;
 })
