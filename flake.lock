@@ -17,17 +17,16 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1636918428,
-        "narHash": "sha256-STJy3Q8auX755w6P8cMrDYdnKt+CeQuLsMvo8ukEug4=",
-        "owner": "nixos",
+        "lastModified": 1636989269,
+        "narHash": "sha256-5oS3a8deMaqSTi8754O3OJZzNjqCDb/LkEUmm+96qyQ=",
+        "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "d1d215a900952faba2f321dc8fabb5d43b9f46cb",
+        "rev": "19beab130df8584aba4a34909be10566fa06b150",
         "type": "github"
       },
       "original": {
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "type": "github"
+        "id": "nixpkgs",
+        "type": "indirect"
       }
     },
     "ocaml-overlay": {

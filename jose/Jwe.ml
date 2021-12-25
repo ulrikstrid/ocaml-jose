@@ -88,7 +88,7 @@ let encrypt_payload ?enc ~cek ~iv ~aad payload =
       GCM.authenticate_encrypt ~key ~nonce:iv ~adata (Cstruct.of_string payload)
       |> fun cdata ->
       let cipher, tag_data =
-        Cstruct.split cdata (Cstruct.len cdata - GCM.tag_size)
+        Cstruct.split cdata (Cstruct.length cdata - GCM.tag_size)
       in
       let ciphertext = Cstruct.to_string cipher in
       let tag_string = Cstruct.to_string tag_data in

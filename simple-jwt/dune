@@ -1,0 +1,4 @@
+(library
+ (name SimpleJwt)
+ (public_name jose.simple-jwt)
+ (libraries jose))

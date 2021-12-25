@@ -311,7 +311,7 @@ let jwe_rsa_tests =
           check_result_string "correct kid in header"
             (Ok "frodo.baggins@hobbiton.example")
             (CCResult.map
-               (fun jwe -> jwe.Jose.Jwe.header.kid |> CCOpt.get_exn)
+               (fun jwe -> jwe.Jose.Jwe.header.kid |> CCOpt.get_exn_or "")
                jwe);
           check_result_string "correct alg in header" (Ok "RSA1_5")
             (CCResult.map
@@ -352,7 +352,7 @@ let jwe_rsa_tests =
           check_result_string "correct kid in header"
             (Ok "samwise.gamgee@hobbiton.example")
             (CCResult.map
-               (fun jwe -> jwe.Jose.Jwe.header.kid |> CCOpt.get_exn)
+               (fun jwe -> jwe.Jose.Jwe.header.kid |> CCOpt.get_exn_or "")
                jwe);
           check_result_string "correct alg in header" (Ok "RSA-OAEP")
             (CCResult.map

@@ -141,7 +141,7 @@ let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
               let message = Mirage_crypto.Hash.SHA512.digest x in
               let r, s = Mirage_crypto_ec.P521.Dsa.sign ~key message in
               let sign = Cstruct.append r s in
-              Printf.printf "sig length %i" (Cstruct.len sign);
+              Printf.printf "sig length %i" (Cstruct.length sign);
               sign
           | `Digest _ -> raise (Invalid_argument "Digest"))
     | Jwk.Oct oct ->

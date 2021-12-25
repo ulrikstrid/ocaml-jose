@@ -92,7 +92,7 @@ end
 module Pkcs7 = struct
   (* https://tools.ietf.org/html/rfc5652#section-6.3 *)
   let pad data block_size =
-    let pad_size = block_size - (Cstruct.len data mod block_size) in
+    let pad_size = block_size - (Cstruct.length data mod block_size) in
     if pad_size = 0 then data
     else
       (* this is the remaining bytes in the last block *)
@@ -102,7 +102,7 @@ module Pkcs7 = struct
       Cstruct.append data pad
 
   let unpad cs =
-    let cs_len = Cstruct.len cs in
+    let cs_len = Cstruct.length cs in
     let pad_len = Cstruct.get_uint8 cs (cs_len - 1) in
     let data, padding = Cstruct.split cs (cs_len - pad_len) in
     let rec check idx =
