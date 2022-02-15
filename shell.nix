@@ -1,4 +1,4 @@
-{ pkgs ? import ./nix/sources.nix { } }:
+{ pkgs }:
 let
   inherit (pkgs) lib;
   josePkgs = pkgs.recurseIntoAttrs (import ./nix { inherit pkgs; doCheck = true; }).native;
@@ -19,6 +19,7 @@ with pkgs;
 (mkShell {
   inputsFrom = lib.attrValues joseDrvs;
   buildInputs = with ocamlPackages; [
+    merlin
     ocaml-lsp
     ocamlformat
     dune-release
