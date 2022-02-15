@@ -325,6 +325,7 @@ module Jwt : sig
     jwk:'a Jwk.t ->
     string ->
     (t, [> `Expired | `Invalid_signature | `Msg of string ]) result
+  (** [of_string ~jwk jwt_string] parses and validates the encoded JWT string. *)
 
   val unsafe_of_string : string -> (t, [> `Msg of string ]) result
   val to_jws : t -> Jws.t
@@ -332,14 +333,17 @@ module Jwt : sig
 
   val validate_signature :
     jwk:'a Jwk.t -> t -> (t, [> `Invalid_signature | `Msg of string ]) result
-  (** [validate_signature jwk t] checks if the JWT is valid and then calls
+  (** [validate_signature ~jwk t] checks if the JWT is valid and then calls
       Jws.validate to validate the signature *)
+
+  val check_expiration : t -> (t, [> `Expired ]) result
+  (** [check_expiration t] checks whether the JWT is valid at the current time. *)
 
   val validate :
     jwk:'a Jwk.t ->
     t ->
     (t, [> `Expired | `Invalid_signature | `Msg of string ]) result
-  (** [validate jwk t] does the same validation as `validate_signature` and
+  (** [validate ~jwk t] does the same validation as `validate_signature` and
       additionally checks expiration. *)
 
   val sign :

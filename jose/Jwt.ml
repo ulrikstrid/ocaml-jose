@@ -75,7 +75,7 @@ let of_jws (jws : Jws.t) =
     raw_payload = jws.payload;
   }
 
-let check_exp t =
+let check_expiration t =
   let module Json = Yojson.Safe.Util in
   match Json.member "exp" t.payload |> Json.to_int_option with
   | Some exp when exp > int_of_float (Unix.time ()) -> Ok t
@@ -87,7 +87,7 @@ let validate_signature (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
 
 let validate (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
   match validate_signature ~jwk t with
-  | Ok t -> check_exp t
+  | Ok t -> check_expiration t
   | Error e -> Error e
 
 let of_string ~jwk s = RResult.bind (unsafe_of_string s) (validate ~jwk)
