@@ -23,7 +23,7 @@ let jwt_suite, _ =
               let open Jose in
               let jwk = Jwk.make_oct Fixtures.oct_key_string in
               let jwt =
-                Jwt.of_string Fixtures.oct_jwt_string
+                Jwt.unsafe_of_string Fixtures.oct_jwt_string
                 |> CCResult.flat_map (Jwt.validate ~jwk)
                 |> CCResult.get_exn
               in
@@ -200,7 +200,8 @@ let jwt_suite, _ =
                 (CCResult.map Jwt.to_string jwt_r));
           Alcotest.test_case "Can parse JWT without kid" `Quick (fun () ->
               let jwt =
-                Jose.Jwt.of_string Fixtures.jwt_without_kid |> CCResult.get_exn
+                Jose.Jwt.unsafe_of_string Fixtures.jwt_without_kid
+                |> CCResult.get_exn
               in
               check_string "JWT was parsed correctly without kid" "RS256"
                 (jwt.header.alg |> Jose.Jwa.alg_to_string));
@@ -225,14 +226,24 @@ let jwt_suite, _ =
               let jwk =
                 Jose.Jwk.of_priv_json_string jwk_str |> CCResult.get_exn
               in
-              Jose.Jwt.of_string expected_str
-              |> CCResult.flat_map (Jose.Jwt.validate ~jwk)
+              Jose.Jwt.unsafe_of_string expected_str
+              |> CCResult.flat_map (Jose.Jwt.validate_signature ~jwk)
               |> CCResult.map (fun (jwt : Jose.Jwt.t) ->
                      Yojson.Safe.to_string jwt.payload)
               |> check_result_string "Validated payload is correct"
                    (Ok
                       (payload_str |> Yojson.Safe.from_string
                      |> Yojson.Safe.to_string)));
+          Alcotest.test_case "Can validate a RSA256 JWT" `Quick (fun () ->
+              let open Jose in
+              let jwt_s =
+                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGFpbSI6ImZvbyIsImV4cCI6MTY0NDkxNTQ4Mn0.HSKBoJuoUSnh-JCxdE5B615qqRlyoThnAvPSnxktgt4"
+              in
+              let jwt =
+                Jwt.of_string ~jwk:(Jwk.make_oct "lol") jwt_s
+                |> CCResult.map (fun _ -> assert false)
+              in
+              check_result_string "expired" jwt (Error `Expired));
         ] );
     ]
 

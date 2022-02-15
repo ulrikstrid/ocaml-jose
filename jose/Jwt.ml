@@ -37,7 +37,7 @@ let to_string t =
   let payload = RBase64.url_encode_string t.raw_payload in
   Printf.sprintf "%s.%s.%s" t.raw_header payload t.signature
 
-let of_string token =
+let unsafe_of_string token =
   String.split_on_char '.' token |> function
   | [ header_str; payload_str; signature ] ->
       let header = Header.of_string header_str in
@@ -50,7 +50,8 @@ let of_string token =
                  raw_header = header_str;
                  payload;
                  raw_payload = RBase64.url_decode payload_str |> RResult.get_exn;
-                 (* The string is already decoded so this is fine but redundant *)
+                 (* The string is already decoded so this is fine but
+                    redundant *)
                  signature;
                })
   | _ -> Error (`Msg "token didn't include header, payload or signature")
@@ -81,8 +82,15 @@ let check_exp t =
   | Some _exp -> Error `Expired
   | None -> Ok t
 
-let validate (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
+let validate_signature (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
   Jws.validate ~jwk (to_jws t) |> RResult.map of_jws
+
+let validate (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
+  match validate_signature ~jwk t with
+  | Ok t -> check_exp t
+  | Error e -> Error e
+
+let of_string ~jwk s = RResult.bind (unsafe_of_string s) (validate ~jwk)
 
 let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
   let payload =

@@ -321,18 +321,26 @@ module Jwt : sig
   val add_claim : string -> Yojson.Safe.t -> payload -> payload
   val to_string : t -> string
 
-  val of_string : string -> (t, [> `Msg of string ]) result
+  val of_string :
+    jwk:'a Jwk.t ->
+    string ->
+    (t, [> `Expired | `Invalid_signature | `Msg of string ]) result
 
+  val unsafe_of_string : string -> (t, [> `Msg of string ]) result
   val to_jws : t -> Jws.t
   val of_jws : Jws.t -> t
+
+  val validate_signature :
+    jwk:'a Jwk.t -> t -> (t, [> `Invalid_signature | `Msg of string ]) result
+  (** [validate_signature jwk t] checks if the JWT is valid and then calls
+      Jws.validate to validate the signature *)
 
   val validate :
     jwk:'a Jwk.t ->
     t ->
     (t, [> `Expired | `Invalid_signature | `Msg of string ]) result
-  (**
-  [validate jwk t] checks if the JWT is valid and then calls Jws.validate to validate the signature
-  *)
+  (** [validate jwk t] does the same validation as `validate_signature` and
+      additionally checks expiration. *)
 
   val sign :
     header:Header.t ->
