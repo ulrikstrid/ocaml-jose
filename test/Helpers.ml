@@ -27,9 +27,7 @@ let result_t :
   Alcotest.testable pp ( = )
 
 let check_string = Alcotest.(check string)
-
 let check_result_string = Alcotest.(check (result string result_t))
-
 let check_result_bool = Alcotest.(check (result bool result_t))
 
 let check_option_string name expected actual =

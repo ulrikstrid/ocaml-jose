@@ -166,7 +166,7 @@ let jws_ecdsa_tests =
                (fun jws ->
                  Jose.Jws.(jws.header)
                  |> Jose.Header.to_json |> Yojson.Safe.to_string)
-               validated_jws));
+               validated_jws))
       (*
        * Disabled until https://github.com/mirage/mirage-crypto/issues/105 is solved
       Alcotest.test_case "Generates the same JWS" `Quick (fun () ->
@@ -182,7 +182,7 @@ let jws_ecdsa_tests =
           in
           check_result_string "correct jws string" (Ok ecdsa_jws)
             (CCResult.map Jose.Jws.to_string jws));
-       *)
+       *);
     ] )
 
 (* https://tools.ietf.org/html/rfc7520#section-4.4 *)
@@ -311,7 +311,8 @@ let jwe_rsa_tests =
           check_result_string "correct kid in header"
             (Ok "frodo.baggins@hobbiton.example")
             (CCResult.map
-               (fun jwe -> jwe.Jose.Jwe.header.kid |> CCOpt.get_exn)
+               (fun jwe ->
+                 jwe.Jose.Jwe.header.kid |> CCOption.get_exn_or "fail")
                jwe);
           check_result_string "correct alg in header" (Ok "RSA1_5")
             (CCResult.map
@@ -352,7 +353,8 @@ let jwe_rsa_tests =
           check_result_string "correct kid in header"
             (Ok "samwise.gamgee@hobbiton.example")
             (CCResult.map
-               (fun jwe -> jwe.Jose.Jwe.header.kid |> CCOpt.get_exn)
+               (fun jwe ->
+                 jwe.Jose.Jwe.header.kid |> CCOption.get_exn_or "fail")
                jwe);
           check_result_string "correct alg in header" (Ok "RSA-OAEP")
             (CCResult.map

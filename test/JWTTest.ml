@@ -13,7 +13,7 @@ let jwt_suite, _ =
                 Jwk.of_pub_pem Fixtures.rsa_test_pub |> CCResult.get_exn
               in
               let jwt =
-                Jwt.of_string Fixtures.external_jwt_string
+                Jwt.unsafe_of_string Fixtures.external_jwt_string
                 |> CCResult.flat_map (Jwt.validate ~jwk)
                 |> CCResult.get_exn
               in

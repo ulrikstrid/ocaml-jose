@@ -1,7 +1,6 @@
 open Utils
 
 type payload = Yojson.Safe.t
-
 type claim = string * Yojson.Safe.t
 
 type error =
