@@ -234,7 +234,8 @@ let jwt_suite, _ =
                    (Ok
                       (payload_str |> Yojson.Safe.from_string
                      |> Yojson.Safe.to_string)));
-          Alcotest.test_case "Can validate a RSA256 JWT" `Quick (fun () ->
+          Alcotest.test_case "Checks for expiration when calling `of_string`"
+            `Quick (fun () ->
               let open Jose in
               let jwt_s =
                 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGFpbSI6ImZvbyIsImV4cCI6MTY0NDkxNTQ4Mn0.HSKBoJuoUSnh-JCxdE5B615qqRlyoThnAvPSnxktgt4"
