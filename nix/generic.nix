@@ -35,6 +35,7 @@ rec {
       astring
       yojson
       zarith
+      ppxlib # needed by bisect_ppx
       pkgs.gmp
     ];
 
