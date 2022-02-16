@@ -1,16 +1,19 @@
-let result_t :
-    [> `Msg of string
-    | `Expired
-    | `Not_rsa
-    | `Json_parse_failed of string
-    | `Unsupported_kty
-    | `Invalid_signature
-    | `Missing_use_and_alg
-    | `Invalid_JWE
-    | `Invalid_JWK
-    | `Decrypt_cek_failed
-    | `Unsafe ]
-    Alcotest.testable =
+type 'a error_t =
+  [> `Msg of string
+  | `Expired
+  | `Not_rsa
+  | `Json_parse_failed of string
+  | `Unsupported_kty
+  | `Invalid_signature
+  | `Missing_use_and_alg
+  | `Invalid_JWE
+  | `Invalid_JWK
+  | `Decrypt_cek_failed
+  | `Unsafe ]
+  as
+  'a
+
+let result_t : _ error_t Alcotest.testable =
   let pp ppf = function
     | `Msg e -> Fmt.string ppf e
     | `Expired -> Fmt.string ppf "expired"
@@ -27,9 +30,7 @@ let result_t :
   Alcotest.testable pp ( = )
 
 let check_string = Alcotest.(check string)
-
 let check_result_string = Alcotest.(check (result string result_t))
-
 let check_result_bool = Alcotest.(check (result bool result_t))
 
 let check_option_string name expected actual =

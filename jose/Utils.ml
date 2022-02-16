@@ -1,14 +1,9 @@
 module RResult = struct
   let map fn r = match r with Ok v -> Ok (fn v) | Error e -> Error e
-
   let flat_map fn r = match r with Ok v -> fn v | Error e -> Error e
-
   let map_error fn r = match r with Ok v -> Ok v | Error e -> Error (fn e)
-
   let to_opt = function Ok v -> Some v | Error _ -> None
-
   let return v = Ok v
-
   let get_exn = function Ok v -> v | Error _ -> raise Not_found
 
   let both a b =
@@ -27,18 +22,14 @@ module RResult = struct
 
   module Infix = struct
     let ( >>= ) = bind
-
     let ( >|= ) r fn = match r with Ok v -> Ok (fn v) | Error e -> Error e
   end
 end
 
 module ROpt = struct
   let flatten o = match o with Some v -> v | None -> None
-
   let map fn o = match o with Some v -> Some (fn v) | None -> None
-
   let get_with_default ~default o = match o with Some v -> v | None -> default
-
   let return x = Some x
 end
 
@@ -92,7 +83,7 @@ end
 module Pkcs7 = struct
   (* https://tools.ietf.org/html/rfc5652#section-6.3 *)
   let pad data block_size =
-    let pad_size = block_size - (Cstruct.len data mod block_size) in
+    let pad_size = block_size - (Cstruct.length data mod block_size) in
     if pad_size = 0 then data
     else
       (* this is the remaining bytes in the last block *)
@@ -102,7 +93,7 @@ module Pkcs7 = struct
       Cstruct.append data pad
 
   let unpad cs =
-    let cs_len = Cstruct.len cs in
+    let cs_len = Cstruct.length cs in
     let pad_len = Cstruct.get_uint8 cs (cs_len - 1) in
     let data, padding = Cstruct.split cs (cs_len - pad_len) in
     let rec check idx =

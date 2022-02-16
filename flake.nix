@@ -1,17 +1,14 @@
 {
   description = "my project description";
 
-  inputs.ocaml-overlay.url = "github:anmonteiro/nix-overlays/ulrikstrid/flakify";
   inputs.flake-utils.url = "github:numtide/flake-utils";
-  inputs.nixpkgs.url = "github:nixos/nixpkgs";
+  inputs.nixpkgs.url = "github:anmonteiro/nix-overlays";
 
-  outputs = { self, nixpkgs, ocaml-overlay, flake-utils }:
+  outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs { inherit system; overlays = [ ocaml-overlay.overlay ]; };
-        devShell = import ./shell.nix {
-          inherit pkgs;
-        };
+        pkgs = nixpkgs.legacyPackages."${system}";
+        devShell = pkgs.callPackage ./shell.nix { };
       in
       {
         inherit devShell;

@@ -1,7 +1,6 @@
 open Utils
 
 type payload = Yojson.Safe.t
-
 type claim = string * Yojson.Safe.t
 
 type error =
@@ -38,7 +37,7 @@ let to_string t =
   let payload = RBase64.url_encode_string t.raw_payload in
   Printf.sprintf "%s.%s.%s" t.raw_header payload t.signature
 
-let of_string token =
+let unsafe_of_string token =
   String.split_on_char '.' token |> function
   | [ header_str; payload_str; signature ] ->
       let header = Header.of_string header_str in
@@ -51,7 +50,8 @@ let of_string token =
                  raw_header = header_str;
                  payload;
                  raw_payload = RBase64.url_decode payload_str |> RResult.get_exn;
-                 (* The string is already decoded so this is fine but redundant *)
+                 (* The string is already decoded so this is fine but
+                    redundant *)
                  signature;
                })
   | _ -> Error (`Msg "token didn't include header, payload or signature")
@@ -75,15 +75,22 @@ let of_jws (jws : Jws.t) =
     raw_payload = jws.payload;
   }
 
-let check_exp t =
+let check_expiration t =
   let module Json = Yojson.Safe.Util in
   match Json.member "exp" t.payload |> Json.to_int_option with
   | Some exp when exp > int_of_float (Unix.time ()) -> Ok t
   | Some _exp -> Error `Expired
   | None -> Ok t
 
-let validate (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
+let validate_signature (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
   Jws.validate ~jwk (to_jws t) |> RResult.map of_jws
+
+let validate (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
+  match validate_signature ~jwk t with
+  | Ok t -> check_expiration t
+  | Error e -> Error e
+
+let of_string ~jwk s = RResult.bind (unsafe_of_string s) (validate ~jwk)
 
 let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
   let payload =
