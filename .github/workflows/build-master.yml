@@ -13,8 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          persist-credentials: false
-
+          persist-credentials: falsene
 
       - uses: cachix/install-nix-action@v15
         with:

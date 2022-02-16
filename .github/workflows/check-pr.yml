@@ -33,7 +33,7 @@ jobs:
 
       - run: opam exec -- dune build
 
-      - run: opam exec -- dune build @runtest
+      - run: opam exec -- dune runtest
   nix:
     runs-on: ubuntu-latest
     steps:
