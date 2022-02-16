@@ -32,7 +32,10 @@ jobs:
         run: nix develop -c dune build -p jose
 
       - name: Test with coverage
-        run: nix develop -c dune build @runtest
+        run: nix develop -c dune build @runtest --instrument-with bisect_ppx --force
+
+      - name: Upload coverage
+        run: nix develop -c bisect-ppx-report send-to Codecov
 
       - name: Build docs
         run: nix develop -c dune build @doc
