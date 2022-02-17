@@ -26,6 +26,7 @@ with pkgs;
     cacert
     curl
     gnupg
+    odoc
   ];
 }).overrideAttrs (o: {
   propagatedBuildInputs = filterDrvs o.propagatedBuildInputs;

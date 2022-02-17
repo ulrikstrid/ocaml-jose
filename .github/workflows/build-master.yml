@@ -1,4 +1,4 @@
-name: Build master - Deploy to GitHub Pages and publish npm
+name: Build master - Deploy to GitHub Pages
 on:
   push:
     branches:
@@ -13,35 +13,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          persist-credentials: false
-      - name: Install esy
-        run: npm install -g esy
+          persist-credentials: falsene
 
-      - name: Install
-        run: esy install
-
-      - name: Print esy cache
-        id: print_esy_cache
-        run: node .github/workflows/print_esy_cache.js
-      - name: Try to restore dependencies cache
-        id: deps-cache
-        uses: actions/cache@v1
+      - uses: cachix/install-nix-action@v15
         with:
-          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
-          key: ubuntu-latest-4.09-${{ hashFiles('**/index.json') }}
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - uses: cachix/cachix-action@v10
+        with:
+          name: anmonteiro
+
+      - name: "Check nix flake "
+        run: nix flake check
 
       - name: Build
-        run: esy build
+        run: nix develop -c dune build -p jose
 
       - name: Test with coverage
-        run: node .github/workflows/test_with_coverage.js
+        run: nix develop -c dune build @runtest --instrument-with bisect_ppx --force
+
+      - name: Upload coverage
+        run: nix develop -c bisect-ppx-report send-to Codecov
 
       - name: Build docs
-        run: esy docs
-
-      - name: Print docs path
-        id: print_docs_path
-        run: node .github/workflows/print_docs_path.js
+        run: nix develop -c dune build @doc
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@releases/v3
@@ -50,23 +46,4 @@ jobs:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
           BRANCH: gh-pages
           CLEAN: true
-          FOLDER: ${{ steps.print_docs_path.outputs.docs_path }}
-  publish-to-npm:
-    needs: build-and-deploy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
-          ref: ${{ github.ref }}
-          submodules: true
-      - uses: actions/setup-node@v1
-        with:
-          node-version: 12
-          registry-url: https://registry.npmjs.org/
-      - name: Install esy
-        run: npm install -g esy
-      - name: Publish packages
-        run: node .github/workflows/publish_to_npm.js
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+          FOLDER: _build/default/_doc/_html

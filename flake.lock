@@ -35,15 +35,16 @@
         "flake-utils": "flake-utils_2"
       },
       "locked": {
-        "lastModified": 1644896789,
-        "narHash": "sha256-gbEtakPZwZ/uMn2spcNu8Lqb1mN9XCGoR5k9/YBk2Ek=",
+        "lastModified": 1645041550,
+        "narHash": "sha256-R0DkiqRHh8KbE3WJ9W+JoAQ8jD0opnhKeb4l5vQ05Eg=",
         "owner": "anmonteiro",
         "repo": "nix-overlays",
-        "rev": "90539755684d696f986e89894f46ddceb26b3497",
+        "rev": "fc3d75a4c034dfc1ae43f643f7cad421932f2088",
         "type": "github"
       },
       "original": {
         "owner": "anmonteiro",
+        "ref": "ulrikstrid/odoc-2_1_0",
         "repo": "nix-overlays",
         "type": "github"
       }
