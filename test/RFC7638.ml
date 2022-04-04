@@ -2,7 +2,6 @@ open Helpers
 module Jwk = Jose.Jwk
 
 let get_thumbprint jwk = Jwk.get_thumbprint `SHA256 jwk
-
 let get_ok_thumbprint jwk = get_thumbprint jwk |> CCResult.get_exn
 
 let public_rsa_thumbprint () =

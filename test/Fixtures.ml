@@ -49,9 +49,7 @@ MQ==
 |}
 
 let private_jwk_kty = `RSA
-
 let private_jwk_alg = `RS256
-
 let private_jwk_kid = "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik"
 
 let private_jwk_string =
@@ -81,9 +79,7 @@ JQIDAQAB
 |}
 
 let public_jwk_alg : Jose.Jwa.alg = `RS256
-
 let public_jwk_kty = `RSA
-
 let public_jwk_kid = "0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik"
 
 let public_jwk_string =
@@ -118,15 +114,10 @@ let oct_jwt_string =
   {|eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6Iko0eFFoN3otRWFKSTdQeTFQNHJGZjJTMHJwcFAybTR5S3JaVzRYNFlmdWsifQ.eyJzdWIiOiJ0ZXN0ZXIifQ.VSzni5ed3P9_vimTe9Weu56vTlMsSGHZY-WjnUo7S0A|}
 
 let oct_jwk_pub_k = "MDZjM2JkNWMtMGY5Ny00YjNlLWJmMjAtZWIyOWFlOTM2M2Rl"
-
 let oct_jwk_pub_kid = "J4xQh7z-EaJI7Py1P4rFf2S0rppP2m4yKrZW4X4Yfuk"
-
 let oct_jwk_priv_k = "MDZjM2JkNWMtMGY5Ny00YjNlLWJmMjAtZWIyOWFlOTM2M2Rl"
-
 let oct_jwk_priv_kid = "J4xQh7z-EaJI7Py1P4rFf2S0rppP2m4yKrZW4X4Yfuk"
-
 let oct_jwk_priv_kty = `oct
-
 let oct_jwk_priv_alg = `HS256
 
 let oct_jwk_string =

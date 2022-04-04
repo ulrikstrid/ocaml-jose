@@ -14,7 +14,6 @@ let of_json json =
   }
 
 let to_string t = to_json t |> Yojson.Safe.to_string
-
 let of_string str = Yojson.Safe.from_string str |> of_json
 
 let find_key jwks kid =

@@ -35,11 +35,6 @@ module Util = struct
            Cstruct.set_uint8 four 0 4;
            let point = Cstruct.concat [ four; x; y ] in
            let k = Mirage_crypto_ec.P256.Dsa.pub_of_cstruct point in
-           (*
-           let _ =
-             Format.printf "%a" Mirage_crypto_ec.pp_error (Result.get_error k)
-           in
-           *)
            k |> Result.get_ok)
 
   let get_ES512_x_y key =
@@ -58,11 +53,6 @@ module Util = struct
            Cstruct.set_uint8 four 0 4;
            let point = Cstruct.concat [ four; x; y ] in
            let k = Mirage_crypto_ec.P521.Dsa.pub_of_cstruct point in
-           (*
-           let _ =
-             Format.printf "%a" Mirage_crypto_ec.pp_error (Result.get_error k)
-           in
-           *)
            k |> Result.get_ok)
 end
 
@@ -97,7 +87,6 @@ let use_of_alg (alg : Jwa.alg) =
   | `Unsupported str -> `Unsupported str
 
 type public = Public
-
 type priv = Private
 
 type 'key jwk = {
@@ -109,17 +98,11 @@ type 'key jwk = {
 }
 
 type oct = string jwk
-
 type priv_rsa = Mirage_crypto_pk.Rsa.priv jwk
-
 type pub_rsa = Mirage_crypto_pk.Rsa.pub jwk
-
 type priv_es256 = Mirage_crypto_ec.P256.Dsa.priv jwk
-
 type pub_es256 = Mirage_crypto_ec.P256.Dsa.pub jwk
-
 type priv_es512 = Mirage_crypto_ec.P521.Dsa.priv jwk
-
 type pub_es512 = Mirage_crypto_ec.P521.Dsa.pub jwk
 
 type 'a t =
@@ -301,7 +284,8 @@ let oct_to_json (oct : oct) =
   `Assoc (RList.filter_map (fun x -> x) values)
 
 let pub_rsa_to_json pub_rsa =
-  (* Should I make this a result? It feels like our well-formed key should always be able to become a JSON *)
+  (* Should I make this a result? It feels like our well-formed key should
+     always be able to become a JSON *)
   let public_key : X509.Public_key.t = `RSA pub_rsa.key in
   let e = Util.get_JWK_component pub_rsa.key.e in
   let n = Util.get_JWK_component pub_rsa.key.n in
@@ -333,7 +317,8 @@ let priv_rsa_to_pub_json (priv_rsa : priv_rsa) =
   pub_rsa_to_json (pub_of_priv_rsa priv_rsa)
 
 let priv_rsa_to_priv_json (priv_rsa : priv_rsa) : Yojson.Safe.t =
-  (* Should I make this a result? It feels like our well-formed key should always be able to become a JSON *)
+  (* Should I make this a result? It feels like our well-formed key should
+     always be able to become a JSON *)
   let n = Util.get_JWK_component priv_rsa.key.n in
   let e = Util.get_JWK_component priv_rsa.key.e in
   let d = Util.get_JWK_component priv_rsa.key.d in
