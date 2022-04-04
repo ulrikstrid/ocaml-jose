@@ -1,3 +1,9 @@
+0.7.0
+--------------
+- Remove print statements that was used for debugging (by @phongphan)
+- Make things safer by default, `of_string` will now return result, etc (by @anmonteiro)
+- Fix deprecation warnings in libraries (by @anmonteiro)
+
 0.6.0
 --------------
 - JWT/JWS/JWK: Add support for ES256 and ES512 signing via the updated mirage-crypto and x509 (by @ulrikstrid)
