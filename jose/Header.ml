@@ -46,8 +46,8 @@ let of_json json =
         jwk =
           json |> Json.member "jwk"
           |> Json.to_option (fun jwk_json ->
-                 Jwk.of_pub_json jwk_json |> RResult.to_opt)
-          |> ROpt.flatten;
+                 Jwk.of_pub_json jwk_json |> U_Result.to_opt)
+          |> U_Opt.flatten;
         kid = json |> Json.member "kid" |> Json.to_string_option;
         x5t = json |> Json.member "x5t" |> Json.to_string_option;
         x5t256 = json |> Json.member "x5t#256" |> Json.to_string_option;
@@ -55,7 +55,7 @@ let of_json json =
         cty = json |> Json.member "cty" |> Json.to_string_option;
         enc =
           json |> Json.member "enc" |> Json.to_string_option
-          |> ROpt.map Jwa.enc_of_string;
+          |> U_Opt.map Jwa.enc_of_string;
       }
   with Json.Type_error (s, _) -> Error (`Msg s)
 
@@ -65,21 +65,21 @@ let to_json t =
       RJson.to_json_string_opt "typ" t.typ;
       Some ("alg", Jwa.alg_to_json t.alg);
       RJson.to_json_string_opt "jku" t.jku;
-      ROpt.map Jwk.to_pub_json t.jwk |> ROpt.map (fun jwk -> ("jwk", jwk));
+      U_Opt.map Jwk.to_pub_json t.jwk |> U_Opt.map (fun jwk -> ("jwk", jwk));
       RJson.to_json_string_opt "kid" t.kid;
       RJson.to_json_string_opt "x5t" t.x5t;
       RJson.to_json_string_opt "x5t#256" t.x5t256;
       RJson.to_json_string_opt "cty" t.cty;
-      t.enc |> ROpt.map Jwa.enc_to_string
-      |> ROpt.map (fun enc -> ("enc", `String enc));
+      t.enc |> U_Opt.map Jwa.enc_to_string
+      |> U_Opt.map (fun enc -> ("enc", `String enc));
     ]
   in
-  `Assoc (RList.filter_map (fun x -> x) values)
+  `Assoc (U_List.filter_map (fun x -> x) values)
 
 let of_string header_str =
-  RBase64.url_decode header_str
-  |> RResult.flat_map (fun decoded_header ->
+  U_Base64.url_decode header_str
+  |> U_Result.flat_map (fun decoded_header ->
          Yojson.Safe.from_string decoded_header |> of_json)
 
 let to_string header =
-  to_json header |> Yojson.Safe.to_string |> RBase64.url_encode_string
+  to_json header |> Yojson.Safe.to_string |> U_Base64.url_encode_string

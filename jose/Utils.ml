@@ -1,4 +1,4 @@
-module RResult = struct
+module U_Result = struct
   let map fn r = match r with Ok v -> Ok (fn v) | Error e -> Error e
   let flat_map fn r = match r with Ok v -> fn v | Error e -> Error e
   let map_error fn r = match r with Ok v -> Ok v | Error e -> Error (fn e)
@@ -26,14 +26,14 @@ module RResult = struct
   end
 end
 
-module ROpt = struct
+module U_Opt = struct
   let flatten o = match o with Some v -> v | None -> None
   let map fn o = match o with Some v -> Some (fn v) | None -> None
   let get_with_default ~default o = match o with Some v -> v | None -> default
   let return x = Some x
 end
 
-module RList = struct
+module U_List = struct
   let filter_map f =
     let rec aux accu = function
       | [] -> List.rev accu
@@ -47,7 +47,7 @@ module RList = struct
     | x :: l -> if p x then Some x else find_opt p l
 end
 
-module RString = struct
+module U_String = struct
   let rev s =
     let len = Astring.String.length s in
     Astring.String.mapi (fun i _ -> s.[len - (i + 1)]) s
@@ -64,7 +64,7 @@ module RString = struct
     Astring.String.trim ~drop:(function '\000' -> true | _ -> false) s
 end
 
-module RBase64 = struct
+module U_Base64 = struct
   let url_encode_string ?(pad = false) payload =
     Base64.encode_string ~pad ~alphabet:Base64.uri_safe_alphabet payload
 

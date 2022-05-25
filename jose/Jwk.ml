@@ -2,35 +2,35 @@ open Utils
 
 module Util = struct
   let get_JWK_component ?(pad = false) e : string =
-    Z.to_bits e |> RString.rev |> RString.trim_leading_null
-    |> RBase64.url_encode_string ~pad
+    Z.to_bits e |> U_String.rev |> U_String.trim_leading_null
+    |> U_Base64.url_encode_string ~pad
 
   let get_component ?(pad = false) e =
-    RBase64.url_decode ~pad e
-    |> RResult.map (fun x ->
-           RString.pad 8 ~c:'\000' x |> RString.rev |> Z.of_bits)
+    U_Base64.url_decode ~pad e
+    |> U_Result.map (fun x ->
+           U_String.pad 8 ~c:'\000' x |> U_String.rev |> Z.of_bits)
 
   let kid_of_json json =
     Yojson.Safe.to_string json |> Cstruct.of_string
     |> Mirage_crypto.Hash.SHA256.digest |> Cstruct.to_bytes |> Bytes.to_string
-    |> RBase64.url_encode_string
+    |> U_Base64.url_encode_string
 
   let get_JWK_x5t fingerprint =
     fingerprint |> Cstruct.to_bytes |> Bytes.to_string
-    |> RBase64.url_encode ~len:20
+    |> U_Base64.url_encode ~len:20
 
   let get_ES256_x_y key =
     let point = Mirage_crypto_ec.P256.Dsa.pub_to_cstruct key in
     let x_cs, y_cs = Cstruct.(split (shift point 1) 32) in
-    let x = x_cs |> Cstruct.to_string |> RBase64.url_encode_string in
-    let y = y_cs |> Cstruct.to_string |> RBase64.url_encode_string in
+    let x = x_cs |> Cstruct.to_string |> U_Base64.url_encode_string in
+    let y = y_cs |> Cstruct.to_string |> U_Base64.url_encode_string in
     (x, y)
 
   let make_ES256_of_x_y (x, y) =
-    let x = RBase64.url_decode x |> RResult.map Cstruct.of_string in
-    let y = RBase64.url_decode y |> RResult.map Cstruct.of_string in
-    RResult.both x y
-    |> RResult.map (fun (x, y) ->
+    let x = U_Base64.url_decode x |> U_Result.map Cstruct.of_string in
+    let y = U_Base64.url_decode y |> U_Result.map Cstruct.of_string in
+    U_Result.both x y
+    |> U_Result.map (fun (x, y) ->
            let four = Cstruct.create 1 in
            Cstruct.set_uint8 four 0 4;
            let point = Cstruct.concat [ four; x; y ] in
@@ -40,15 +40,15 @@ module Util = struct
   let get_ES512_x_y key =
     let point = Mirage_crypto_ec.P521.Dsa.pub_to_cstruct key in
     let x_cs, y_cs = Cstruct.(split (shift point 1) 66) in
-    let x = x_cs |> Cstruct.to_string |> RBase64.url_encode_string in
-    let y = y_cs |> Cstruct.to_string |> RBase64.url_encode_string in
+    let x = x_cs |> Cstruct.to_string |> U_Base64.url_encode_string in
+    let y = y_cs |> Cstruct.to_string |> U_Base64.url_encode_string in
     (x, y)
 
   let make_ES512_of_x_y (x, y) =
-    let x = RBase64.url_decode x |> RResult.map Cstruct.of_string in
-    let y = RBase64.url_decode y |> RResult.map Cstruct.of_string in
-    RResult.both x y
-    |> RResult.map (fun (x, y) ->
+    let x = U_Base64.url_decode x |> U_Result.map Cstruct.of_string in
+    let y = U_Base64.url_decode y |> U_Result.map Cstruct.of_string in
+    U_Result.both x y
+    |> U_Result.map (fun (x, y) ->
            let four = Cstruct.create 1 in
            Cstruct.set_uint8 four 0 4;
            let point = Cstruct.concat [ four; x; y ] in
@@ -209,7 +209,7 @@ let make_kid (type a) (t : a t) =
 
 let make_oct ?(use : use = `Sig) (str : string) : 'a t =
   (* Should we make this just return a result intead? *)
-  let key = RBase64.url_encode_string str in
+  let key = U_Base64.url_encode_string str in
   let jwk = { kty = `oct; use; alg = `HS256; key; kid = None } in
   Oct { jwk with kid = make_kid (Oct jwk) }
 
@@ -243,10 +243,10 @@ let make_pub_rsa ?(use : use = `Sig) (rsa_pub : Mirage_crypto_pk.Rsa.pub) :
 
 let of_pub_pem ?(use : use = `Sig) pem : (public t, [> `Not_rsa ]) result =
   Cstruct.of_string pem |> X509.Public_key.decode_pem
-  |> RResult.flat_map (function
+  |> U_Result.flat_map (function
        | `RSA pub_key -> Ok pub_key
        | _ -> Error `Not_rsa)
-  |> RResult.map (make_pub_rsa ~use)
+  |> U_Result.map (make_pub_rsa ~use)
 
 let to_pub_pem (type a) (jwk : a t) =
   match jwk with
@@ -255,12 +255,12 @@ let to_pub_pem (type a) (jwk : a t) =
   | Rsa_priv rsa ->
       rsa.key |> Mirage_crypto_pk.Rsa.pub_of_priv
       |> (fun key -> X509.Public_key.encode_pem (`RSA key))
-      |> Cstruct.to_string |> RResult.return
+      |> Cstruct.to_string |> U_Result.return
   | _ -> Error `Not_rsa
 
 let of_priv_pem ?(use : use = `Sig) pem : (priv t, [> `Not_rsa ]) result =
   Cstruct.of_string pem |> X509.Private_key.decode_pem
-  |> RResult.flat_map (function
+  |> U_Result.flat_map (function
        | `RSA priv_key -> Ok (make_priv_rsa ~use priv_key)
        | `P256 priv_key -> Ok (make_priv_es256 ~use priv_key)
        | `P521 priv_key -> Ok (make_priv_es512 ~use priv_key)
@@ -281,7 +281,7 @@ let oct_to_json (oct : oct) =
       RJson.to_json_string_opt "kid" oct.kid;
     ]
   in
-  `Assoc (RList.filter_map (fun x -> x) values)
+  `Assoc (U_List.filter_map (fun x -> x) values)
 
 let pub_rsa_to_json pub_rsa =
   (* Should I make this a result? It feels like our well-formed key should
@@ -299,10 +299,10 @@ let pub_rsa_to_json pub_rsa =
       Some ("use", `String (use_to_string pub_rsa.use));
       RJson.to_json_string_opt "x5t"
         (Util.get_JWK_x5t (X509.Public_key.fingerprint ~hash:`SHA1 public_key)
-        |> RResult.to_opt);
+        |> U_Result.to_opt);
     ]
   in
-  `Assoc (RList.filter_map (fun x -> x) values)
+  `Assoc (U_List.filter_map (fun x -> x) values)
 
 let pub_of_priv_rsa (priv_rsa : priv_rsa) : pub_rsa =
   { priv_rsa with key = Mirage_crypto_pk.Rsa.pub_of_priv priv_rsa.key }
@@ -343,7 +343,7 @@ let priv_rsa_to_priv_json (priv_rsa : priv_rsa) : Yojson.Safe.t =
       RJson.to_json_string_opt "kid" priv_rsa.kid;
     ]
   in
-  `Assoc (RList.filter_map (fun x -> x) values)
+  `Assoc (U_List.filter_map (fun x -> x) values)
 
 let pub_es256_to_pub_json (pub_es256 : pub_es256) : Yojson.Safe.t =
   let x, y = Util.get_ES256_x_y pub_es256.key in
@@ -358,7 +358,7 @@ let pub_es256_to_pub_json (pub_es256 : pub_es256) : Yojson.Safe.t =
       RJson.to_json_string_opt "kid" pub_es256.kid;
     ]
   in
-  `Assoc (RList.filter_map (fun x -> x) values)
+  `Assoc (U_List.filter_map (fun x -> x) values)
 
 let priv_es256_to_pub_json (priv_es256 : priv_es256) : Yojson.Safe.t =
   pub_of_priv_es256 priv_es256 |> pub_es256_to_pub_json
@@ -369,7 +369,7 @@ let priv_es256_to_priv_json (priv_es256 : priv_es256) : Yojson.Safe.t =
   in
   let d =
     Mirage_crypto_ec.P256.Dsa.priv_to_cstruct priv_es256.key
-    |> Cstruct.to_string |> RBase64.url_encode_string
+    |> Cstruct.to_string |> U_Base64.url_encode_string
   in
   let values =
     [
@@ -383,7 +383,7 @@ let priv_es256_to_priv_json (priv_es256 : priv_es256) : Yojson.Safe.t =
       RJson.to_json_string_opt "kid" priv_es256.kid;
     ]
   in
-  `Assoc (RList.filter_map (fun x -> x) values)
+  `Assoc (U_List.filter_map (fun x -> x) values)
 
 let pub_es512_to_pub_json (pub_es512 : pub_es512) : Yojson.Safe.t =
   let x, y = Util.get_ES512_x_y pub_es512.key in
@@ -398,7 +398,7 @@ let pub_es512_to_pub_json (pub_es512 : pub_es512) : Yojson.Safe.t =
       RJson.to_json_string_opt "kid" pub_es512.kid;
     ]
   in
-  `Assoc (RList.filter_map (fun x -> x) values)
+  `Assoc (U_List.filter_map (fun x -> x) values)
 
 let priv_es512_to_pub_json (priv_es512 : priv_es512) : Yojson.Safe.t =
   pub_of_priv_es512 priv_es512 |> pub_es512_to_pub_json
@@ -409,7 +409,7 @@ let priv_es512_to_priv_json (priv_es512 : priv_es512) : Yojson.Safe.t =
   in
   let d =
     Mirage_crypto_ec.P521.Dsa.priv_to_cstruct priv_es512.key
-    |> Cstruct.to_string |> RBase64.url_encode_string
+    |> Cstruct.to_string |> U_Base64.url_encode_string
   in
   let values =
     [
@@ -423,7 +423,7 @@ let priv_es512_to_priv_json (priv_es512 : priv_es512) : Yojson.Safe.t =
       RJson.to_json_string_opt "kid" priv_es512.kid;
     ]
   in
-  `Assoc (RList.filter_map (fun x -> x) values)
+  `Assoc (U_List.filter_map (fun x -> x) values)
 
 let to_pub_json (type a) (jwk : a t) : Yojson.Safe.t =
   match jwk with
@@ -453,16 +453,16 @@ let pub_rsa_of_json json : (public t, 'error) result =
   try
     let e = json |> Json.member "e" |> Json.to_string |> Util.get_component in
     let n = json |> Json.member "n" |> Json.to_string |> Util.get_component in
-    RResult.both e n
-    |> RResult.flat_map (fun (e, n) -> Mirage_crypto_pk.Rsa.pub ~e ~n)
-    |> RResult.flat_map (fun key ->
+    U_Result.both e n
+    |> U_Result.flat_map (fun (e, n) -> Mirage_crypto_pk.Rsa.pub ~e ~n)
+    |> U_Result.flat_map (fun key ->
            let alg =
              json |> Json.member "alg" |> Json.to_string_option
-             |> ROpt.map Jwa.alg_of_string
+             |> U_Opt.map Jwa.alg_of_string
            in
            let use =
              json |> Json.member "use" |> Json.to_string_option
-             |> ROpt.map use_of_string
+             |> U_Opt.map use_of_string
            in
            let kid = json |> Json.member "kid" |> Json.to_string_option in
            let kty = `RSA in
@@ -488,17 +488,17 @@ let priv_rsa_of_json json : (priv t, 'error) result =
     let dp = json |> Json.member "dp" |> Json.to_string |> Util.get_component in
     let dq = json |> Json.member "dq" |> Json.to_string |> Util.get_component in
     let qi = json |> Json.member "qi" |> Json.to_string |> Util.get_component in
-    RResult.all8 e n d p q dp dq qi
-    |> RResult.flat_map (fun (e, n, d, p, q, dp, dq, qi) ->
+    U_Result.all8 e n d p q dp dq qi
+    |> U_Result.flat_map (fun (e, n, d, p, q, dp, dq, qi) ->
            Mirage_crypto_pk.Rsa.priv ~e ~n ~d ~p ~q ~dp ~dq ~q':qi)
-    |> RResult.flat_map (fun key ->
+    |> U_Result.flat_map (fun key ->
            let alg =
              json |> Json.member "alg" |> Json.to_string_option
-             |> ROpt.map Jwa.alg_of_string
+             |> U_Opt.map Jwa.alg_of_string
            in
            let use =
              json |> Json.member "use" |> Json.to_string_option
-             |> ROpt.map use_of_string
+             |> U_Opt.map use_of_string
            in
            let kid = json |> Json.member "kid" |> Json.to_string_option in
            let kty = `RSA in
@@ -525,8 +525,8 @@ let oct_of_json json =
            (* Shortcut since that is the only thing we handle *)
            use =
              json |> Json.member "use" |> Json.to_string_option
-             |> ROpt.map use_of_string
-             |> ROpt.get_with_default ~default:(use_of_alg alg);
+             |> U_Opt.map use_of_string
+             |> U_Opt.get_with_default ~default:(use_of_alg alg);
            key = json |> Json.member "k" |> Json.to_string;
            kid = json |> Json.member "kid" |> Json.to_string_option;
          })
@@ -537,7 +537,7 @@ let pub_ec_of_json json =
   try
     let alg =
       json |> Json.member "alg" |> Json.to_string_option
-      |> ROpt.map Jwa.alg_of_string
+      |> U_Opt.map Jwa.alg_of_string
     in
     let crv = json |> Json.member "crv" |> Json.to_string in
     let x = json |> Json.member "x" |> Json.to_string in
@@ -545,8 +545,8 @@ let pub_ec_of_json json =
     match crv with
     | "P-256" ->
         Util.make_ES256_of_x_y (x, y)
-        |> RResult.map (fun key ->
-               let alg = ROpt.get_with_default ~default:`ES256 alg in
+        |> U_Result.map (fun key ->
+               let alg = U_Opt.get_with_default ~default:`ES256 alg in
                Es256_pub
                  {
                    alg;
@@ -554,15 +554,15 @@ let pub_ec_of_json json =
                    (* Shortcut since that is the only thing we handle *)
                    use =
                      json |> Json.member "use" |> Json.to_string_option
-                     |> ROpt.map use_of_string
-                     |> ROpt.get_with_default ~default:(use_of_alg alg);
+                     |> U_Opt.map use_of_string
+                     |> U_Opt.get_with_default ~default:(use_of_alg alg);
                    key;
                    kid = json |> Json.member "kid" |> Json.to_string_option;
                  })
     | "P-521" ->
         Util.make_ES512_of_x_y (x, y)
-        |> RResult.map (fun key ->
-               let alg = ROpt.get_with_default ~default:`ES512 alg in
+        |> U_Result.map (fun key ->
+               let alg = U_Opt.get_with_default ~default:`ES512 alg in
                Es512_pub
                  {
                    alg;
@@ -570,8 +570,8 @@ let pub_ec_of_json json =
                    (* Shortcut since that is the only thing we handle *)
                    use =
                      json |> Json.member "use" |> Json.to_string_option
-                     |> ROpt.map use_of_string
-                     |> ROpt.get_with_default ~default:(use_of_alg alg);
+                     |> U_Opt.map use_of_string
+                     |> U_Opt.get_with_default ~default:(use_of_alg alg);
                    key;
                    kid = json |> Json.member "kid" |> Json.to_string_option;
                  })
@@ -583,19 +583,19 @@ let priv_ec_of_json json =
   try
     let alg =
       json |> Json.member "alg" |> Json.to_string_option
-      |> ROpt.map Jwa.alg_of_string
+      |> U_Opt.map Jwa.alg_of_string
     in
     let crv = json |> Json.member "crv" |> Json.to_string in
     let d =
-      json |> Json.member "d" |> Json.to_string |> RBase64.url_decode
-      |> RResult.map Cstruct.of_string
+      json |> Json.member "d" |> Json.to_string |> U_Base64.url_decode
+      |> U_Result.map Cstruct.of_string
     in
     match (crv, d) with
     | "P-256", Ok d ->
-        let alg = ROpt.get_with_default ~default:`ES256 alg in
+        let alg = U_Opt.get_with_default ~default:`ES256 alg in
         Mirage_crypto_ec.P256.Dsa.priv_of_cstruct d
-        |> RResult.map_error (fun _ -> `Msg "Could not create key")
-        |> RResult.map (fun key ->
+        |> U_Result.map_error (fun _ -> `Msg "Could not create key")
+        |> U_Result.map (fun key ->
                Es256_priv
                  {
                    alg;
@@ -603,16 +603,16 @@ let priv_ec_of_json json =
                    (* Shortcut since that is the only thing we handle *)
                    use =
                      json |> Json.member "use" |> Json.to_string_option
-                     |> ROpt.map use_of_string
-                     |> ROpt.get_with_default ~default:(use_of_alg alg);
+                     |> U_Opt.map use_of_string
+                     |> U_Opt.get_with_default ~default:(use_of_alg alg);
                    key;
                    kid = json |> Json.member "kid" |> Json.to_string_option;
                  })
     | "P-521", Ok d ->
-        let alg = ROpt.get_with_default ~default:`ES512 alg in
+        let alg = U_Opt.get_with_default ~default:`ES512 alg in
         Mirage_crypto_ec.P521.Dsa.priv_of_cstruct d
-        |> RResult.map_error (fun _ -> `Msg "Could not create key")
-        |> RResult.map (fun key ->
+        |> U_Result.map_error (fun _ -> `Msg "Could not create key")
+        |> U_Result.map (fun key ->
                Es512_priv
                  {
                    alg;
@@ -620,8 +620,8 @@ let priv_ec_of_json json =
                    (* Shortcut since that is the only thing we handle *)
                    use =
                      json |> Json.member "use" |> Json.to_string_option
-                     |> ROpt.map use_of_string
-                     |> ROpt.get_with_default ~default:(use_of_alg alg);
+                     |> U_Opt.map use_of_string
+                     |> U_Opt.get_with_default ~default:(use_of_alg alg);
                    key;
                    kid = json |> Json.member "kid" |> Json.to_string_option;
                  })
@@ -660,11 +660,11 @@ let pub_of_priv (jwk : priv t) : public t =
   | Es512_priv es -> Es512_pub (pub_of_priv_es512 es)
 
 let oct_to_sign_key (oct : oct) : (Cstruct.t, [> `Msg of string ]) result =
-  RBase64.url_decode oct.key |> RResult.map Cstruct.of_string
+  U_Base64.url_decode oct.key |> U_Result.map Cstruct.of_string
 
 let hash_values hash values =
   let module Hash = (val Mirage_crypto.Hash.module_of hash) in
-  `Assoc (RList.filter_map (fun x -> x) values)
+  `Assoc (U_List.filter_map (fun x -> x) values)
   |> Yojson.to_string |> Cstruct.of_string |> Hash.digest |> Cstruct.to_string
 
 let pub_rsa_to_thumbprint hash (pub_rsa : Mirage_crypto_pk.Rsa.pub jwk) =
