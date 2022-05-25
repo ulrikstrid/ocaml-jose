@@ -20,10 +20,9 @@
    (eqaf (>= 0.7))
    (mirage-crypto (>= 0.10.0))
    (x509 (>= 0.13.0))
-   (cstruct (>= 4.0.0))
+   (cstruct (>= 6.0.0))
    astring
-   yojson
-   result
+   (yojson (>= 1.6.0))
    zarith
    (containers :with-test)
    (bisect_ppx :with-test)
