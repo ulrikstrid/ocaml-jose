@@ -13,14 +13,14 @@ let of_string token =
   String.split_on_char '.' token |> function
   | [ header_str; payload_str; signature ] ->
       let header = Header.of_string header_str in
-      let payload = payload_str |> RBase64.url_decode in
-      RResult.both header payload
-      |> RResult.map (fun (header, payload) ->
+      let payload = payload_str |> U_Base64.url_decode in
+      U_Result.both header payload
+      |> U_Result.map (fun (header, payload) ->
              { header; raw_header = header_str; payload; signature })
   | _ -> Error (`Msg "token didn't include header, payload or signature")
 
 let to_string t =
-  let payload_str = t.payload |> RBase64.url_encode_string in
+  let payload_str = t.payload |> U_Base64.url_encode_string in
   Printf.sprintf "%s.%s.%s" t.raw_header payload_str t.signature
 
 let verify_RS256 (type a) ~(jwk : a Jwk.t) str =
@@ -42,7 +42,7 @@ let verify_HS256 (type a) ~(jwk : a Jwk.t) str =
   match jwk with
   | Jwk.Oct jwk ->
       Mirage_crypto.Hash.SHA256.hmac ~key:(Cstruct.of_string jwk.key) str
-      |> RResult.return
+      |> U_Result.return
   | _ -> Error (`Msg "JWK doesn't match")
 
 let verify_ES (type a) ~(jwk : a Jwk.t) ~input_str msg =
@@ -93,12 +93,12 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str str =
   | _ -> Error (`Msg "alg not supported")
 
 let verify_internal (type a) ~(jwk : a Jwk.t) t =
-  let payload_str = RBase64.url_encode_string t.payload in
+  let payload_str = U_Base64.url_encode_string t.payload in
   let input_str = Printf.sprintf "%s.%s" t.raw_header payload_str in
-  RBase64.url_decode t.signature
-  |> RResult.map Cstruct.of_string
-  |> RResult.flat_map (verify_jwk ~jwk ~input_str)
-  |> RResult.map (fun message ->
+  U_Base64.url_decode t.signature
+  |> U_Result.map Cstruct.of_string
+  |> U_Result.flat_map (verify_jwk ~jwk ~input_str)
+  |> U_Result.map (fun message ->
          let token_hash =
            input_str |> Cstruct.of_string |> Mirage_crypto.Hash.SHA256.digest
          in
@@ -117,8 +117,8 @@ let validate (type a) ~(jwk : a Jwk.t) t =
   | `ES512 -> Ok header.alg
   | `Unsupported _ | `RSA_OAEP | `RSA1_5 | `None ->
       Error (`Msg "alg not supported for signing"))
-  |> RResult.flat_map (fun _ -> verify_internal ~jwk t)
-  |> RResult.map (fun _ -> t)
+  |> U_Result.flat_map (fun _ -> verify_internal ~jwk t)
+  |> U_Result.map (fun _ -> t)
 
 (* Assumes a well formed header. *)
 let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
@@ -145,18 +145,18 @@ let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
           | `Digest _ -> raise (Invalid_argument "Digest"))
     | Jwk.Oct oct ->
         Jwk.oct_to_sign_key oct
-        |> RResult.map (fun key -> function
+        |> U_Result.map (fun key -> function
              | `Message x -> Mirage_crypto.Hash.SHA256.hmac ~key x
              | `Digest _ -> raise (Invalid_argument "Digest"))
   in
   match sign_f with
   | Ok sign_f ->
       let header_str = Header.to_string header in
-      let payload_str = RBase64.url_encode_string payload in
+      let payload_str = U_Base64.url_encode_string payload in
       let input_str = Printf.sprintf "%s.%s" header_str payload_str in
       let signature =
         `Message (Cstruct.of_string input_str)
-        |> sign_f |> Cstruct.to_string |> RBase64.url_encode_string
+        |> sign_f |> Cstruct.to_string |> U_Base64.url_encode_string
       in
       Ok { header; raw_header = header_str; payload; signature }
   | Error e -> Error e

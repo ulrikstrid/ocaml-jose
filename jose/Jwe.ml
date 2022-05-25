@@ -31,21 +31,21 @@ let make_cek (header : Header.t) =
   | Some enc ->
       let key_length = Jwa.enc_to_length enc in
       Mirage_crypto_rng.generate (key_length / 8)
-      |> Cstruct.to_string |> RResult.return
+      |> Cstruct.to_string |> U_Result.return
   | None -> Error `Missing_enc
 
 let make_iv (header : Header.t) =
   match header.alg with
   | `RSA_OAEP ->
       Mirage_crypto_rng.generate Mirage_crypto.Cipher_block.AES.GCM.block_size
-      |> Cstruct.to_string |> RResult.return
+      |> Cstruct.to_string |> U_Result.return
   | `RSA1_5 ->
       Mirage_crypto_rng.generate Mirage_crypto.Cipher_block.AES.CBC.block_size
-      |> Cstruct.to_string |> RResult.return
+      |> Cstruct.to_string |> U_Result.return
   | _ -> Error `Unsupported_alg
 
 let make ~header payload =
-  let open RResult.Infix in
+  let open U_Result.Infix in
   make_cek header >>= fun cek ->
   make_iv header >>= fun iv ->
   let aad = None in
@@ -97,7 +97,7 @@ let encrypt_payload ?enc ~cek ~iv ~aad payload =
   | _ -> Error `Unsupported_enc
 
 let encrypt_cek (type a) alg (cek : string) ~(jwk : a Jwk.t) =
-  let open RResult.Infix in
+  let open U_Result.Infix in
   (match jwk with
   | Rsa_priv rsa -> Ok (Mirage_crypto_pk.Rsa.pub_of_priv rsa.key)
   | Rsa_pub rsa -> Ok rsa.key
@@ -122,12 +122,12 @@ let encrypt_cek (type a) alg (cek : string) ~(jwk : a Jwk.t) =
   | _ -> Error `Invalid_alg
 
 let encrypt (type a) ~(jwk : a Jwk.t) t =
-  let open RResult.Infix in
+  let open U_Result.Infix in
   let header_string = Header.to_string t.header in
 
-  encrypt_cek t.header.alg t.cek ~jwk >|= RBase64.url_encode_string
+  encrypt_cek t.header.alg t.cek ~jwk >|= U_Base64.url_encode_string
   >>= fun ecek ->
-  let eiv = RBase64.url_encode_string t.iv in
+  let eiv = U_Base64.url_encode_string t.iv in
   encrypt_payload ?enc:t.header.enc ~cek:t.cek ~iv:t.iv ~aad:header_string
     t.payload
   >>= fun (ciphertext, auth_tag) ->
@@ -137,8 +137,8 @@ let encrypt (type a) ~(jwk : a Jwk.t) t =
          header_string;
          ecek;
          eiv;
-         RBase64.url_encode_string ciphertext;
-         RBase64.url_encode_string auth_tag;
+         U_Base64.url_encode_string ciphertext;
+         U_Base64.url_encode_string auth_tag;
        ])
 
 let decrypt_cek alg str ~(jwk : Jwk.priv Jwk.t) =
@@ -148,22 +148,22 @@ let decrypt_cek alg str ~(jwk : Jwk.priv Jwk.t) =
   in
   match (alg, jwk) with
   | `RSA1_5, Jwk.Rsa_priv rsa ->
-      Utils.RBase64.url_decode str
-      |> RResult.map Cstruct.of_string
-      |> RResult.map (Mirage_crypto_pk.Rsa.PKCS1.decrypt ~key:rsa.key)
-      |> RResult.flat_map of_opt_cstruct
+      Utils.U_Base64.url_decode str
+      |> U_Result.map Cstruct.of_string
+      |> U_Result.map (Mirage_crypto_pk.Rsa.PKCS1.decrypt ~key:rsa.key)
+      |> U_Result.flat_map of_opt_cstruct
   | `RSA_OAEP, Jwk.Rsa_priv rsa ->
-      Utils.RBase64.url_decode str
-      |> RResult.map Cstruct.of_string
-      |> RResult.map (RSA_OAEP.decrypt ~key:rsa.key)
-      |> RResult.flat_map of_opt_cstruct
+      Utils.U_Base64.url_decode str
+      |> U_Result.map Cstruct.of_string
+      |> U_Result.map (RSA_OAEP.decrypt ~key:rsa.key)
+      |> U_Result.flat_map of_opt_cstruct
   | _ -> Error `Invalid_JWK
 
 (* Move to Jwa? *)
 let decrypt_ciphertext enc ~cek ~iv ~auth_tag ~aad ciphertext =
   let iv = Cstruct.of_string iv in
-  let open Utils.RResult.Infix in
-  RBase64.url_decode ciphertext >>= fun encrypted ->
+  let open Utils.U_Result.Infix in
+  U_Base64.url_decode ciphertext >>= fun encrypted ->
   let encrypted = Cstruct.of_string encrypted in
   match enc with
   | Some `A128CBC_HS256 ->
@@ -199,19 +199,19 @@ let decrypt_ciphertext enc ~cek ~iv ~auth_tag ~aad ciphertext =
       Mirage_crypto.Cipher_block.AES.GCM.authenticate_decrypt ~key ~nonce:iv
         ~adata encrypted
       |> fun message ->
-      ROpt.(
+      U_Opt.(
         map (fun x -> Ok (Cstruct.to_string x)) message
         |> get_with_default ~default:(Error (`Msg "invalid auth tag")))
   | _ -> Error (`Msg "unsupported encryption")
 
 let decrypt ~(jwk : Jwk.priv Jwk.t) jwe =
-  let open Utils.RResult.Infix in
+  let open Utils.U_Result.Infix in
   String.split_on_char '.' jwe |> function
   | [ enc_header; enc_cek; enc_iv; ciphertext; auth_tag ] ->
       Header.of_string enc_header >>= fun header ->
       decrypt_cek header.Header.alg ~jwk enc_cek >>= fun cek ->
-      RBase64.url_decode enc_iv >>= fun iv ->
-      RBase64.url_decode auth_tag >>= fun auth_tag ->
+      U_Base64.url_decode enc_iv >>= fun iv ->
+      U_Base64.url_decode auth_tag >>= fun auth_tag ->
       decrypt_ciphertext header.Header.enc ~cek ~iv ~auth_tag ~aad:enc_header
         ciphertext
       >>= fun payload -> Ok { header; cek; iv; payload; aad = None }

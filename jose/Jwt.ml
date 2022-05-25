@@ -15,11 +15,11 @@ let empty_payload = `Assoc []
 
 let payload_to_string payload =
   let serialized_payload = Yojson.Safe.to_string payload in
-  RBase64.url_encode_string serialized_payload
+  U_Base64.url_encode_string serialized_payload
 
 let payload_of_string payload_str =
-  let payload = RBase64.url_decode payload_str in
-  RResult.map Yojson.Safe.from_string payload
+  let payload = U_Base64.url_decode payload_str in
+  U_Result.map Yojson.Safe.from_string payload
 
 type t = {
   header : Header.t;
@@ -34,7 +34,7 @@ let add_claim (claim_name : string) (claim_value : Yojson.Safe.t)
   `Assoc ((claim_name, claim_value) :: Yojson.Safe.Util.to_assoc payload)
 
 let to_string t =
-  let payload = RBase64.url_encode_string t.raw_payload in
+  let payload = U_Base64.url_encode_string t.raw_payload in
   Printf.sprintf "%s.%s.%s" t.raw_header payload t.signature
 
 let unsafe_of_string token =
@@ -42,14 +42,14 @@ let unsafe_of_string token =
   | [ header_str; payload_str; signature ] ->
       let header = Header.of_string header_str in
       let payload = payload_of_string payload_str in
-      RResult.both header payload
-      |> RResult.flat_map (fun (header, payload) ->
+      U_Result.both header payload
+      |> U_Result.flat_map (fun (header, payload) ->
              Ok
                {
                  header;
                  raw_header = header_str;
                  payload;
-                 raw_payload = RBase64.url_decode payload_str |> RResult.get_exn;
+                 raw_payload = U_Base64.url_decode payload_str |> U_Result.get_exn;
                  (* The string is already decoded so this is fine but
                     redundant *)
                  signature;
@@ -83,14 +83,14 @@ let check_expiration t =
   | None -> Ok t
 
 let validate_signature (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
-  Jws.validate ~jwk (to_jws t) |> RResult.map of_jws
+  Jws.validate ~jwk (to_jws t) |> U_Result.map of_jws
 
 let validate (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
   match validate_signature ~jwk t with
   | Ok t -> check_expiration t
   | Error e -> Error e
 
-let of_string ~jwk s = RResult.bind (unsafe_of_string s) (validate ~jwk)
+let of_string ~jwk s = U_Result.bind (unsafe_of_string s) (validate ~jwk)
 
 let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
   let payload =
@@ -98,5 +98,5 @@ let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
     with _ -> Error (`Msg "Can't serialize payload")
   in
   match payload with
-  | Ok payload -> Jws.sign ~header ~payload jwk |> RResult.map of_jws
+  | Ok payload -> Jws.sign ~header ~payload jwk |> U_Result.map of_jws
   | Error e -> Error e
