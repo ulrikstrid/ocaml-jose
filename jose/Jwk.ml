@@ -64,7 +64,7 @@ let use_to_string use =
 let use_of_string use =
   match use with "sig" -> `Sig | "enc" -> `Enc | str -> `Unsupported str
 
-let alg_of_use_and_kty ?(use : use = `Sig) (kty : Jwa.kty) =
+let alg_of_use_and_kty ?(use : use = `Sig) (kty : Jwa.kty) : Jwa.alg =
   match (use, kty) with
   | `Sig, `oct -> `HS256
   | `Sig, `RSA -> `RS256
@@ -90,9 +90,9 @@ type public = Public
 type priv = Private
 
 type 'key jwk = {
-  alg : Jwa.alg;
+  alg : Jwa.alg option;
   kty : Jwa.kty;
-  use : use;
+  use : use option;
   kid : string option;
   key : 'key;
 }
@@ -114,7 +114,7 @@ type 'a t =
   | Es512_priv : priv_es512 -> priv t
   | Es512_pub : pub_es512 -> public t
 
-let get_alg (type a) (t : a t) : Jwa.alg =
+let get_alg (type a) (t : a t) : Jwa.alg option =
   match t with
   | Rsa_priv rsa -> rsa.alg
   | Rsa_pub rsa -> rsa.alg
@@ -207,46 +207,46 @@ let make_kid (type a) (t : a t) =
   in
   Some kid
 
-let make_oct ?(use : use = `Sig) (str : string) : 'a t =
+let make_oct ?use (str : string) : 'a t =
   (* Should we make this just return a result intead? *)
   let key = U_Base64.url_encode_string str in
-  let jwk = { kty = `oct; use; alg = `HS256; key; kid = None } in
+  let jwk = { kty = `oct; use; alg = Some `HS256; key; kid = None } in
   Oct { jwk with kid = make_kid (Oct jwk) }
 
-let make_priv_rsa ?(use : use = `Sig) (rsa_priv : Mirage_crypto_pk.Rsa.priv) :
+let make_priv_rsa ?use (rsa_priv : Mirage_crypto_pk.Rsa.priv) :
     priv t =
   let kty : Jwa.kty = `RSA in
-  let alg = alg_of_use_and_kty ~use kty in
+  let alg: Jwa.alg option = Option.map (fun use -> alg_of_use_and_kty ~use kty) use in
   let jwk = { alg; kty; use; key = rsa_priv; kid = None } in
   Rsa_priv { jwk with kid = make_kid (Rsa_priv jwk) }
 
-let make_priv_es256 ?(use : use = `Sig)
+let make_priv_es256 ?use
     (es256_priv : Mirage_crypto_ec.P256.Dsa.priv) : priv t =
   let kty : Jwa.kty = `EC in
-  let alg = `ES256 in
+  let alg = Some `ES256 in
   let jwk = { alg; kty; use; key = es256_priv; kid = None } in
   Es256_priv { jwk with kid = make_kid (Es256_priv jwk) }
 
-let make_priv_es512 ?(use : use = `Sig)
+let make_priv_es512 ?use
     (es512_priv : Mirage_crypto_ec.P521.Dsa.priv) : priv t =
   let kty : Jwa.kty = `EC in
-  let alg = `ES512 in
+  let alg = Some `ES512 in
   let jwk = { alg; kty; use; key = es512_priv; kid = None } in
   Es512_priv { jwk with kid = make_kid (Es512_priv jwk) }
 
-let make_pub_rsa ?(use : use = `Sig) (rsa_pub : Mirage_crypto_pk.Rsa.pub) :
+let make_pub_rsa ?use (rsa_pub : Mirage_crypto_pk.Rsa.pub) :
     public t =
   let kty : Jwa.kty = `RSA in
-  let alg = alg_of_use_and_kty ~use kty in
+  let alg = Option.map (fun use -> alg_of_use_and_kty ~use kty) use in
   let jwk = { alg; kty; use; key = rsa_pub; kid = None } in
   Rsa_pub { jwk with kid = make_kid (Rsa_pub jwk) }
 
-let of_pub_pem ?(use : use = `Sig) pem : (public t, [> `Not_rsa ]) result =
+let of_pub_pem ?use pem : (public t, [> `Not_rsa ]) result =
   Cstruct.of_string pem |> X509.Public_key.decode_pem
   |> U_Result.flat_map (function
        | `RSA pub_key -> Ok pub_key
        | _ -> Error `Not_rsa)
-  |> U_Result.map (make_pub_rsa ~use)
+  |> U_Result.map (make_pub_rsa ?use)
 
 let to_pub_pem (type a) (jwk : a t) =
   match jwk with
@@ -258,12 +258,12 @@ let to_pub_pem (type a) (jwk : a t) =
       |> Cstruct.to_string |> U_Result.return
   | _ -> Error `Not_rsa
 
-let of_priv_pem ?(use : use = `Sig) pem : (priv t, [> `Not_rsa ]) result =
+let of_priv_pem ?use pem : (priv t, [> `Not_rsa ]) result =
   Cstruct.of_string pem |> X509.Private_key.decode_pem
   |> U_Result.flat_map (function
-       | `RSA priv_key -> Ok (make_priv_rsa ~use priv_key)
-       | `P256 priv_key -> Ok (make_priv_es256 ~use priv_key)
-       | `P521 priv_key -> Ok (make_priv_es512 ~use priv_key)
+       | `RSA priv_key -> Ok (make_priv_rsa ?use priv_key)
+       | `P256 priv_key -> Ok (make_priv_es256 ?use priv_key)
+       | `P521 priv_key -> Ok (make_priv_es512 ?use priv_key)
        | _ -> Error `Not_rsa)
 
 let to_priv_pem (jwk : priv t) =
@@ -275,7 +275,7 @@ let to_priv_pem (jwk : priv t) =
 let oct_to_json (oct : oct) =
   let values =
     [
-      Some ("alg", Jwa.alg_to_json oct.alg);
+      Option.map (fun alg -> "alg", Jwa.alg_to_json alg) oct.alg;
       Some ("kty", `String (Jwa.kty_to_string oct.kty));
       Some ("k", `String oct.key);
       RJson.to_json_string_opt "kid" oct.kid;
@@ -291,12 +291,12 @@ let pub_rsa_to_json pub_rsa =
   let n = Util.get_JWK_component pub_rsa.key.n in
   let values =
     [
-      Some ("alg", Jwa.alg_to_json pub_rsa.alg);
+      Option.map (fun alg -> "alg", Jwa.alg_to_json alg) pub_rsa.alg;
       Some ("e", `String e);
       Some ("n", `String n);
       Some ("kty", `String (Jwa.kty_to_string pub_rsa.kty));
       RJson.to_json_string_opt "kid" pub_rsa.kid;
-      Some ("use", `String (use_to_string pub_rsa.use));
+      Option.map (fun use -> "use", `String (use_to_string use)) pub_rsa.use;
       RJson.to_json_string_opt "x5t"
         (Util.get_JWK_x5t (X509.Public_key.fingerprint ~hash:`SHA1 public_key)
         |> U_Result.to_opt);
@@ -329,7 +329,7 @@ let priv_rsa_to_priv_json (priv_rsa : priv_rsa) : Yojson.Safe.t =
   let qi = Util.get_JWK_component priv_rsa.key.q' in
   let values =
     [
-      Some ("alg", Jwa.alg_to_json priv_rsa.alg);
+      Option.map (fun alg -> "alg", Jwa.alg_to_json alg) priv_rsa.alg;
       Some ("e", `String e);
       Some ("n", `String n);
       Some ("d", `String d);
@@ -339,7 +339,7 @@ let priv_rsa_to_priv_json (priv_rsa : priv_rsa) : Yojson.Safe.t =
       Some ("dq", `String dq);
       Some ("qi", `String qi);
       Some ("kty", `String (priv_rsa.kty |> Jwa.kty_to_string));
-      Some ("use", `String (use_to_string priv_rsa.use));
+      Option.map (fun use -> "use", `String (use_to_string use)) priv_rsa.use;
       RJson.to_json_string_opt "kid" priv_rsa.kid;
     ]
   in
@@ -349,12 +349,12 @@ let pub_es256_to_pub_json (pub_es256 : pub_es256) : Yojson.Safe.t =
   let x, y = Util.get_ES256_x_y pub_es256.key in
   let values =
     [
-      Some ("alg", Jwa.alg_to_json pub_es256.alg);
+      Option.map (fun alg -> "alg", Jwa.alg_to_json alg) pub_es256.alg;
       Some ("crv", `String "P-256");
       Some ("x", `String x);
       Some ("y", `String y);
       Some ("kty", `String (pub_es256.kty |> Jwa.kty_to_string));
-      Some ("use", `String (use_to_string pub_es256.use));
+      Option.map (fun use -> "use", `String (use_to_string use)) pub_es256.use;
       RJson.to_json_string_opt "kid" pub_es256.kid;
     ]
   in
@@ -373,13 +373,13 @@ let priv_es256_to_priv_json (priv_es256 : priv_es256) : Yojson.Safe.t =
   in
   let values =
     [
-      Some ("alg", Jwa.alg_to_json priv_es256.alg);
+      Option.map (fun alg -> "alg", Jwa.alg_to_json alg) priv_es256.alg;
       Some ("crv", `String "P-256");
       Some ("x", `String x);
       Some ("y", `String y);
       Some ("d", `String d);
       Some ("kty", `String (priv_es256.kty |> Jwa.kty_to_string));
-      Some ("use", `String (use_to_string priv_es256.use));
+      Option.map (fun use -> "use", `String (use_to_string use)) priv_es256.use;
       RJson.to_json_string_opt "kid" priv_es256.kid;
     ]
   in
@@ -389,12 +389,12 @@ let pub_es512_to_pub_json (pub_es512 : pub_es512) : Yojson.Safe.t =
   let x, y = Util.get_ES512_x_y pub_es512.key in
   let values =
     [
-      Some ("alg", Jwa.alg_to_json pub_es512.alg);
+      Option.map (fun alg -> "alg", Jwa.alg_to_json alg) pub_es512.alg;
       Some ("crv", `String "P-521");
       Some ("x", `String x);
       Some ("y", `String y);
       Some ("kty", `String (pub_es512.kty |> Jwa.kty_to_string));
-      Some ("use", `String (use_to_string pub_es512.use));
+      Option.map (fun use -> "use", `String (use_to_string use)) pub_es512.use;
       RJson.to_json_string_opt "kid" pub_es512.kid;
     ]
   in
@@ -413,13 +413,13 @@ let priv_es512_to_priv_json (priv_es512 : priv_es512) : Yojson.Safe.t =
   in
   let values =
     [
-      Some ("alg", Jwa.alg_to_json priv_es512.alg);
+      Option.map (fun alg -> "alg", Jwa.alg_to_json alg) priv_es512.alg;
       Some ("crv", `String "P-521");
       Some ("x", `String x);
       Some ("y", `String y);
       Some ("d", `String d);
       Some ("kty", `String (priv_es512.kty |> Jwa.kty_to_string));
-      Some ("use", `String (use_to_string priv_es512.use));
+      Option.map (fun use -> "use", `String (use_to_string use)) priv_es512.use;
       RJson.to_json_string_opt "kid" priv_es512.kid;
     ]
   in
@@ -467,14 +467,14 @@ let pub_rsa_of_json json : (public t, 'error) result =
            let kid = json |> Json.member "kid" |> Json.to_string_option in
            let kty = `RSA in
            match (alg, use) with
-           | Some alg, Some use -> Ok (Rsa_pub { alg; kty; use; key; kid })
+           | Some _, Some _ -> Ok (Rsa_pub { alg; kty; use; key; kid })
            | Some alg, None ->
-               Ok (Rsa_pub { alg; kty; use = use_of_alg alg; key; kid })
+               Ok (Rsa_pub { alg = Some alg; kty; use = Some (use_of_alg alg); key; kid })
            | None, Some use ->
                Ok
                  (Rsa_pub
-                    { alg = alg_of_use_and_kty ~use kty; kty; use; key; kid })
-           | None, None -> Error `Missing_use_and_alg)
+                    { alg = Some (alg_of_use_and_kty ~use kty); kty; use = Some use; key; kid })
+           | alg, use -> Ok (Rsa_pub { alg; kty; use; key; kid }))
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
 let priv_rsa_of_json json : (priv t, 'error) result =
@@ -503,20 +503,20 @@ let priv_rsa_of_json json : (priv t, 'error) result =
            let kid = json |> Json.member "kid" |> Json.to_string_option in
            let kty = `RSA in
            match (alg, use) with
-           | Some alg, Some use -> Ok (Rsa_priv { alg; kty; use; key; kid })
+           | Some _, Some _ -> Ok (Rsa_priv { alg; kty; use; key; kid })
            | Some alg, None ->
-               Ok (Rsa_priv { alg; kty; use = use_of_alg alg; key; kid })
+               Ok (Rsa_priv { alg = Some alg; kty; use = Some (use_of_alg alg); key; kid })
            | None, Some use ->
                Ok
                  (Rsa_priv
-                    { alg = alg_of_use_and_kty ~use kty; kty; use; key; kid })
-           | None, None -> Error `Missing_use_and_alg)
+                    { alg = Some (alg_of_use_and_kty ~use kty); kty; use = Some use; key; kid })
+           | None, None -> Ok (Rsa_priv { alg; kty; use; key; kid }))
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
 let oct_of_json json =
   let module Json = Yojson.Safe.Util in
   try
-    let alg = json |> Json.member "alg" |> Jwa.alg_of_json in
+    let alg = Some (json |> Json.member "alg" |> Jwa.alg_of_json) in
     Ok
       (Oct
          {
@@ -525,8 +525,7 @@ let oct_of_json json =
            (* Shortcut since that is the only thing we handle *)
            use =
              json |> Json.member "use" |> Json.to_string_option
-             |> U_Opt.map use_of_string
-             |> U_Opt.get_with_default ~default:(use_of_alg alg);
+             |> U_Opt.map use_of_string;
            key = json |> Json.member "k" |> Json.to_string;
            kid = json |> Json.member "kid" |> Json.to_string_option;
          })
@@ -546,7 +545,6 @@ let pub_ec_of_json json =
     | "P-256" ->
         Util.make_ES256_of_x_y (x, y)
         |> U_Result.map (fun key ->
-               let alg = U_Opt.get_with_default ~default:`ES256 alg in
                Es256_pub
                  {
                    alg;
@@ -554,15 +552,13 @@ let pub_ec_of_json json =
                    (* Shortcut since that is the only thing we handle *)
                    use =
                      json |> Json.member "use" |> Json.to_string_option
-                     |> U_Opt.map use_of_string
-                     |> U_Opt.get_with_default ~default:(use_of_alg alg);
+                     |> U_Opt.map use_of_string;
                    key;
                    kid = json |> Json.member "kid" |> Json.to_string_option;
                  })
     | "P-521" ->
         Util.make_ES512_of_x_y (x, y)
         |> U_Result.map (fun key ->
-               let alg = U_Opt.get_with_default ~default:`ES512 alg in
                Es512_pub
                  {
                    alg;
@@ -570,8 +566,7 @@ let pub_ec_of_json json =
                    (* Shortcut since that is the only thing we handle *)
                    use =
                      json |> Json.member "use" |> Json.to_string_option
-                     |> U_Opt.map use_of_string
-                     |> U_Opt.get_with_default ~default:(use_of_alg alg);
+                     |> U_Opt.map use_of_string;
                    key;
                    kid = json |> Json.member "kid" |> Json.to_string_option;
                  })
@@ -592,7 +587,6 @@ let priv_ec_of_json json =
     in
     match (crv, d) with
     | "P-256", Ok d ->
-        let alg = U_Opt.get_with_default ~default:`ES256 alg in
         Mirage_crypto_ec.P256.Dsa.priv_of_cstruct d
         |> U_Result.map_error (fun _ -> `Msg "Could not create key")
         |> U_Result.map (fun key ->
@@ -603,13 +597,11 @@ let priv_ec_of_json json =
                    (* Shortcut since that is the only thing we handle *)
                    use =
                      json |> Json.member "use" |> Json.to_string_option
-                     |> U_Opt.map use_of_string
-                     |> U_Opt.get_with_default ~default:(use_of_alg alg);
+                     |> U_Opt.map use_of_string;
                    key;
                    kid = json |> Json.member "kid" |> Json.to_string_option;
                  })
     | "P-521", Ok d ->
-        let alg = U_Opt.get_with_default ~default:`ES512 alg in
         Mirage_crypto_ec.P521.Dsa.priv_of_cstruct d
         |> U_Result.map_error (fun _ -> `Msg "Could not create key")
         |> U_Result.map (fun key ->
@@ -620,8 +612,7 @@ let priv_ec_of_json json =
                    (* Shortcut since that is the only thing we handle *)
                    use =
                      json |> Json.member "use" |> Json.to_string_option
-                     |> U_Opt.map use_of_string
-                     |> U_Opt.get_with_default ~default:(use_of_alg alg);
+                     |> U_Opt.map use_of_string;
                    key;
                    kid = json |> Json.member "kid" |> Json.to_string_option;
                  })

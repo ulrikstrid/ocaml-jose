@@ -1,7 +1,7 @@
 open Helpers
 
 let get_string_alg jwk : string =
-  let alg = Jose.Jwk.get_alg jwk in
+  let alg = Jose.Jwk.get_alg jwk |> Option.get in
   Jose.Jwa.alg_to_string alg
 
 let jwk_suite, _ =
@@ -37,7 +37,7 @@ let jwk_suite, _ =
                 (Jose.Jwk.get_kty jwk |> Jose.Jwa.kty_to_string);
               check_string "correct alg"
                 (Fixtures.public_jwk_alg |> Jose.Jwa.alg_to_string)
-                (Jose.Jwk.get_alg jwk |> Jose.Jwa.alg_to_string));
+                (Jose.Jwk.get_alg jwk |> Option.get |> Jose.Jwa.alg_to_string));
           Alcotest.test_case "pub - make_oct" `Quick (fun () ->
               let open Jose.Jwk in
               let jwk = make_oct Fixtures.oct_key_string in
@@ -77,7 +77,7 @@ let jwk_suite, _ =
                 (jwk |> Jose.Jwk.get_kty |> Jose.Jwa.kty_to_string);
               check_string "correct alg"
                 (Fixtures.oct_jwk_priv_alg |> Jose.Jwa.alg_to_string)
-                (jwk |> Jose.Jwk.get_alg |> Jose.Jwa.alg_to_string));
+                (jwk |> Jose.Jwk.get_alg |> Option.get |> Jose.Jwa.alg_to_string));
           Alcotest.test_case "priv - Creates a correct JWK from pem" `Quick
             (fun () ->
               let open Jose.Jwk in
@@ -102,7 +102,7 @@ let jwk_suite, _ =
                 (jwk |> get_kty |> Jose.Jwa.kty_to_string);
               check_string "correct alg"
                 (Fixtures.private_jwk_alg |> Jose.Jwa.alg_to_string)
-                (get_alg jwk |> Jose.Jwa.alg_to_string));
+                (get_alg jwk |> Option.get |> Jose.Jwa.alg_to_string));
           Alcotest.test_case "priv - Roundtrip" `Quick (fun () ->
               let open Jose.Jwk in
               let priv_cert =
@@ -147,7 +147,7 @@ let jwk_suite, _ =
                 (jwk |> Jose.Jwk.get_kty |> Jose.Jwa.kty_to_string);
               check_string "correct alg"
                 (Fixtures.oct_jwk_priv_alg |> Jose.Jwa.alg_to_string)
-                (Jose.Jwk.get_alg jwk |> Jose.Jwa.alg_to_string));
+                (Jose.Jwk.get_alg jwk |> Option.get |> Jose.Jwa.alg_to_string));
           Alcotest.test_case "pub - parse without alg and use" `Quick (fun () ->
               check_result_string "correct jwk" (Ok "2aff6e30eb11dc76a38ed5d0c1d50fe8d347ffa0cc654edc4a15803f7ae3a784")
               (Jose.Jwk.of_pub_json_string Fixtures.jwk_without_use_and_alg |> Result.map Jose.Jwk.get_kid |> Result.map Option.get))

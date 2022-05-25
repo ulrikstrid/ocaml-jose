@@ -23,74 +23,53 @@ let to_string t =
   let payload_str = t.payload |> U_Base64.url_encode_string in
   Printf.sprintf "%s.%s.%s" t.raw_header payload_str t.signature
 
-let verify_RS256 (type a) ~(jwk : a Jwk.t) str =
-  (match jwk with
+let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str str =
+  match jwk with
   | Jwk.Rsa_priv jwk ->
       let pub_jwk = Jwk.pub_of_priv_rsa jwk in
-      Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:pub_jwk.key str
-  | Jwk.Rsa_pub jwk -> Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:jwk.key str
-  | Jwk.Oct _ -> None
-  | Jwk.Es256_pub _ -> None
-  | Jwk.Es256_priv _ -> None
-  | Jwk.Es512_pub _ -> None
-  | Jwk.Es512_priv _ -> None)
-  |> function
-  | None -> Error `Invalid_signature
-  | Some message -> Ok message
-
-let verify_HS256 (type a) ~(jwk : a Jwk.t) str =
-  match jwk with
+      Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:pub_jwk.key str |> (function
+      | None -> Error `Invalid_signature
+      | Some message -> Ok message)
+  | Jwk.Rsa_pub jwk -> Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:jwk.key str |> (function
+      | None -> Error `Invalid_signature
+      | Some message -> Ok message)
   | Jwk.Oct jwk ->
       Mirage_crypto.Hash.SHA256.hmac ~key:(Cstruct.of_string jwk.key) str
       |> U_Result.return
-  | _ -> Error (`Msg "JWK doesn't match")
-
-let verify_ES (type a) ~(jwk : a Jwk.t) ~input_str msg =
-  match jwk with
   | Jwk.Es256_pub pub_jwk ->
-      let r, s = Cstruct.split msg 32 in
+      let r, s = Cstruct.split str 32 in
       let message =
         Mirage_crypto.Hash.SHA256.digest (Cstruct.of_string input_str)
       in
       if Mirage_crypto_ec.P256.Dsa.verify ~key:pub_jwk.key (r, s) message then
-        Ok msg
+        Ok str
       else Error `Invalid_signature
   | Jwk.Es256_priv jwk ->
-      let r, s = Cstruct.split msg 32 in
+      let r, s = Cstruct.split str 32 in
       let message =
         Mirage_crypto.Hash.SHA256.digest (Cstruct.of_string input_str)
       in
       let pub_jwk = Jwk.pub_of_priv_es256 jwk in
       if Mirage_crypto_ec.P256.Dsa.verify ~key:pub_jwk.key (r, s) message then
-        Ok msg
+        Ok str
       else Error `Invalid_signature
   | Jwk.Es512_pub pub_jwk ->
-      let r, s = Cstruct.split msg 66 in
+      let r, s = Cstruct.split str 66 in
       let message =
         Mirage_crypto.Hash.SHA512.digest (Cstruct.of_string input_str)
       in
       if Mirage_crypto_ec.P521.Dsa.verify ~key:pub_jwk.key (r, s) message then
-        Ok msg
+        Ok str
       else Error `Invalid_signature
   | Jwk.Es512_priv jwk ->
-      let r, s = Cstruct.split msg 66 in
+      let r, s = Cstruct.split str 66 in
       let message =
         Mirage_crypto.Hash.SHA512.digest (Cstruct.of_string input_str)
       in
       let pub_jwk = Jwk.pub_of_priv_es512 jwk in
       if Mirage_crypto_ec.P521.Dsa.verify ~key:pub_jwk.key (r, s) message then
-        Ok msg
+        Ok str
       else Error `Invalid_signature
-  | _ -> raise (Invalid_argument "alg")
-
-let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str str =
-  match Jwk.get_alg jwk with
-  | `RS256 -> verify_RS256 ~jwk str
-  | `HS256 -> verify_HS256 ~jwk str
-  | `ES256 -> verify_ES ~jwk ~input_str str
-  | `ES512 -> verify_ES ~jwk ~input_str str
-  | `None -> Ok str
-  | _ -> Error (`Msg "alg not supported")
 
 let verify_internal (type a) ~(jwk : a Jwk.t) t =
   let payload_str = U_Base64.url_encode_string t.payload in
