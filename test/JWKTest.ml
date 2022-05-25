@@ -148,6 +148,9 @@ let jwk_suite, _ =
               check_string "correct alg"
                 (Fixtures.oct_jwk_priv_alg |> Jose.Jwa.alg_to_string)
                 (Jose.Jwk.get_alg jwk |> Jose.Jwa.alg_to_string));
+          Alcotest.test_case "pub - parse without alg and use" `Quick (fun () ->
+              check_result_string "correct jwk" (Ok "2aff6e30eb11dc76a38ed5d0c1d50fe8d347ffa0cc654edc4a15803f7ae3a784")
+              (Jose.Jwk.of_pub_json_string Fixtures.jwk_without_use_and_alg |> Result.map Jose.Jwk.get_kid |> Result.map Option.get))
         ] );
     ]
 
