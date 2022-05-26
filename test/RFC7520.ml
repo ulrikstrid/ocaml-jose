@@ -145,9 +145,6 @@ let jws_ecdsa_tests =
                  | `Json_parse_failed m ->
                      print_endline m;
                      `Json_parse_failed m
-                 | `Missing_use_and_alg ->
-                     print_endline "Missing_use_and_alg";
-                     `Missing_use_and_alg
                  | `Unsupported_kty ->
                      print_endline "Unsupported_kty";
                      `Unsupported_kty

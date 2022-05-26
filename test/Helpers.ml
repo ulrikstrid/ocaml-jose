@@ -5,7 +5,6 @@ type 'a error_t =
   | `Json_parse_failed of string
   | `Unsupported_kty
   | `Invalid_signature
-  | `Missing_use_and_alg
   | `Invalid_JWE
   | `Invalid_JWK
   | `Decrypt_cek_failed
@@ -21,7 +20,6 @@ let result_t : _ error_t Alcotest.testable =
     | `Json_parse_failed s -> Fmt.string ppf ("Badly formed json " ^ s)
     | `Unsupported_kty -> Fmt.string ppf "Unsupported kty"
     | `Invalid_signature -> Fmt.string ppf "Invalid signature"
-    | `Missing_use_and_alg -> Fmt.string ppf "Missing use and alg"
     | `Invalid_JWE -> Fmt.string ppf "Invalid JWE"
     | `Invalid_JWK -> Fmt.string ppf "Invalid JWK"
     | `Decrypt_cek_failed -> Fmt.string ppf "Failed to decrypt cek"

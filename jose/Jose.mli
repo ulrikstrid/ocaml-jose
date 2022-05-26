@@ -54,9 +54,9 @@ module Jwk : sig
   type priv = Private
 
   type 'key jwk = {
-    alg : Jwa.alg;  (** The algorithm for the key *)
+    alg : Jwa.alg option;  (** The algorithm for the key *)
     kty : Jwa.kty;  (** The key type for the key *)
-    use : use;
+    use : use option;
     kid : string option;  (** Key ID *)
     key : 'key;  (** The key implementation *)
   }
@@ -117,8 +117,7 @@ module Jwk : sig
     ( public t,
       [> `Json_parse_failed of string
       | `Msg of string
-      | `Unsupported_kty
-      | `Missing_use_and_alg ] )
+      | `Unsupported_kty ] )
     result
   (** [of_pub_json t] takes a [Yojson.Safe.t] and tries to return a [public t] *)
 
@@ -127,8 +126,7 @@ module Jwk : sig
     ( public t,
       [> `Json_parse_failed of string
       | `Msg of string
-      | `Unsupported_kty
-      | `Missing_use_and_alg ] )
+      | `Unsupported_kty ] )
     result
   (** [of_pub_json_string json_string] takes a JSON string representation and
       tries to return a [public t] *)
@@ -165,8 +163,7 @@ module Jwk : sig
     ( priv t,
       [> `Json_parse_failed of string
       | `Msg of string
-      | `Unsupported_kty
-      | `Missing_use_and_alg ] )
+      | `Unsupported_kty ] )
     result
   (** [of_json json] takes a [Yojson.Safe.t] and returns a [priv t] *)
 
@@ -175,8 +172,7 @@ module Jwk : sig
     ( priv t,
       [> `Json_parse_failed of string
       | `Msg of string
-      | `Unsupported_kty
-      | `Missing_use_and_alg ] )
+      | `Unsupported_kty ] )
     result
   (** [of_priv_json_string json_string] takes a JSON string representation and
       tries to return a [private t] *)
@@ -204,7 +200,7 @@ module Jwk : sig
   val get_kty : 'a t -> Jwa.kty
   (** [get_kty jwk] is a convencience function to get the key type *)
 
-  val get_alg : 'a t -> Jwa.alg
+  val get_alg : 'a t -> Jwa.alg option
   (** [get_alg jwk] is a convencience function to get the algorithm *)
 
   val get_thumbprint :
