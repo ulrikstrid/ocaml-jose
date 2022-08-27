@@ -1,6 +1,9 @@
 open Helpers
 module Jwk = Jose.Jwk
 
+let url_encode_string ?(pad = false) payload =
+  Base64.encode_string ~pad ~alphabet:Base64.uri_safe_alphabet payload
+
 let get_thumbprint jwk = Jwk.get_thumbprint `SHA256 jwk
 let get_ok_thumbprint jwk = get_thumbprint jwk |> CCResult.get_exn
 
@@ -8,12 +11,9 @@ let public_rsa_thumbprint () =
   let hashable_reference =
     Fixtures.public_jwk_string_rfc_7638_hashable |> Cstruct.of_string
     |> Mirage_crypto.Hash.SHA256.digest |> Cstruct.to_string
+    |> url_encode_string
   in
-  let hashed_reference =
-    Fixtures.public_jwk_string_rfc_7638_hashed
-    |> Base64.decode ~pad:false ~alphabet:Base64.uri_safe_alphabet
-    |> CCResult.get_exn
-  in
+  let hashed_reference = Fixtures.public_jwk_string_rfc_7638_hashed in
   let thumbprint =
     Fixtures.public_jwk_string_rfc_7638 |> Jwk.of_pub_json_string
     |> CCResult.get_exn |> get_ok_thumbprint
