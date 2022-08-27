@@ -237,14 +237,30 @@ let jwt_suite, _ =
           Alcotest.test_case "Checks for expiration when calling `of_string`"
             `Quick (fun () ->
               let open Jose in
-              let jwt_s =
-                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGFpbSI6ImZvbyIsImV4cCI6MTY0NDkxNTQ4Mn0.HSKBoJuoUSnh-JCxdE5B615qqRlyoThnAvPSnxktgt4"
+              let jwk =
+                Jwk.of_priv_pem Fixtures.rsa_test_priv |> CCResult.get_exn
               in
-              let jwt =
-                Jwt.of_string ~jwk:(Jwk.make_oct "lol") jwt_s
-                |> CCResult.map (fun _ -> assert false)
+              let header : Jose.Header.t = Header.make_header ~typ:"JWT" jwk in
+              check_string "Header is correct"
+                {|{"typ":"JWT","alg":"RS256","kid":"0IRFN_RUHUQcXcdp_7PLBxoG_9b6bHrvGH0p8qRotik"}|}
+                (Header.to_json header |> Yojson.Safe.to_string);
+              check_string "alg is correct" "RS256"
+                (Header.to_json header
+                |> Yojson.Safe.Util.member "alg"
+                |> Yojson.Safe.Util.to_string);
+              let payload =
+                Jwt.empty_payload
+                |> Jwt.add_claim "sub" (`String "tester")
+                |> Jwt.add_claim "num" (`Int 10)
               in
-              check_result_string "expired" jwt (Error `Expired));
+              let jwt = Jwt.sign ~header ~payload jwk |> Result.get_ok in
+              check_option_string "Can get string claim" "tester"
+                (Jwt.get_string_claim jwt "sub");
+              check_option_int "Can get int claim" 10
+                (Jwt.get_int_claim jwt "num");
+              Alcotest.(check (option int))
+                "Returns None on missing claim" None
+                (Jwt.get_int_claim jwt "missing"));
         ] );
     ]
 
