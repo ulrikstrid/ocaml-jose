@@ -149,8 +149,42 @@ let jwk_suite, _ =
                 (Fixtures.oct_jwk_priv_alg |> Jose.Jwa.alg_to_string)
                 (Jose.Jwk.get_alg jwk |> Option.get |> Jose.Jwa.alg_to_string));
           Alcotest.test_case "pub - parse without alg and use" `Quick (fun () ->
-              check_result_string "correct jwk" (Ok "2aff6e30eb11dc76a38ed5d0c1d50fe8d347ffa0cc654edc4a15803f7ae3a784")
-              (Jose.Jwk.of_pub_json_string Fixtures.jwk_without_use_and_alg |> Result.map Jose.Jwk.get_kid |> Result.map Option.get))
+              check_result_string "correct jwk"
+                (Ok
+                   "2aff6e30eb11dc76a38ed5d0c1d50fe8d347ffa0cc654edc4a15803f7ae3a784")
+                (Jose.Jwk.of_pub_json_string Fixtures.jwk_without_use_and_alg
+                |> Result.map Jose.Jwk.get_kid
+                |> Result.map Option.get));
+          Alcotest.test_case "P256 - thumbprint" `Quick (fun () ->
+              let pub_string =
+                {|{
+                  "crv": "P-256",
+                  "kty": "EC",
+                  "x": "q3zAwR_kUwtdLEwtB2oVfucXiLHmEhu9bJUFYjJxYGs",
+                  "y": "8h0D-ONoU-iZqrq28TyUxEULxuGwJZGMJYTMbeMshvI"
+                }|}
+              in
+              let pub_jwk =
+                Jose.Jwk.of_pub_json_string pub_string |> Result.get_ok
+              in
+              check_result_string "Creates the correct thumbprint"
+                (Ok "ZrBaai73Hi8Fg4MElvDGzIne2NsbI75RHubOViHYE5Q")
+              @@ Jose.Jwk.get_thumbprint `SHA256 pub_jwk);
+          Alcotest.test_case "P256 - thumbprint" `Quick (fun () ->
+              let pub_string =
+                {|{
+                  "crv":"P-521",
+                  "kty":"EC",
+                  "x":"AIwG869tNnEGIDg2hSyvXKIOk9rWPO_riIixGliBGBV0kB57QoTrjK-g5JCtazDTcBT23igX9gvAVkLvr2oFTQ9p",
+                  "y":"AeGZ0Z3JHM1rQWvmmpdfVu0zSNpmu0xPjGUE2hGhloRqF-JJV3aVMS72ZhGlbWi-O7OCcypIfndhpYgrc3qx0Y1w"
+                }|}
+              in
+              let pub_jwk =
+                Jose.Jwk.of_pub_json_string pub_string |> Result.get_ok
+              in
+              check_result_string "Creates the correct thumbprint"
+                (Ok "nBBpbUsITZuECZH0WpBqPH4HKwYV3Tx2KDVyNfwvOkU")
+              @@ Jose.Jwk.get_thumbprint `SHA256 pub_jwk);
         ] );
     ]
 
