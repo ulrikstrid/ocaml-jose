@@ -34,8 +34,7 @@ let add_claim (claim_name : string) (claim_value : Yojson.Safe.t)
   `Assoc ((claim_name, claim_value) :: Yojson.Safe.Util.to_assoc payload)
 
 let get_yojson_claim (jwt : t) (claim_name : string) =
-  try Yojson.Safe.Util.member claim_name jwt.payload |> Option.some
-  with _ -> None
+  Yojson.Safe.Util.member claim_name jwt.payload |> Option.some
 
 let get_string_claim (jwt : t) (claim_name : string) =
   Option.bind
