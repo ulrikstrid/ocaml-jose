@@ -1,4 +1,4 @@
-{ pkgs, stdenv, lib, ocamlPackages, static ? false, doCheck }:
+{ pkgs, stdenv, lib, nix-filter, ocamlPackages, static ? false, doCheck }:
 
 with ocamlPackages;
 
@@ -7,13 +7,20 @@ rec {
     pname = "jose";
     version = "0.2.0-dev";
 
-    src = lib.filterGitSource {
-      src = ./..;
-      dirs = [ "jose" "test" ];
-      files = [ "dune-project" "jose.opam" ];
+    src = with nix-filter.lib; filter {
+      root = ./..;
+      # If no include is passed, it will include all the paths.
+      include = [
+        # Include the "src" path relative to the root.
+        "jose"
+        "test"
+        # Include this specific path. The path must be under the root.
+        ../jose.opam
+        ../dune-project
+        # Include all files with the .js extension
+        (matchExt "ml")
+      ];
     };
-
-    useDune2 = true;
 
     checkInputs = [
       containers

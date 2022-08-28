@@ -1,7 +1,7 @@
-{ pkgs }:
+{ nix-filter, pkgs }:
 let
   inherit (pkgs) lib;
-  josePkgs = pkgs.recurseIntoAttrs (import ./nix { inherit pkgs; doCheck = true; }).native;
+  josePkgs = pkgs.recurseIntoAttrs (import ./nix { inherit pkgs nix-filter; doCheck = true; }).native;
   joseDrvs = lib.filterAttrs (_: value: lib.isDerivation value) josePkgs;
 
   filterDrvs = inputs:
