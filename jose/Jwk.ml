@@ -722,7 +722,7 @@ let priv_es256_to_thumbprint hash (priv_es256 : priv_es256) =
   pub_of_priv_es256 priv_es256 |> pub_es256_to_thumbprint hash
 
 let pub_es512_to_thumbprint hash (pub_es512 : pub_es512) =
-  let crv = "P-512" in
+  let crv = "P-521" in
   let kty = Jwa.kty_to_string pub_es512.kty in
   let x, y = Util.get_ES512_x_y pub_es512.key in
   let values =
