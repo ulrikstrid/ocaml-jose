@@ -115,18 +115,14 @@ module Jwk : sig
   val of_pub_json :
     Yojson.Safe.t ->
     ( public t,
-      [> `Json_parse_failed of string
-      | `Msg of string
-      | `Unsupported_kty ] )
+      [> `Json_parse_failed of string | `Msg of string | `Unsupported_kty ] )
     result
   (** [of_pub_json t] takes a [Yojson.Safe.t] and tries to return a [public t] *)
 
   val of_pub_json_string :
     string ->
     ( public t,
-      [> `Json_parse_failed of string
-      | `Msg of string
-      | `Unsupported_kty ] )
+      [> `Json_parse_failed of string | `Msg of string | `Unsupported_kty ] )
     result
   (** [of_pub_json_string json_string] takes a JSON string representation and
       tries to return a [public t] *)
@@ -161,18 +157,14 @@ module Jwk : sig
   val of_priv_json :
     Yojson.Safe.t ->
     ( priv t,
-      [> `Json_parse_failed of string
-      | `Msg of string
-      | `Unsupported_kty ] )
+      [> `Json_parse_failed of string | `Msg of string | `Unsupported_kty ] )
     result
   (** [of_json json] takes a [Yojson.Safe.t] and returns a [priv t] *)
 
   val of_priv_json_string :
     string ->
     ( priv t,
-      [> `Json_parse_failed of string
-      | `Msg of string
-      | `Unsupported_kty ] )
+      [> `Json_parse_failed of string | `Msg of string | `Unsupported_kty ] )
     result
   (** [of_priv_json_string json_string] takes a JSON string representation and
       tries to return a [private t] *)
@@ -320,6 +312,9 @@ module Jwt : sig
   }
 
   val add_claim : string -> Yojson.Safe.t -> payload -> payload
+  val get_yojson_claim : t -> string -> Yojson.Safe.t option
+  val get_string_claim : t -> string -> string option
+  val get_int_claim : t -> string -> int option
   val to_string : t -> string
 
   val of_string :

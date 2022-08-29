@@ -33,6 +33,17 @@ let add_claim (claim_name : string) (claim_value : Yojson.Safe.t)
     (payload : payload) =
   `Assoc ((claim_name, claim_value) :: Yojson.Safe.Util.to_assoc payload)
 
+let get_yojson_claim (jwt : t) (claim_name : string) =
+  Yojson.Safe.Util.member claim_name jwt.payload |> Option.some
+
+let get_string_claim (jwt : t) (claim_name : string) =
+  Option.bind
+    (get_yojson_claim jwt claim_name)
+    Yojson.Safe.Util.to_string_option
+
+let get_int_claim (jwt : t) (claim_name : string) =
+  Option.bind (get_yojson_claim jwt claim_name) Yojson.Safe.Util.to_int_option
+
 let to_string t =
   let payload = U_Base64.url_encode_string t.raw_payload in
   Printf.sprintf "%s.%s.%s" t.raw_header payload t.signature
@@ -49,7 +60,8 @@ let unsafe_of_string token =
                  header;
                  raw_header = header_str;
                  payload;
-                 raw_payload = U_Base64.url_decode payload_str |> U_Result.get_exn;
+                 raw_payload =
+                   U_Base64.url_decode payload_str |> U_Result.get_exn;
                  (* The string is already decoded so this is fine but
                     redundant *)
                  signature;

@@ -34,6 +34,9 @@ let check_result_bool = Alcotest.(check (result bool result_t))
 let check_option_string name expected actual =
   Alcotest.(check (option string)) name (Some expected) actual
 
+let check_option_int name expected actual =
+  Alcotest.(check (option int)) name (Some expected) actual
+
 let check_int = Alcotest.(check int)
 
 let trim_json_string str =

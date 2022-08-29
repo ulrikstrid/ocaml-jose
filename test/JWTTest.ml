@@ -245,6 +245,25 @@ let jwt_suite, _ =
                 |> CCResult.map (fun _ -> assert false)
               in
               check_result_string "expired" jwt (Error `Expired));
+          Alcotest.test_case "claim getters" `Quick (fun () ->
+              let open Jose in
+              let jwk =
+                Jwk.of_priv_pem Fixtures.rsa_test_priv |> CCResult.get_exn
+              in
+              let header : Jose.Header.t = Header.make_header ~typ:"JWT" jwk in
+              let payload =
+                Jwt.empty_payload
+                |> Jwt.add_claim "sub" (`String "tester")
+                |> Jwt.add_claim "num" (`Int 10)
+              in
+              let jwt = Jwt.sign ~header ~payload jwk |> Result.get_ok in
+              check_option_string "Can get string claim" "tester"
+                (Jwt.get_string_claim jwt "sub");
+              check_option_int "Can get int claim" 10
+                (Jwt.get_int_claim jwt "num");
+              Alcotest.(check (option int))
+                "Returns None on missing claim" None
+                (Jwt.get_int_claim jwt "missing"));
         ] );
     ]
 
