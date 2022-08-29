@@ -104,7 +104,10 @@ let validate (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
 
 let of_string ~jwk s = U_Result.bind (unsafe_of_string s) (validate ~jwk)
 
-let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
+let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
+  let header =
+    match header with Some header -> header | None -> Header.make_header jwk
+  in
   let payload =
     try Ok (Yojson.Safe.to_string payload)
     with _ -> Error (`Msg "Can't serialize payload")

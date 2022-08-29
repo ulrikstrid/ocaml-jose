@@ -25,12 +25,13 @@ let to_string t =
 
 let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str str =
   match jwk with
-  | Jwk.Rsa_priv jwk ->
+  | Jwk.Rsa_priv jwk -> (
       let pub_jwk = Jwk.pub_of_priv_rsa jwk in
-      Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:pub_jwk.key str |> (function
+      Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:pub_jwk.key str |> function
       | None -> Error `Invalid_signature
       | Some message -> Ok message)
-  | Jwk.Rsa_pub jwk -> Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:jwk.key str |> (function
+  | Jwk.Rsa_pub jwk -> (
+      Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:jwk.key str |> function
       | None -> Error `Invalid_signature
       | Some message -> Ok message)
   | Jwk.Oct jwk ->
@@ -100,7 +101,10 @@ let validate (type a) ~(jwk : a Jwk.t) t =
   |> U_Result.map (fun _ -> t)
 
 (* Assumes a well formed header. *)
-let sign ~(header : Header.t) ~payload (jwk : Jwk.priv Jwk.t) =
+let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
+  let header =
+    match header with Some header -> header | None -> Header.make_header jwk
+  in
   let sign_f =
     match jwk with
     | Jwk.Rsa_priv { key; _ } ->
