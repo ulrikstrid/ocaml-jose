@@ -106,7 +106,9 @@ let of_string ~jwk s = U_Result.bind (unsafe_of_string s) (validate ~jwk)
 
 let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
   let header =
-    match header with Some header -> header | None -> Header.make_header jwk
+    match header with
+    | Some header -> header
+    | None -> Header.make_header ~typ:"JWT" jwk
   in
   let payload =
     try Ok (Yojson.Safe.to_string payload)

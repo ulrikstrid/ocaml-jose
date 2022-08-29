@@ -103,7 +103,9 @@ let validate (type a) ~(jwk : a Jwk.t) t =
 (* Assumes a well formed header. *)
 let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
   let header =
-    match header with Some header -> header | None -> Header.make_header jwk
+    match header with
+    | Some header -> header
+    | None -> Header.make_header ~typ:"JWS" jwk
   in
   let sign_f =
     match jwk with
