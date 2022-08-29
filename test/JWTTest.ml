@@ -264,6 +264,20 @@ let jwt_suite, _ =
               Alcotest.(check (option int))
                 "Returns None on missing claim" None
                 (Jwt.get_int_claim jwt "missing"));
+          Alcotest.test_case "Can create JWT without header" `Quick (fun () ->
+              let open Jose in
+              let jwk =
+                Jwk.of_priv_pem Fixtures.rsa_test_priv |> CCResult.get_exn
+              in
+              let payload =
+                Jwt.empty_payload |> Jwt.add_claim "sub" (`String "tester")
+              in
+              let jwt_r =
+                Jwt.sign ~payload jwk |> CCResult.flat_map (Jwt.validate ~jwk)
+              in
+              check_result_string "JWT is correctly created"
+                (Ok Fixtures.external_jwt_string)
+                (CCResult.map Jwt.to_string jwt_r));
         ] );
     ]
 
