@@ -688,7 +688,7 @@ let oct_to_sign_key (oct : oct) : (Cstruct.t, [> `Msg of string ]) result =
 let hash_values hash values =
   let module Hash = (val Mirage_crypto.Hash.module_of hash) in
   `Assoc (U_List.filter_map (fun x -> x) values)
-  |> Yojson.to_string |> Cstruct.of_string |> Hash.digest |> Cstruct.to_string
+  |> Yojson.to_string |> Cstruct.of_string |> Hash.digest
 
 let pub_rsa_to_thumbprint hash (pub_rsa : Mirage_crypto_pk.Rsa.pub jwk) =
   let e = Util.get_JWK_component pub_rsa.key.e in
@@ -697,7 +697,7 @@ let pub_rsa_to_thumbprint hash (pub_rsa : Mirage_crypto_pk.Rsa.pub jwk) =
   let values =
     [ Some ("e", `String e); Some ("kty", `String kty); Some ("n", `String n) ]
   in
-  hash_values hash values |> U_Base64.url_encode_string
+  hash_values hash values
 
 let priv_rsa_to_thumbprint hash (priv_rsa : Mirage_crypto_pk.Rsa.priv jwk) =
   pub_rsa_to_thumbprint hash (pub_of_priv_rsa priv_rsa)
@@ -716,7 +716,7 @@ let pub_es256_to_thumbprint hash (pub_es256 : pub_es256) =
       Some ("y", `String y);
     ]
   in
-  hash_values hash values |> U_Base64.url_encode_string
+  hash_values hash values
 
 let priv_es256_to_thumbprint hash (priv_es256 : priv_es256) =
   pub_of_priv_es256 priv_es256 |> pub_es256_to_thumbprint hash
@@ -733,7 +733,7 @@ let pub_es512_to_thumbprint hash (pub_es512 : pub_es512) =
       Some ("y", `String y);
     ]
   in
-  hash_values hash values |> U_Base64.url_encode_string
+  hash_values hash values
 
 let priv_es512_to_thumbprint hash (priv_es512 : priv_es512) =
   pub_of_priv_es512 priv_es512 |> pub_es512_to_thumbprint hash

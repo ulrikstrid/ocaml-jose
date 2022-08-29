@@ -196,7 +196,7 @@ module Jwk : sig
   (** [get_alg jwk] is a convencience function to get the algorithm *)
 
   val get_thumbprint :
-    Mirage_crypto.Hash.hash -> 'a t -> (string, [> `Unsafe ]) result
+    Mirage_crypto.Hash.hash -> 'a t -> (Cstruct.t, [> `Unsafe ]) result
   (** [get_thumbprint hash jwk] calculates the thumbprint of [jwk] with [hash],
       following {{: https://tools.ietf.org/html/rfc7638 } RFC 7638 }.
 
