@@ -169,6 +169,7 @@ let jwk_suite, _ =
               in
               check_result_string "Creates the correct thumbprint"
                 (Ok "ZrBaai73Hi8Fg4MElvDGzIne2NsbI75RHubOViHYE5Q")
+              @@ Result.map url_encode_cstruct
               @@ Jose.Jwk.get_thumbprint `SHA256 pub_jwk);
           Alcotest.test_case "P256 - thumbprint" `Quick (fun () ->
               let pub_string =
@@ -184,6 +185,7 @@ let jwk_suite, _ =
               in
               check_result_string "Creates the correct thumbprint"
                 (Ok "nBBpbUsITZuECZH0WpBqPH4HKwYV3Tx2KDVyNfwvOkU")
+              @@ Result.map url_encode_cstruct
               @@ Jose.Jwk.get_thumbprint `SHA256 pub_jwk);
         ] );
     ]
