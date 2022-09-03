@@ -285,7 +285,7 @@ module Jws : sig
   (** [validate jwk t] validates the signature *)
 
   val sign :
-    header:Header.t ->
+    ?header:Header.t ->
     payload:string ->
     Jwk.priv Jwk.t ->
     (t, [> `Msg of string ]) result
@@ -343,7 +343,7 @@ module Jwt : sig
       additionally checks expiration. *)
 
   val sign :
-    header:Header.t ->
+    ?header:Header.t ->
     payload:payload ->
     Jwk.priv Jwk.t ->
     (t, [> `Msg of string ]) result
