@@ -1,34 +1,32 @@
 open Helpers
 module Jwk = Jose.Jwk
 
-let url_encode_string ?(pad = false) payload =
-  Base64.encode_string ~pad ~alphabet:Base64.uri_safe_alphabet payload
-
 let get_thumbprint jwk = Jwk.get_thumbprint `SHA256 jwk
 let get_ok_thumbprint jwk = get_thumbprint jwk |> CCResult.get_exn
 
 let public_rsa_thumbprint () =
   let hashable_reference =
     Fixtures.public_jwk_string_rfc_7638_hashable |> Cstruct.of_string
-    |> Mirage_crypto.Hash.SHA256.digest |> Cstruct.to_string
-    |> url_encode_string
+    |> Mirage_crypto.Hash.SHA256.digest |> url_encode_cstruct
   in
   let hashed_reference = Fixtures.public_jwk_string_rfc_7638_hashed in
   let thumbprint =
     Fixtures.public_jwk_string_rfc_7638 |> Jwk.of_pub_json_string
     |> CCResult.get_exn |> get_ok_thumbprint
   in
-  check_string "Hashes must match" hashable_reference thumbprint;
-  check_string "Hashes must match" hashed_reference thumbprint
+  check_string "Hashes must match" hashable_reference
+    (url_encode_cstruct thumbprint);
+  check_string "Hashes must match" hashed_reference
+    (url_encode_cstruct thumbprint)
 
 let private_rsa_thumbprint () =
   let private_thumbprint =
     Fixtures.private_jwk_string |> Jwk.of_priv_json_string |> CCResult.get_exn
-    |> get_ok_thumbprint
+    |> get_ok_thumbprint |> url_encode_cstruct
   in
   let public_thumbprint =
     Fixtures.public_jwk_string |> Jwk.of_pub_json_string |> CCResult.get_exn
-    |> get_ok_thumbprint
+    |> get_ok_thumbprint |> url_encode_cstruct
   in
   check_string "Hashes must match" public_thumbprint private_thumbprint
 
@@ -36,7 +34,8 @@ let symmetric_thumbprint () =
   let jwk =
     Fixtures.oct_jwk_string |> Jwk.of_pub_json_string |> CCResult.get_exn
   in
-  check_result_string "Errors must match" (Error `Unsafe) (get_thumbprint jwk)
+  check_result_string "Errors must match" (Error `Unsafe)
+    (Result.map url_encode_cstruct @@ get_thumbprint jwk)
 
 let tests =
   List.map make_test_case
