@@ -1,3 +1,7 @@
+0.8.1
+--------------
+- Remove usage of Result.get_ok to maintain compatibility with older OCaml versions
+
 0.8.0
 --------------
 - Make `use` and `alg` optional
