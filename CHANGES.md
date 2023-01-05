@@ -1,3 +1,11 @@
+0.8.0
+--------------
+- Make `use` and `alg` optional
+- Correct thumbprint generation on all algs
+- Add getters for claims
+- Thumbprint is now a Cstruct.t instead of string which is less ambigious
+- Make `header` argument optional when signing which simplifies the normal usecase
+
 0.7.0
 --------------
 - Remove print statements that was used for debugging (by @phongphan)
