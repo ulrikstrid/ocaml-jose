@@ -165,7 +165,7 @@ let jwk_suite, _ =
                 }|}
               in
               let pub_jwk =
-                Jose.Jwk.of_pub_json_string pub_string |> Result.get_ok
+                Jose.Jwk.of_pub_json_string pub_string |> CCResult.get_exn
               in
               check_result_string "Creates the correct thumbprint"
                 (Ok "ZrBaai73Hi8Fg4MElvDGzIne2NsbI75RHubOViHYE5Q")
@@ -181,7 +181,7 @@ let jwk_suite, _ =
                 }|}
               in
               let pub_jwk =
-                Jose.Jwk.of_pub_json_string pub_string |> Result.get_ok
+                Jose.Jwk.of_pub_json_string pub_string |> CCResult.get_exn
               in
               check_result_string "Creates the correct thumbprint"
                 (Ok "nBBpbUsITZuECZH0WpBqPH4HKwYV3Tx2KDVyNfwvOkU")

@@ -256,7 +256,7 @@ let jwt_suite, _ =
                 |> Jwt.add_claim "sub" (`String "tester")
                 |> Jwt.add_claim "num" (`Int 10)
               in
-              let jwt = Jwt.sign ~header ~payload jwk |> Result.get_ok in
+              let jwt = Jwt.sign ~header ~payload jwk |> CCResult.get_exn in
               check_option_string "Can get string claim" "tester"
                 (Jwt.get_string_claim jwt "sub");
               check_option_int "Can get int claim" 10

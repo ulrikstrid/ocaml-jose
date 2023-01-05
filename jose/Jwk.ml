@@ -35,7 +35,7 @@ module Util = struct
            Cstruct.set_uint8 four 0 4;
            let point = Cstruct.concat [ four; x; y ] in
            let k = Mirage_crypto_ec.P256.Dsa.pub_of_cstruct point in
-           k |> Result.get_ok)
+           k |> U_Result.get_exn)
 
   let get_ES512_x_y key =
     let point = Mirage_crypto_ec.P521.Dsa.pub_to_cstruct key in
@@ -53,7 +53,7 @@ module Util = struct
            Cstruct.set_uint8 four 0 4;
            let point = Cstruct.concat [ four; x; y ] in
            let k = Mirage_crypto_ec.P521.Dsa.pub_of_cstruct point in
-           k |> Result.get_ok)
+           k |> U_Result.get_exn)
 end
 
 type use = [ `Sig | `Enc | `Unsupported of string ]
