@@ -1,3 +1,8 @@
+0.8.2
+--------------
+- JWS now properly checks the signature. Reported by @nankeen and fixed by @ulrikstrid. CVE-2023-23928
+
+
 0.8.1
 --------------
 - Remove usage of Result.get_ok to maintain compatibility with older OCaml versions
