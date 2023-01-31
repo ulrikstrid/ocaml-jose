@@ -19,13 +19,9 @@ with pkgs;
 (mkShell {
   inputsFrom = lib.attrValues joseDrvs;
   buildInputs = with ocamlPackages; [
-    merlin
     ocaml-lsp
     ocamlformat
     dune-release
-    cacert
-    curl
-    gnupg
     odoc
   ];
 }).overrideAttrs (o: {

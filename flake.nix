@@ -2,7 +2,7 @@
   description = "JOSE implementation in OCaml";
 
   nixConfig = {
-    extra-substituters = "https://anmonteiro.nix-cache.workers.dev";
+    extra-substituters = "https://ocaml.nix-cache.com";
     extra-trusted-public-keys = "ocaml.nix-cache.com-1:/xI2h2+56rwFfKyyFVbkJSeGqSIYMC/Je+7XXqGKDIY=";
   };
 
