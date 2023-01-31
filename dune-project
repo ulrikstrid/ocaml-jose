@@ -15,8 +15,8 @@
  (description "JavaScript Object Signing and Encryption built ontop of pure OCaml libs")
  (depends
    (ocaml (>= 4.08.0))
-   (base64 (>= 3.0.0))
-   (dune (>= 1.11))
+   (base64 (>= 3.3.0))
+   dune
    (eqaf (>= 0.7))
    (mirage-crypto (>= 0.10.0))
    (x509 (>= 0.13.0))
