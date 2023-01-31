@@ -35,8 +35,18 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str str =
       | None -> Error `Invalid_signature
       | Some message -> Ok message)
   | Jwk.Oct jwk ->
-      Mirage_crypto.Hash.SHA256.hmac ~key:(Cstruct.of_string jwk.key) str
-      |> U_Result.return
+      Jwk.oct_to_sign_key jwk
+      |> U_Result.flat_map (fun key ->
+             let computed_signature =
+               Mirage_crypto.Hash.SHA256.hmac ~key (Cstruct.of_string input_str)
+             in
+             (* From RFC7518§3.2:
+              *   The comparison of the computed HMAC value to the JWS Signature
+              *   value MUST be done in a constant-time manner to thwart timing
+              *   attacks. *)
+             if Eqaf_cstruct.equal str computed_signature then
+               Ok computed_signature
+             else Error `Invalid_signature)
   | Jwk.Es256_pub pub_jwk ->
       let r, s = Cstruct.split str 32 in
       let message =
@@ -78,15 +88,6 @@ let verify_internal (type a) ~(jwk : a Jwk.t) t =
   U_Base64.url_decode t.signature
   |> U_Result.map Cstruct.of_string
   |> U_Result.flat_map (verify_jwk ~jwk ~input_str)
-  |> U_Result.map (fun message ->
-         let token_hash =
-           input_str |> Cstruct.of_string |> Mirage_crypto.Hash.SHA256.digest
-         in
-         (* From RFC7518§3.2:
-          *   The comparison of the computed HMAC value to the JWS Signature
-          *   value MUST be done in a constant-time manner to thwart timing
-          *   attacks. *)
-         Eqaf_cstruct.equal message token_hash)
 
 let validate (type a) ~(jwk : a Jwk.t) t =
   let header = t.header in
@@ -97,8 +98,10 @@ let validate (type a) ~(jwk : a Jwk.t) t =
   | `ES512 -> Ok header.alg
   | `Unsupported _ | `RSA_OAEP | `RSA1_5 | `None ->
       Error (`Msg "alg not supported for signing"))
-  |> U_Result.flat_map (fun _ -> verify_internal ~jwk t)
-  |> U_Result.map (fun _ -> t)
+  |> U_Result.flat_map (fun _alg ->
+         match verify_internal ~jwk t with
+         | Ok _sig -> Ok t
+         | Error e -> Error e)
 
 (* Assumes a well formed header. *)
 let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =

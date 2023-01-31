@@ -223,6 +223,17 @@ let jws_oct_tests =
           in
           check_result_string "correct jws string" (Ok oct_jws)
             (CCResult.map Jose.Jws.to_string jws));
+      Alcotest.test_case "Cannot verify invalid signature" `Quick (fun () ->
+          let jwk =
+            Jose.Jwk.of_pub_json_string oct_sig_json |> CCResult.get_exn
+          in
+          let jws =
+            Jose.Jws.of_string
+              {|eyJhbGciOiJIUzI1NiIsImtpZCI6IjAxOGMwYWU1LTRkOWItNDcxYi1iZmQ2LWVlZjMxNGJjNzAzNyJ9.SXTigJlzIGEgZGFuZ2Vyb3VzIGJ1c2luZXNzLCBGcm9kbywgZ29pbmcgb3V0IHlvdXIgZG9vci4gWW91IHN0ZXAgb250byB0aGUgcm9hZCwgYW5kIGlmIHlvdSBkb24ndCBrZWVwIHlvdXIgZmVldCwgdGhlcmXigJlzIG5vIGtub3dpbmcgd2hlcmUgeW91IG1pZ2h0IGJlIHN3ZXB0IG9mZiB0by4.NO_GOOD_SIGNATURE|}
+          in
+          let validated_jws = CCResult.flat_map (Jose.Jws.validate ~jwk) jws in
+          check_result_string "validation fails" (Error `Invalid_signature)
+            (CCResult.map (fun jws -> Jose.Jws.(jws.signature)) validated_jws));
     ] )
 
 let rsa_priv_enc_json_5_1 =
