@@ -163,6 +163,16 @@ module Jwk : sig
   (** [to_priv_pem t] takes a JWK and returns a result PEM string or a message
       of what went wrong. *)
 
+  val of_priv_x509 :
+    ?use:use ->
+    X509.Private_key.t ->
+    (priv t, [> `Msg of string | `Not_rsa ]) result
+
+  val of_pub_x509 :
+    ?use:use ->
+    X509.Public_key.t ->
+    (public t, [> `Msg of string | `Not_rsa ]) result
+
   val of_priv_json :
     Yojson.Safe.t ->
     ( priv t,

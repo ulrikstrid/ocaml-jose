@@ -348,6 +348,23 @@ let to_priv_pem (jwk : priv t) =
       Ok (X509.Private_key.encode_pem (`RSA rsa.key) |> Cstruct.to_string)
   | _ -> Error `Not_rsa
 
+let of_priv_x509 ?use x509 : (priv t, [> `Not_rsa ]) result =
+  match x509 with
+  | `RSA priv_key -> Ok (make_priv_rsa ?use priv_key)
+  | `P256 priv_key -> Ok (make_priv_es256 ?use priv_key)
+  | `P384 priv_key -> Ok (make_priv_es384 ?use priv_key)
+  | `P521 priv_key -> Ok (make_priv_es512 ?use priv_key)
+  | _ -> Error (`Msg "key type not supported")
+
+let of_pub_x509 ?use (x509 : X509.Public_key.t) :
+    (public t, [> `Not_rsa ]) result =
+  match x509 with
+  | `RSA public_key -> Ok (make_pub_rsa ?use public_key)
+  | `P256 public_key -> Ok (make_pub_es256 ?use public_key)
+  | `P384 public_key -> Ok (make_pub_es384 ?use public_key)
+  | `P521 public_key -> Ok (make_pub_es512 ?use public_key)
+  | _ -> Error (`Msg "key type not supported")
+
 let oct_to_json (oct : oct) =
   let values =
     [
