@@ -45,7 +45,6 @@ jobs:
         with:
           persist-credentials: false
 
-
       - uses: cachix/install-nix-action@v15
         with:
           extra_nix_config: |
@@ -56,13 +55,13 @@ jobs:
           name: anmonteiro
 
       - name: Build
-        run: nix develop -c dune build
+        run: nix develop --accept-flake-config -c dune build
 
       - name: Test with coverage
-        run: nix develop -c dune build @runtest --instrument-with bisect_ppx --force
+        run: nix develop --accept-flake-config -c dune build @runtest --instrument-with bisect_ppx --force
 
       - name: Upload coverage
-        run: nix develop -c bisect-ppx-report send-to Codecov
+        run: nix develop --accept-flake-config -c bisect-ppx-report send-to Codecov
 
       - name: Build docs
-        run: nix develop -c dune build @doc
+        run: nix develop --accept-flake-config -c dune build @doc
