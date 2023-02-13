@@ -3,7 +3,7 @@ open Utils
 type signature = string
 
 type t = {
-  header : Header.t;
+  header : Header.t; (* TODO: This is always treated as protected headers*)
   raw_header : string;
   payload : string;
   signature : signature;

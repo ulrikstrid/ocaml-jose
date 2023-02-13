@@ -253,7 +253,6 @@ end
 module Header : sig
   type t = {
     alg : Jwa.alg;
-    jku : string option;
     jwk : Jwk.public Jwk.t option;
     kid : string option;
     x5t : string option;
@@ -261,21 +260,32 @@ module Header : sig
     typ : string option;
     cty : string option;
     enc : Jwa.enc option;
+    extra : (string * Yojson.Safe.t) list option;
   }
-  (** The [header] has the following properties: - [alg] Jwa - RS256 and none is
-      currently the only supported algs - [jku] JWK Set URL - [jwk] JSON Web Key
-      - [kid] Key ID - We currently always expect this to be there, this can
-      change in the future - [x5t] X.509 Certificate SHA-1 Thumbprint -
-      [x5t#S256] X.509 Certificate SHA-256 Thumbprint - [typ] Type - [cty]
-      Content Type Not implemented: - [x5u] X.509 URL - [x5c] X.509 Certficate
-      Chain - [crit] Critical
+  (** The [header] has the following properties:
+  
+  - [alg] {! Jwa.alg }
+  - [jwk] JSON Web Key
+  - [kid] Key ID - We currently always expect this to be there, this can change in the future
+  - [x5t] X.509 Certificate SHA-1 Thumbprint -
+  - [x5t#S256] X.509 Certificate SHA-256 Thumbprint
+  - [typ] Type
+  - [cty] Content Type Not implemented
+  
+      {{: https://tools.ietf.org/html/rfc7515#section-4.1 } Link to RFC }
 
-      {{: https://tools.ietf.org/html/rfc7515#section-4.1 } Link to RFC } *)
+      {{: https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-header-parameters } Complete list of registered header parameters} *)
 
   val make_header :
-    ?typ:string -> ?alg:Jwa.alg -> ?enc:Jwa.enc -> Jwk.priv Jwk.t -> t
+    ?typ:string ->
+    ?alg:Jwa.alg ->
+    ?enc:Jwa.enc ->
+    ?extra:(string * Yojson.Safe.t) list ->
+    ?jwk_header:bool ->
+    Jwk.priv Jwk.t ->
+    t
   (** [make_header typ alg enc jwk] if [alg] is not provided it will be derived
-      from [jwk]. *)
+      from [jwk]. [jwk_header] decides if the jwk should be put in the header. *)
 
   val of_string : string -> (t, [> `Msg of string ]) result
   val to_string : t -> string
