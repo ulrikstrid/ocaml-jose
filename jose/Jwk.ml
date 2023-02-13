@@ -689,7 +689,10 @@ let priv_rsa_of_json json : (priv t, 'error) result =
 let oct_of_json json =
   let module Json = Yojson.Safe.Util in
   try
-    let alg = Some (json |> Json.member "alg" |> Jwa.alg_of_json) in
+    let alg =
+      json |> Json.member "alg" |> Json.to_string_option
+      |> U_Opt.map Jwa.alg_of_string
+    in
     Ok
       (Oct
          {
@@ -831,7 +834,8 @@ let of_pub_json (json : Yojson.Safe.t) : (public t, 'error) result =
   | _ -> Error `Unsupported_kty
 
 let of_pub_json_string str : (public t, 'error) result =
-  Yojson.Safe.from_string str |> of_pub_json
+  try Yojson.Safe.from_string str |> of_pub_json
+  with Yojson.Json_error s -> Error (`Json_parse_failed s)
 
 let of_priv_json json : (priv t, 'error) result =
   let module Json = Yojson.Safe.Util in
@@ -843,7 +847,8 @@ let of_priv_json json : (priv t, 'error) result =
   | _ -> Error `Unsupported_kty
 
 let of_priv_json_string str : (priv t, 'error) result =
-  Yojson.Safe.from_string str |> of_priv_json
+  try Yojson.Safe.from_string str |> of_priv_json
+  with Yojson.Json_error s -> Error (`Json_parse_failed s)
 
 let pub_of_priv (jwk : priv t) : public t =
   match jwk with
