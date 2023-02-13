@@ -9,7 +9,9 @@ type t = {
   signature : signature;
 }
 
-let of_string token =
+type serialization = [ `Compact | `General | `Flattened ]
+
+let of_compact_string token =
   String.split_on_char '.' token |> function
   | [ header_str; payload_str; signature ] ->
       let header = Header.of_string header_str in
@@ -19,9 +21,71 @@ let of_string token =
              { header; raw_header = header_str; payload; signature })
   | _ -> Error (`Msg "token didn't include header, payload or signature")
 
-let to_string t =
+let of_json_string token =
+  try
+    let module Json = Yojson.Safe.Util in
+    let json = Yojson.Safe.from_string token in
+    let payload =
+      Json.member "payload" json |> Json.to_string |> U_Base64.url_decode
+    in
+
+    match (payload, Json.member "signature" json |> Json.to_string_option) with
+    | Ok payload, Some signature ->
+        let protected = Json.member "protected" json |> Json.to_string in
+        Ok
+          {
+            header = Header.of_string protected |> U_Result.get_exn;
+            raw_header = protected;
+            payload;
+            signature;
+          }
+    | Error e, _ -> Error e
+    | _, None -> Error `Not_supported
+  with _ -> Error `Not_json
+
+let of_string token =
+  match of_json_string token with
+  | Ok t -> Ok t
+  | Error `Not_json -> of_compact_string token
+  | e -> e
+
+let to_flattened_json t =
+  let payload_str = t.payload |> U_Base64.url_encode_string in
+  `Assoc
+    [
+      ("payload", `String payload_str);
+      ("protected", `String t.raw_header);
+      (* TODO: add "header" for public header parameters *)
+      ("signature", `String t.signature);
+    ]
+
+let to_compact_string t =
   let payload_str = t.payload |> U_Base64.url_encode_string in
   Printf.sprintf "%s.%s.%s" t.raw_header payload_str t.signature
+
+let to_general_string t =
+  let payload_str = t.payload |> U_Base64.url_encode_string in
+  (* TODO: Support multiple signatures *)
+  let signatures =
+    [
+      `Assoc
+        [
+          ("protected", `String t.raw_header);
+          (* TODO: add "header" for public header parameters *)
+          ("signature", `String t.signature);
+        ];
+    ]
+  in
+  `Assoc [ ("payload", `String payload_str); ("signatures", `List signatures) ]
+  |> Yojson.Safe.to_string
+
+let to_flattened_string t = to_flattened_json t |> Yojson.Safe.to_string
+
+let to_string ?(serialization = `Compact) t =
+  match serialization with
+  | `Compact -> to_compact_string t
+  | `General -> to_general_string t
+  | `Flattened -> to_flattened_string t
 
 let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str str =
   match jwk with

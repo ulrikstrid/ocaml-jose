@@ -277,8 +277,12 @@ module Jws : sig
     signature : signature;
   }
 
-  val of_string : string -> (t, [> `Msg of string ]) result
-  val to_string : t -> string
+  type serialization = [ `Compact | `General | `Flattened ]
+
+  val of_string :
+    string -> (t, [> `Msg of string | `Not_json | `Not_supported ]) result
+
+  val to_string : ?serialization:serialization -> t -> string
 
   val validate :
     jwk:'a Jwk.t -> t -> (t, [> `Invalid_signature | `Msg of string ]) result
@@ -315,15 +319,23 @@ module Jwt : sig
   val get_yojson_claim : t -> string -> Yojson.Safe.t option
   val get_string_claim : t -> string -> string option
   val get_int_claim : t -> string -> int option
-  val to_string : t -> string
+  val to_string : ?serialization:Jws.serialization -> t -> string
 
   val of_string :
     jwk:'a Jwk.t ->
     string ->
-    (t, [> `Expired | `Invalid_signature | `Msg of string ]) result
+    ( t,
+      [> `Expired
+      | `Invalid_signature
+      | `Msg of string
+      | `Not_json
+      | `Not_supported ] )
+    result
   (** [of_string ~jwk jwt_string] parses and validates the encoded JWT string. *)
 
-  val unsafe_of_string : string -> (t, [> `Msg of string ]) result
+  val unsafe_of_string :
+    string -> (t, [> `Msg of string | `Not_json | `Not_supported ]) result
+
   val to_jws : t -> Jws.t
   val of_jws : Jws.t -> t
 
