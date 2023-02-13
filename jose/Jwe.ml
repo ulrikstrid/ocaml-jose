@@ -104,6 +104,8 @@ let encrypt_cek (type a) alg (cek : string) ~(jwk : a Jwk.t) =
   | Oct _ -> Error `Unsupported_kty
   | Es256_priv _ -> Error `Unsupported_kty
   | Es256_pub _ -> Error `Unsupported_kty
+  | Es384_priv _ -> Error `Unsupported_kty
+  | Es384_pub _ -> Error `Unsupported_kty
   | Es512_priv _ -> Error `Unsupported_kty
   | Es512_pub _ -> Error `Unsupported_kty)
   >>= fun key ->

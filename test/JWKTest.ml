@@ -171,6 +171,20 @@ let jwk_suite, _ =
                 (Ok "ZrBaai73Hi8Fg4MElvDGzIne2NsbI75RHubOViHYE5Q")
               @@ Result.map url_encode_cstruct
               @@ Jose.Jwk.get_thumbprint `SHA256 pub_jwk);
+          Alcotest.test_case "P384 - thumbprint" `Quick (fun () ->
+              let pub_string =
+                {|{
+                  "crv":"P-384",
+                  "kty":"EC",
+                  "x":"FqTN7UHEy4MLUQvaB31WtfPcBhmzRS2Xl7jVtM3ELvHBQ6l_WrJqryK2gAoDImRl",
+                  "y":"5wlJyPkB7PE2MVdIMoqwclRpnCX3l5w7kIPwE69GGJVMLBxd758jhcptkKVhRjTg"
+                }|}
+              in
+              let pub_jwk = Jose.Jwk.of_pub_json_string pub_string in
+              check_result_string "Creates the correct thumbprint"
+                (Ok "CZv-vJviuyEXKGIeW2fYpEjRXSxUTHUdoQ58asby1Rg")
+              @@ Result.map url_encode_cstruct
+              @@ CCResult.flat_map (Jose.Jwk.get_thumbprint `SHA256) pub_jwk);
           Alcotest.test_case "P256 - thumbprint" `Quick (fun () ->
               let pub_string =
                 {|{

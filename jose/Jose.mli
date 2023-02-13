@@ -6,6 +6,7 @@ module Jwa : sig
     [ `RS256  (** HMAC using SHA-256 *)
     | `HS256  (** RSASSA-PKCS1-v1_5 using SHA-256 *)
     | `ES256  (** ECDSA using P-256 and SHA-256 *)
+    | `ES384  (** ECDSA using P-384 and SHA-384 *)
     | `ES512  (** ECDSA using P-521 and SHA-512 *)
     | `RSA_OAEP  (** RSAES OAEP using default parameters *)
     | `RSA1_5  (** RSA PKCS 1 *)
@@ -79,6 +80,12 @@ module Jwk : sig
   type pub_es256 = Mirage_crypto_ec.P256.Dsa.pub jwk
   (** [es256] represents a private JWK with [kty] [`EC] and a [P256.priv] key *)
 
+  type priv_es384 = Mirage_crypto_ec.P384.Dsa.priv jwk
+  (** [es384] represents a public JWK with [kty] [`EC] and a [P384.pub] key *)
+
+  type pub_es384 = Mirage_crypto_ec.P384.Dsa.pub jwk
+  (** [es384] represents a private JWK with [kty] [`EC] and a [P384.priv] key *)
+
   type priv_es512 = Mirage_crypto_ec.P521.Dsa.priv jwk
   (** [es512] represents a public JWK with [kty] [`EC] and a [P512.pub] key *)
 
@@ -92,6 +99,8 @@ module Jwk : sig
     | Rsa_pub : pub_rsa -> public t
     | Es256_priv : priv_es256 -> priv t
     | Es256_pub : pub_es256 -> public t
+    | Es384_priv : priv_es384 -> priv t
+    | Es384_pub : pub_es384 -> public t
     | Es512_priv : priv_es512 -> priv t
     | Es512_pub : pub_es512 -> public t
 

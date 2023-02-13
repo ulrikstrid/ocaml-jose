@@ -21,6 +21,7 @@ let make_header ?typ ?alg ?enc (jwk : Jwk.priv Jwk.t) =
         | Jwk.Rsa_priv _ -> `RS256
         | Jwk.Oct _ -> `HS256
         | Jwk.Es256_priv _ -> `ES256
+        | Jwk.Es384_priv _ -> `ES384
         | Jwk.Es512_priv _ -> `ES512)
   in
   {
