@@ -20,6 +20,7 @@ depends: [
   "astring"
   "yojson" {>= "1.6.0"}
   "zarith"
+  "mirage-crypto-rng" {with-test & < "0.11.0"}
   "containers" {with-test}
   "bisect_ppx" {with-test}
   "alcotest" {with-test}

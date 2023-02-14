@@ -1,1 +1,3 @@
-wrap-comments = true
+version = 0.24.1
+
+wrap-comments = false

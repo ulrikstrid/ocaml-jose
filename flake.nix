@@ -2,26 +2,64 @@
   description = "JOSE implementation in OCaml";
 
   nixConfig = {
-    extra-substituters = "https://ocaml.nix-cache.com";
+    extra-substituters = "https://anmonteiro.nix-cache.workers.dev";
     extra-trusted-public-keys = "ocaml.nix-cache.com-1:/xI2h2+56rwFfKyyFVbkJSeGqSIYMC/Je+7XXqGKDIY=";
   };
 
   inputs = {
-    flake-utils.url = "github:numtide/flake-utils";
-    nixpkgs.inputs.flake-utils.follows = "flake-utils";
     nixpkgs.url = "github:nix-ocaml/nix-overlays";
-
+    treefmt-nix.url = "github:numtide/treefmt-nix";
+    treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     nix-filter.url = "github:numtide/nix-filter";
   };
 
-  outputs = { self, nixpkgs, flake-utils, nix-filter }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = nixpkgs.legacyPackages."${system}";
-        devShell = pkgs.callPackage ./shell.nix { inherit nix-filter; };
-      in
-      {
-        inherit devShell;
-      }
-    );
+  outputs = inputs @ {flake-parts, ...}:
+    flake-parts.lib.mkFlake {inherit inputs;} {
+      imports = [
+        inputs.treefmt-nix.flakeModule
+      ];
+      systems = ["x86_64-linux" "aarch64-darwin"];
+      perSystem = {
+        config,
+        self',
+        inputs',
+        pkgs,
+        system,
+        ...
+      }: {
+        treefmt = {
+          projectRootFile = "flake.nix";
+          programs = {
+            alejandra.enable = true;
+            ocamlformat = {
+              inherit pkgs;
+              configFile = ./.ocamlformat;
+              enable = true;
+            };
+          };
+        };
+
+        packages = pkgs.ocamlPackages.callPackage ./nix/generic.nix {
+          inherit (inputs) nix-filter;
+          doCheck = true;
+        };
+
+        devShells.default = pkgs.mkShell {
+          inputsFrom = with self'.packages; [
+            jose
+          ];
+
+          packages = with pkgs.ocamlPackages; [
+            ocaml
+            dune
+
+            ocaml-lsp
+
+            ocamlformat
+            dune-release
+            odoc
+          ];
+        };
+      };
+    };
 }
