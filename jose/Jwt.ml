@@ -69,22 +69,32 @@ let to_string ?serialization t =
 
 let unsafe_of_string token = Jws.of_string token |> U_Result.map of_jws
 
-let check_expiration t =
+let check_expiration ~(now : Ptime.t) t =
   let module Json = Yojson.Safe.Util in
-  match Json.member "exp" t.payload |> Json.to_int_option with
-  | Some exp when exp > int_of_float (Unix.time ()) -> Ok t
-  | Some _exp -> Error `Expired
-  | None -> Ok t
+  match
+    Json.member "exp" t.payload |> Json.to_int_option |> Option.map float_of_int
+  with
+  | Some exp ->
+      let pexp = Ptime.of_float_s exp in
+      let is_earlier =
+        Option.map (fun pexp -> Ptime.is_earlier now ~than:pexp) pexp
+      in
+
+      if is_earlier = Some true then Ok t else Error `Expired
+  | None ->
+      print_endline "no exp";
+      Ok t
 
 let validate_signature (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
   Jws.validate ~jwk (to_jws t) |> U_Result.map of_jws
 
-let validate (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
+let validate (type a) ~(jwk : a Jwk.t) ~now (t : t) : (t, 'error) result =
   match validate_signature ~jwk t with
-  | Ok t -> check_expiration t
+  | Ok t -> check_expiration t ~now
   | Error e -> Error e
 
-let of_string ~jwk s = U_Result.bind (unsafe_of_string s) (validate ~jwk)
+let of_string ~jwk ~now s =
+  U_Result.bind (unsafe_of_string s) (validate ~jwk ~now)
 
 let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
   let header =

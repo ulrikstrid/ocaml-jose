@@ -24,10 +24,11 @@
    astring
    (yojson (>= 1.6.0))
    zarith
+   ptime
+   (mirage-crypto-rng (and :with-test (< 0.11.0)))
    (containers :with-test)
    (bisect_ppx :with-test)
    (alcotest :with-test)
    (junit :with-test)
-   (junit_alcotest :with-test)
-   (lwt :with-test))
+   (junit_alcotest :with-test))
 )
