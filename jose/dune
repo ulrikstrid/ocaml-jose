@@ -1,5 +1,16 @@
 (library
  (name Jose)
  (public_name jose)
- (libraries astring eqaf yojson mirage-crypto mirage-crypto-pk mirage-crypto-ec x509 base64 zarith)
- (instrumentation (backend bisect_ppx)))
+ (libraries
+  astring
+  eqaf
+  yojson
+  mirage-crypto
+  mirage-crypto-pk
+  mirage-crypto-ec
+  x509
+  base64
+  zarith
+  ptime)
+ (instrumentation
+  (backend bisect_ppx)))
