@@ -20,24 +20,17 @@ jobs:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - uses: cachix/cachix-action@v10
-        with:
-          name: anmonteiro
-
-      - name: "Check nix flake "
-        run: nix flake check
-
       - name: Build
-        run: nix develop -c dune build -p jose
+        run: nix develop --accept-flake-config -c dune build -p jose
 
       - name: Test with coverage
-        run: nix develop -c dune build @runtest --instrument-with bisect_ppx --force
+        run: nix develop --accept-flake-config -c dune build @runtest --instrument-with bisect_ppx --force
 
       - name: Upload coverage
-        run: nix develop -c bisect-ppx-report send-to Codecov
+        run: nix develop --accept-flake-config -c bisect-ppx-report send-to Codecov
 
       - name: Build docs
-        run: nix develop -c dune build @doc
+        run: nix develop --accept-flake-config -c dune build @doc
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@releases/v3
