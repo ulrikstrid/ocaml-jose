@@ -19,14 +19,14 @@ module Util = struct
     fingerprint |> Cstruct.to_bytes |> Bytes.to_string
     |> U_Base64.url_encode ~len:20
 
-  let get_ES256_x_y key =
-    let point = Mirage_crypto_ec.P256.Dsa.pub_to_cstruct key in
-    let x_cs, y_cs = Cstruct.(split (shift point 1) 32) in
+  let get_ESXXX_x_y ~split_at ~pub_to_cstruct key =
+    let point = pub_to_cstruct key in
+    let x_cs, y_cs = Cstruct.(split (shift point 1) split_at) in
     let x = x_cs |> Cstruct.to_string |> U_Base64.url_encode_string in
     let y = y_cs |> Cstruct.to_string |> U_Base64.url_encode_string in
     (x, y)
 
-  let make_ES256_of_x_y (x, y) =
+  let make_ESXXX_of_x_y ~pub_of_cstruct (x, y) =
     let x = U_Base64.url_decode x |> U_Result.map Cstruct.of_string in
     let y = U_Base64.url_decode y |> U_Result.map Cstruct.of_string in
     U_Result.both x y
@@ -34,44 +34,29 @@ module Util = struct
            let four = Cstruct.create 1 in
            Cstruct.set_uint8 four 0 4;
            let point = Cstruct.concat [ four; x; y ] in
-           let k = Mirage_crypto_ec.P256.Dsa.pub_of_cstruct point in
+           let k = pub_of_cstruct point in
            k |> U_Result.get_exn)
 
-  let get_ES384_x_y key =
-    let point = Mirage_crypto_ec.P384.Dsa.pub_to_cstruct key in
-    let x_cs, y_cs = Cstruct.(split (shift point 1) 48) in
-    let x = x_cs |> Cstruct.to_string |> U_Base64.url_encode_string in
-    let y = y_cs |> Cstruct.to_string |> U_Base64.url_encode_string in
-    (x, y)
+  let get_ES256_x_y =
+    get_ESXXX_x_y ~split_at:32
+      ~pub_to_cstruct:Mirage_crypto_ec.P256.Dsa.pub_to_cstruct
 
-  let make_ES384_of_x_y (x, y) =
-    let x = U_Base64.url_decode x |> U_Result.map Cstruct.of_string in
-    let y = U_Base64.url_decode y |> U_Result.map Cstruct.of_string in
-    U_Result.both x y
-    |> U_Result.map (fun (x, y) ->
-           let four = Cstruct.create 1 in
-           Cstruct.set_uint8 four 0 4;
-           let point = Cstruct.concat [ four; x; y ] in
-           let k = Mirage_crypto_ec.P384.Dsa.pub_of_cstruct point in
-           k |> U_Result.get_exn)
+  let make_ES256_of_x_y =
+    make_ESXXX_of_x_y ~pub_of_cstruct:Mirage_crypto_ec.P256.Dsa.pub_of_cstruct
 
-  let get_ES512_x_y key =
-    let point = Mirage_crypto_ec.P521.Dsa.pub_to_cstruct key in
-    let x_cs, y_cs = Cstruct.(split (shift point 1) 66) in
-    let x = x_cs |> Cstruct.to_string |> U_Base64.url_encode_string in
-    let y = y_cs |> Cstruct.to_string |> U_Base64.url_encode_string in
-    (x, y)
+  let get_ES384_x_y =
+    get_ESXXX_x_y ~split_at:48
+      ~pub_to_cstruct:Mirage_crypto_ec.P384.Dsa.pub_to_cstruct
 
-  let make_ES512_of_x_y (x, y) =
-    let x = U_Base64.url_decode x |> U_Result.map Cstruct.of_string in
-    let y = U_Base64.url_decode y |> U_Result.map Cstruct.of_string in
-    U_Result.both x y
-    |> U_Result.map (fun (x, y) ->
-           let four = Cstruct.create 1 in
-           Cstruct.set_uint8 four 0 4;
-           let point = Cstruct.concat [ four; x; y ] in
-           let k = Mirage_crypto_ec.P521.Dsa.pub_of_cstruct point in
-           k |> U_Result.get_exn)
+  let make_ES384_of_x_y =
+    make_ESXXX_of_x_y ~pub_of_cstruct:Mirage_crypto_ec.P384.Dsa.pub_of_cstruct
+
+  let get_ES512_x_y =
+    get_ESXXX_x_y ~split_at:66
+      ~pub_to_cstruct:Mirage_crypto_ec.P521.Dsa.pub_to_cstruct
+
+  let make_ES512_of_x_y =
+    make_ESXXX_of_x_y ~pub_of_cstruct:Mirage_crypto_ec.P521.Dsa.pub_of_cstruct
 end
 
 type use = [ `Sig | `Enc | `Unsupported of string ]
@@ -441,131 +426,73 @@ let priv_rsa_to_priv_json (priv_rsa : priv_rsa) : Yojson.Safe.t =
   in
   `Assoc (U_List.filter_map (fun x -> x) values)
 
-let pub_es256_to_pub_json (pub_es256 : pub_es256) : Yojson.Safe.t =
-  let x, y = Util.get_ES256_x_y pub_es256.key in
+let pub_esXXX_to_pub_json ~get_ESXXX_x_y ~crv (pub : 'a) : Yojson.Safe.t =
+  let x, y = get_ESXXX_x_y pub.key in
   let values =
     [
-      Option.map (fun alg -> ("alg", Jwa.alg_to_json alg)) pub_es256.alg;
-      Some ("crv", `String "P-256");
+      Option.map (fun alg -> ("alg", Jwa.alg_to_json alg)) pub.alg;
+      Some ("crv", `String crv);
       Some ("x", `String x);
       Some ("y", `String y);
-      Some ("kty", `String (pub_es256.kty |> Jwa.kty_to_string));
-      Option.map (fun use -> ("use", `String (use_to_string use))) pub_es256.use;
-      RJson.to_json_string_opt "kid" pub_es256.kid;
+      Some ("kty", `String (pub.kty |> Jwa.kty_to_string));
+      Option.map (fun use -> ("use", `String (use_to_string use))) pub.use;
+      RJson.to_json_string_opt "kid" pub.kid;
     ]
   in
   `Assoc (U_List.filter_map (fun x -> x) values)
+
+let priv_esXXX_to_priv_json ~get_ESXXX_x_y ~pub_of_priv ~priv_to_cstruct ~crv
+    (priv : 'a) : Yojson.Safe.t =
+  let x, y = get_ESXXX_x_y (pub_of_priv priv.key) in
+  let d =
+    priv_to_cstruct priv.key |> Cstruct.to_string |> U_Base64.url_encode_string
+  in
+  let values =
+    [
+      Option.map (fun alg -> ("alg", Jwa.alg_to_json alg)) priv.alg;
+      Some ("crv", `String crv);
+      Some ("x", `String x);
+      Some ("y", `String y);
+      Some ("d", `String d);
+      Some ("kty", `String (priv.kty |> Jwa.kty_to_string));
+      Option.map (fun use -> ("use", `String (use_to_string use))) priv.use;
+      RJson.to_json_string_opt "kid" priv.kid;
+    ]
+  in
+  `Assoc (U_List.filter_map (fun x -> x) values)
+
+let pub_es256_to_pub_json =
+  pub_esXXX_to_pub_json ~get_ESXXX_x_y:Util.get_ES256_x_y ~crv:"P-256"
 
 let priv_es256_to_pub_json (priv_es256 : priv_es256) : Yojson.Safe.t =
   pub_of_priv_es256 priv_es256 |> pub_es256_to_pub_json
 
-let priv_es256_to_priv_json (priv_es256 : priv_es256) : Yojson.Safe.t =
-  let x, y =
-    Util.get_ES256_x_y (Mirage_crypto_ec.P256.Dsa.pub_of_priv priv_es256.key)
-  in
-  let d =
-    Mirage_crypto_ec.P256.Dsa.priv_to_cstruct priv_es256.key
-    |> Cstruct.to_string |> U_Base64.url_encode_string
-  in
-  let values =
-    [
-      Option.map (fun alg -> ("alg", Jwa.alg_to_json alg)) priv_es256.alg;
-      Some ("crv", `String "P-256");
-      Some ("x", `String x);
-      Some ("y", `String y);
-      Some ("d", `String d);
-      Some ("kty", `String (priv_es256.kty |> Jwa.kty_to_string));
-      Option.map
-        (fun use -> ("use", `String (use_to_string use)))
-        priv_es256.use;
-      RJson.to_json_string_opt "kid" priv_es256.kid;
-    ]
-  in
-  `Assoc (U_List.filter_map (fun x -> x) values)
+let priv_es256_to_priv_json =
+  priv_esXXX_to_priv_json ~get_ESXXX_x_y:Util.get_ES256_x_y
+    ~pub_of_priv:Mirage_crypto_ec.P256.Dsa.pub_of_priv
+    ~priv_to_cstruct:Mirage_crypto_ec.P256.Dsa.priv_to_cstruct ~crv:"P-256"
 
 let pub_es384_to_pub_json (pub_es384 : pub_es384) : Yojson.Safe.t =
-  let x, y = Util.get_ES384_x_y pub_es384.key in
-  let values =
-    [
-      Option.map (fun alg -> ("alg", Jwa.alg_to_json alg)) pub_es384.alg;
-      Some ("crv", `String "P-384");
-      Some ("x", `String x);
-      Some ("y", `String y);
-      Some ("kty", `String (pub_es384.kty |> Jwa.kty_to_string));
-      Option.map (fun use -> ("use", `String (use_to_string use))) pub_es384.use;
-      RJson.to_json_string_opt "kid" pub_es384.kid;
-    ]
-  in
-  `Assoc (U_List.filter_map (fun x -> x) values)
+  pub_esXXX_to_pub_json ~get_ESXXX_x_y:Util.get_ES384_x_y ~crv:"P-384" pub_es384
 
 let priv_es384_to_pub_json (priv_es384 : priv_es384) : Yojson.Safe.t =
   pub_of_priv_es384 priv_es384 |> pub_es384_to_pub_json
 
-let priv_es384_to_priv_json (priv_es384 : priv_es384) : Yojson.Safe.t =
-  let x, y =
-    Util.get_ES384_x_y (Mirage_crypto_ec.P384.Dsa.pub_of_priv priv_es384.key)
-  in
-  let d =
-    Mirage_crypto_ec.P384.Dsa.priv_to_cstruct priv_es384.key
-    |> Cstruct.to_string |> U_Base64.url_encode_string
-  in
-  let values =
-    [
-      Option.map (fun alg -> ("alg", Jwa.alg_to_json alg)) priv_es384.alg;
-      Some ("crv", `String "P-256");
-      Some ("x", `String x);
-      Some ("y", `String y);
-      Some ("d", `String d);
-      Some ("kty", `String (priv_es384.kty |> Jwa.kty_to_string));
-      Option.map
-        (fun use -> ("use", `String (use_to_string use)))
-        priv_es384.use;
-      RJson.to_json_string_opt "kid" priv_es384.kid;
-    ]
-  in
-  `Assoc (U_List.filter_map (fun x -> x) values)
+let priv_es384_to_priv_json =
+  priv_esXXX_to_priv_json ~get_ESXXX_x_y:Util.get_ES384_x_y
+    ~pub_of_priv:Mirage_crypto_ec.P384.Dsa.pub_of_priv
+    ~priv_to_cstruct:Mirage_crypto_ec.P384.Dsa.priv_to_cstruct ~crv:"P-384"
 
 let pub_es512_to_pub_json (pub_es512 : pub_es512) : Yojson.Safe.t =
-  let x, y = Util.get_ES512_x_y pub_es512.key in
-  let values =
-    [
-      Option.map (fun alg -> ("alg", Jwa.alg_to_json alg)) pub_es512.alg;
-      Some ("crv", `String "P-521");
-      Some ("x", `String x);
-      Some ("y", `String y);
-      Some ("kty", `String (pub_es512.kty |> Jwa.kty_to_string));
-      Option.map (fun use -> ("use", `String (use_to_string use))) pub_es512.use;
-      RJson.to_json_string_opt "kid" pub_es512.kid;
-    ]
-  in
-  `Assoc (U_List.filter_map (fun x -> x) values)
+  pub_esXXX_to_pub_json ~get_ESXXX_x_y:Util.get_ES512_x_y ~crv:"P-521" pub_es512
 
 let priv_es512_to_pub_json (priv_es512 : priv_es512) : Yojson.Safe.t =
   pub_of_priv_es512 priv_es512 |> pub_es512_to_pub_json
 
-let priv_es512_to_priv_json (priv_es512 : priv_es512) : Yojson.Safe.t =
-  let x, y =
-    Util.get_ES512_x_y (Mirage_crypto_ec.P521.Dsa.pub_of_priv priv_es512.key)
-  in
-  let d =
-    Mirage_crypto_ec.P521.Dsa.priv_to_cstruct priv_es512.key
-    |> Cstruct.to_string |> U_Base64.url_encode_string
-  in
-  let values =
-    [
-      Option.map (fun alg -> ("alg", Jwa.alg_to_json alg)) priv_es512.alg;
-      Some ("crv", `String "P-521");
-      Some ("x", `String x);
-      Some ("y", `String y);
-      Some ("d", `String d);
-      Some ("kty", `String (priv_es512.kty |> Jwa.kty_to_string));
-      Option.map
-        (fun use -> ("use", `String (use_to_string use)))
-        priv_es512.use;
-      RJson.to_json_string_opt "kid" priv_es512.kid;
-    ]
-  in
-  `Assoc (U_List.filter_map (fun x -> x) values)
+let priv_es512_to_priv_json =
+  priv_esXXX_to_priv_json ~get_ESXXX_x_y:Util.get_ES512_x_y
+    ~pub_of_priv:Mirage_crypto_ec.P521.Dsa.pub_of_priv
+    ~priv_to_cstruct:Mirage_crypto_ec.P521.Dsa.priv_to_cstruct ~crv:"P-521"
 
 let to_pub_json (type a) (jwk : a t) : Yojson.Safe.t =
   match jwk with
@@ -717,49 +644,28 @@ let pub_ec_of_json json =
     let crv = json |> Json.member "crv" |> Json.to_string in
     let x = json |> Json.member "x" |> Json.to_string in
     let y = json |> Json.member "y" |> Json.to_string in
+    let make_jwk key =
+                 {
+                   alg;
+                   kty = `EC;
+                   (* Shortcut since that is the only thing we handle *)
+                   use =
+                     json |> Json.member "use" |> Json.to_string_option
+                     |> U_Opt.map use_of_string;
+                   key;
+                   kid = json |> Json.member "kid" |> Json.to_string_option;
+      }
+    in
     match crv with
     | "P-256" ->
         Util.make_ES256_of_x_y (x, y)
-        |> U_Result.map (fun key ->
-               Es256_pub
-                 {
-                   alg;
-                   kty = `EC;
-                   (* Shortcut since that is the only thing we handle *)
-                   use =
-                     json |> Json.member "use" |> Json.to_string_option
-                     |> U_Opt.map use_of_string;
-                   key;
-                   kid = json |> Json.member "kid" |> Json.to_string_option;
-                 })
+        |> U_Result.map (fun key -> Es256_pub (make_jwk key))
     | "P-384" ->
         Util.make_ES384_of_x_y (x, y)
-        |> U_Result.map (fun key ->
-               Es384_pub
-                 {
-                   alg;
-                   kty = `EC;
-                   (* Shortcut since that is the only thing we handle *)
-                   use =
-                     json |> Json.member "use" |> Json.to_string_option
-                     |> U_Opt.map use_of_string;
-                   key;
-                   kid = json |> Json.member "kid" |> Json.to_string_option;
-                 })
+        |> U_Result.map (fun key -> Es384_pub (make_jwk key))
     | "P-521" ->
         Util.make_ES512_of_x_y (x, y)
-        |> U_Result.map (fun key ->
-               Es512_pub
-                 {
-                   alg;
-                   kty = `EC;
-                   (* Shortcut since that is the only thing we handle *)
-                   use =
-                     json |> Json.member "use" |> Json.to_string_option
-                     |> U_Opt.map use_of_string;
-                   key;
-                   kid = json |> Json.member "kid" |> Json.to_string_option;
-                 })
+        |> U_Result.map (fun key -> Es512_pub (make_jwk key))
     | _ -> Error (`Msg "kty and alg doesn't match")
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
@@ -775,52 +681,31 @@ let priv_ec_of_json json =
       json |> Json.member "d" |> Json.to_string |> U_Base64.url_decode
       |> U_Result.map Cstruct.of_string
     in
+    let make_jwk key =
+                 {
+                   alg;
+                   kty = `EC;
+                   (* Shortcut since that is the only thing we handle *)
+                   use =
+                     json |> Json.member "use" |> Json.to_string_option
+                     |> U_Opt.map use_of_string;
+                   key;
+                   kid = json |> Json.member "kid" |> Json.to_string_option;
+      }
+    in
     match (crv, d) with
     | "P-256", Ok d ->
         Mirage_crypto_ec.P256.Dsa.priv_of_cstruct d
         |> U_Result.map_error (fun _ -> `Msg "Could not create key")
-        |> U_Result.map (fun key ->
-               Es256_priv
-                 {
-                   alg;
-                   kty = `EC;
-                   (* Shortcut since that is the only thing we handle *)
-                   use =
-                     json |> Json.member "use" |> Json.to_string_option
-                     |> U_Opt.map use_of_string;
-                   key;
-                   kid = json |> Json.member "kid" |> Json.to_string_option;
-                 })
+        |> U_Result.map (fun key -> Es256_priv (make_jwk key))
     | "P-384", Ok d ->
         Mirage_crypto_ec.P384.Dsa.priv_of_cstruct d
         |> U_Result.map_error (fun _ -> `Msg "Could not create key")
-        |> U_Result.map (fun key ->
-               Es384_priv
-                 {
-                   alg;
-                   kty = `EC;
-                   (* Shortcut since that is the only thing we handle *)
-                   use =
-                     json |> Json.member "use" |> Json.to_string_option
-                     |> U_Opt.map use_of_string;
-                   key;
-                   kid = json |> Json.member "kid" |> Json.to_string_option;
-                 })
+        |> U_Result.map (fun key -> Es384_priv (make_jwk key))
     | "P-521", Ok d ->
         Mirage_crypto_ec.P521.Dsa.priv_of_cstruct d
         |> U_Result.map_error (fun _ -> `Msg "Could not create key")
-        |> U_Result.map (fun key ->
-               Es512_priv
-                 {
-                   alg;
-                   kty = `EC;
-                   (* Shortcut since that is the only thing we handle *)
-                   use =
-                     json |> Json.member "use" |> Json.to_string_option
-                     |> U_Opt.map use_of_string;
-                   key;
-                   kid = json |> Json.member "kid" |> Json.to_string_option;
-                 })
+        |> U_Result.map (fun key -> Es512_priv (make_jwk key))
     | _ -> Error (`Msg "kty and alg doesn't match")
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
