@@ -162,6 +162,15 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str str =
       if Mirage_crypto_ec.P521.Dsa.verify ~key:pub_jwk.key (r, s) message then
         Ok str
       else Error `Invalid_signature
+  | Jwk.Ed25519_priv jwk ->
+      let key = Mirage_crypto_ec.Ed25519.pub_of_priv jwk.key in
+      let msg = Cstruct.of_string input_str in
+      if Mirage_crypto_ec.Ed25519.verify ~key str ~msg then Ok str
+      else Error `Invalid_signature
+  | Jwk.Ed25519_pub jwk ->
+      let msg = Cstruct.of_string input_str in
+      if Mirage_crypto_ec.Ed25519.verify ~key:jwk.key str ~msg then Ok str
+      else Error `Invalid_signature
 
 let verify_internal (type a) ~(jwk : a Jwk.t) t =
   let payload_str = U_Base64.url_encode_string t.payload in
@@ -178,6 +187,7 @@ let validate (type a) ~(jwk : a Jwk.t) t =
   | `ES256 -> Ok header.alg
   | `ES384 -> Ok header.alg
   | `ES512 -> Ok header.alg
+  | `EdDSA -> Ok header.alg
   | `Unsupported _ | `RSA_OAEP | `RSA1_5 | `None ->
       Error (`Msg "alg not supported for signing"))
   |> U_Result.flat_map (fun _alg ->
@@ -220,6 +230,11 @@ let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
               let r, s = Mirage_crypto_ec.P521.Dsa.sign ~key message in
               let sign = Cstruct.append r s in
               sign
+          | `Digest _ -> raise (Invalid_argument "Digest"))
+    | Jwk.Ed25519_priv jwk ->
+        Ok
+          (function
+          | `Message x -> Mirage_crypto_ec.Ed25519.sign ~key:jwk.key x
           | `Digest _ -> raise (Invalid_argument "Digest"))
     | Jwk.Oct oct ->
         Jwk.oct_to_sign_key oct

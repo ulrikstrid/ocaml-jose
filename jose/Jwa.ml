@@ -2,18 +2,21 @@ type kty =
   [ `oct  (** Octet sequence (used to represent symmetric keys) *)
   | `RSA  (** RSA *)
   | `EC  (** Elliptic Curve *)
+  | `OKP  (** Octet Key Pair *)
   | `Unsupported of string ]
 
 let kty_to_string : kty -> string = function
   | `oct -> "oct"
   | `RSA -> "RSA"
   | `EC -> "EC"
+  | `OKP -> "OKP"
   | `Unsupported str -> str
 
 let kty_of_string : string -> kty = function
   | "oct" -> `oct
   | "RSA" -> `RSA
   | "EC" -> `EC
+  | "OKP" -> `OKP
   | str -> `Unsupported str
 
 type alg =
@@ -22,6 +25,7 @@ type alg =
   | `ES256  (** ECDSA using P-256 and SHA-256 *)
   | `ES384  (** ECDSA using P-384 and SHA-384 *)
   | `ES512  (** ECDSA using P-521 and SHA-512 *)
+  | `EdDSA  (**  *)
   | `RSA_OAEP  (** RSAES OAEP using default parameters *)
   | `RSA1_5  (** RSA PKCS 1 *)
   | `None
@@ -33,6 +37,7 @@ let alg_to_string = function
   | `ES256 -> "ES256"
   | `ES384 -> "ES384"
   | `ES512 -> "ES512"
+  | `EdDSA -> "EdDSA"
   | `RSA_OAEP -> "RSA-OAEP"
   | `RSA1_5 -> "RSA1_5"
   | `None -> "none"
@@ -44,6 +49,7 @@ let alg_of_string = function
   | "ES256" -> `ES256
   | "ES384" -> `ES384
   | "ES512" -> `ES512
+  | "EdDSA" -> `EdDSA
   | "RSA-OAEP" -> `RSA_OAEP
   | "RSA1_5" -> `RSA1_5
   | "none" -> `None
