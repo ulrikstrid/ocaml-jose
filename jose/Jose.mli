@@ -8,6 +8,7 @@ module Jwa : sig
     | `ES256  (** ECDSA using P-256 and SHA-256 *)
     | `ES384  (** ECDSA using P-384 and SHA-384 *)
     | `ES512  (** ECDSA using P-521 and SHA-512 *)
+    | `EdDSA
     | `RSA_OAEP  (** RSAES OAEP using default parameters *)
     | `RSA1_5  (** RSA PKCS 1 *)
     | `None
@@ -27,6 +28,8 @@ module Jwa : sig
     [ `oct  (** Octet sequence (used to represent symmetric keys) *)
     | `RSA  (** RSA {{: https://tools.ietf.org/html/rfc3447} Link to RFC} *)
     | `EC  (** Elliptic Curve *)
+    | `OKP
+      (** Octet Key Pair {{: https://www.rfc-editor.org/rfc/rfc8037.html} Link to RFC} *)
     | `Unsupported of string ]
   (** {{: https://tools.ietf.org/html/rfc7518#section-6.1 } Link to RFC } *)
 
@@ -92,6 +95,12 @@ module Jwk : sig
   type pub_es512 = Mirage_crypto_ec.P521.Dsa.pub jwk
   (** [es512] represents a private JWK with [kty] [`EC] and a [P512.priv] key *)
 
+  type priv_ed25519 = Mirage_crypto_ec.Ed25519.priv jwk
+  (** [ed25519] represents a public JWK with [kty] [`OKP] and a [Ed25519.pub] key *)
+
+  type pub_ed25519 = Mirage_crypto_ec.Ed25519.pub jwk
+  (** [ed25519] represents a private JWK with [kty] [`OKP] and a [Ed25519.priv] key *)
+
   (** [t] describes a JSON Web Key which can be either [public] or [private] *)
   type 'a t =
     | Oct : oct -> 'a t
@@ -103,6 +112,8 @@ module Jwk : sig
     | Es384_pub : pub_es384 -> public t
     | Es512_priv : priv_es512 -> priv t
     | Es512_pub : pub_es512 -> public t
+    | Ed25519_priv : priv_ed25519 -> priv t
+    | Ed25519_pub : pub_ed25519 -> public t
 
   (** {1 Public keys}
 

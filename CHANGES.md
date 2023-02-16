@@ -5,6 +5,7 @@ next
 - Allow creating a JWK from X509 keys directly (by @ulrikstrid) 
 - Support extra headers (by @ulrikstrid) 
 - Add a parameter to JWT validation for the current time represented as `Ptime.t` (by @ulrikstrid)
+- Add support for EdDSA keys (Ed25519 curve) from rfc8037 (by @ulrikstrid)
 
 0.8.2
 --------------

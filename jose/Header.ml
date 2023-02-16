@@ -31,7 +31,8 @@ let make_header ?typ ?alg ?enc ?(extra = []) ?(jwk_header = false)
         | Jwk.Oct _ -> `HS256
         | Jwk.Es256_priv _ -> `ES256
         | Jwk.Es384_priv _ -> `ES384
-        | Jwk.Es512_priv _ -> `ES512)
+        | Jwk.Es512_priv _ -> `ES512
+        | Jwk.Ed25519_priv _ -> `EdDSA)
   in
   let kid =
     match List.assoc_opt "kid" extra with
