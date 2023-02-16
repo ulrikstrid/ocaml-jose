@@ -44,30 +44,6 @@ let get_string_claim (jwt : t) (claim_name : string) =
 let get_int_claim (jwt : t) (claim_name : string) =
   Option.bind (get_yojson_claim jwt claim_name) Yojson.Safe.Util.to_int_option
 
-let to_string t =
-  let payload = U_Base64.url_encode_string t.raw_payload in
-  Printf.sprintf "%s.%s.%s" t.raw_header payload t.signature
-
-let unsafe_of_string token =
-  String.split_on_char '.' token |> function
-  | [ header_str; payload_str; signature ] ->
-      let header = Header.of_string header_str in
-      let payload = payload_of_string payload_str in
-      U_Result.both header payload
-      |> U_Result.flat_map (fun (header, payload) ->
-             Ok
-               {
-                 header;
-                 raw_header = header_str;
-                 payload;
-                 raw_payload =
-                   U_Base64.url_decode payload_str |> U_Result.get_exn;
-                 (* The string is already decoded so this is fine but
-                    redundant *)
-                 signature;
-               })
-  | _ -> Error (`Msg "token didn't include header, payload or signature")
-
 let to_jws (t : t) =
   Jws.
     {
@@ -86,6 +62,12 @@ let of_jws (jws : Jws.t) =
     payload;
     raw_payload = jws.payload;
   }
+
+let to_string ?serialization t =
+  let jws = to_jws t in
+  Jws.to_string ?serialization jws
+
+let unsafe_of_string token = Jws.of_string token |> U_Result.map of_jws
 
 let check_expiration t =
   let module Json = Yojson.Safe.Util in

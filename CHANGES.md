@@ -1,3 +1,10 @@
+next
+--------------
+- Support all serialization formats, previously only the compact serialization was supported, now we support both general and flattened JSON format (by @ulrikstrid) 
+- Add support for ES384 (P-384 with SHA384) (by @ulrikstrid) 
+- Allow creating a JWK from X509 keys directly (by @ulrikstrid) 
+- Support extra headers (by @ulrikstrid) 
+
 0.8.2
 --------------
 - JWS now properly checks the signature. Reported by @nankeen and fixed by @ulrikstrid. CVE-2023-23928

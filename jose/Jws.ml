@@ -3,13 +3,15 @@ open Utils
 type signature = string
 
 type t = {
-  header : Header.t;
+  header : Header.t; (* TODO: This is always treated as protected headers*)
   raw_header : string;
   payload : string;
   signature : signature;
 }
 
-let of_string token =
+type serialization = [ `Compact | `General | `Flattened ]
+
+let of_compact_string token =
   String.split_on_char '.' token |> function
   | [ header_str; payload_str; signature ] ->
       let header = Header.of_string header_str in
@@ -19,9 +21,71 @@ let of_string token =
              { header; raw_header = header_str; payload; signature })
   | _ -> Error (`Msg "token didn't include header, payload or signature")
 
-let to_string t =
+let of_json_string token =
+  try
+    let module Json = Yojson.Safe.Util in
+    let json = Yojson.Safe.from_string token in
+    let payload =
+      Json.member "payload" json |> Json.to_string |> U_Base64.url_decode
+    in
+
+    match (payload, Json.member "signature" json |> Json.to_string_option) with
+    | Ok payload, Some signature ->
+        let protected = Json.member "protected" json |> Json.to_string in
+        Ok
+          {
+            header = Header.of_string protected |> U_Result.get_exn;
+            raw_header = protected;
+            payload;
+            signature;
+          }
+    | Error e, _ -> Error e
+    | _, None -> Error `Not_supported
+  with _ -> Error `Not_json
+
+let of_string token =
+  match of_json_string token with
+  | Ok t -> Ok t
+  | Error `Not_json -> of_compact_string token
+  | e -> e
+
+let to_flattened_json t =
+  let payload_str = t.payload |> U_Base64.url_encode_string in
+  `Assoc
+    [
+      ("payload", `String payload_str);
+      ("protected", `String t.raw_header);
+      (* TODO: add "header" for public header parameters *)
+      ("signature", `String t.signature);
+    ]
+
+let to_compact_string t =
   let payload_str = t.payload |> U_Base64.url_encode_string in
   Printf.sprintf "%s.%s.%s" t.raw_header payload_str t.signature
+
+let to_general_string t =
+  let payload_str = t.payload |> U_Base64.url_encode_string in
+  (* TODO: Support multiple signatures *)
+  let signatures =
+    [
+      `Assoc
+        [
+          ("protected", `String t.raw_header);
+          (* TODO: add "header" for public header parameters *)
+          ("signature", `String t.signature);
+        ];
+    ]
+  in
+  `Assoc [ ("payload", `String payload_str); ("signatures", `List signatures) ]
+  |> Yojson.Safe.to_string
+
+let to_flattened_string t = to_flattened_json t |> Yojson.Safe.to_string
+
+let to_string ?(serialization = `Compact) t =
+  match serialization with
+  | `Compact -> to_compact_string t
+  | `General -> to_general_string t
+  | `Flattened -> to_flattened_string t
 
 let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str str =
   match jwk with
@@ -64,6 +128,23 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str str =
       if Mirage_crypto_ec.P256.Dsa.verify ~key:pub_jwk.key (r, s) message then
         Ok str
       else Error `Invalid_signature
+  | Jwk.Es384_pub pub_jwk ->
+      let r, s = Cstruct.split str 48 in
+      let message =
+        Mirage_crypto.Hash.SHA384.digest (Cstruct.of_string input_str)
+      in
+      if Mirage_crypto_ec.P384.Dsa.verify ~key:pub_jwk.key (r, s) message then
+        Ok str
+      else Error `Invalid_signature
+  | Jwk.Es384_priv jwk ->
+      let r, s = Cstruct.split str 48 in
+      let message =
+        Mirage_crypto.Hash.SHA384.digest (Cstruct.of_string input_str)
+      in
+      let pub_jwk = Jwk.pub_of_priv_es384 jwk in
+      if Mirage_crypto_ec.P384.Dsa.verify ~key:pub_jwk.key (r, s) message then
+        Ok str
+      else Error `Invalid_signature
   | Jwk.Es512_pub pub_jwk ->
       let r, s = Cstruct.split str 66 in
       let message =
@@ -95,6 +176,7 @@ let validate (type a) ~(jwk : a Jwk.t) t =
   | `RS256 -> Ok header.alg
   | `HS256 -> Ok header.alg
   | `ES256 -> Ok header.alg
+  | `ES384 -> Ok header.alg
   | `ES512 -> Ok header.alg
   | `Unsupported _ | `RSA_OAEP | `RSA1_5 | `None ->
       Error (`Msg "alg not supported for signing"))
@@ -120,6 +202,14 @@ let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
           | `Message x ->
               let message = Mirage_crypto.Hash.SHA256.digest x in
               let r, s = Mirage_crypto_ec.P256.Dsa.sign ~key message in
+              Cstruct.append r s
+          | `Digest _ -> raise (Invalid_argument "Digest"))
+    | Jwk.Es384_priv { key; _ } ->
+        Ok
+          (function
+          | `Message x ->
+              let message = Mirage_crypto.Hash.SHA384.digest x in
+              let r, s = Mirage_crypto_ec.P384.Dsa.sign ~key message in
               Cstruct.append r s
           | `Digest _ -> raise (Invalid_argument "Digest"))
     | Jwk.Es512_priv { key; _ } ->

@@ -6,6 +6,7 @@ module Jwa : sig
     [ `RS256  (** HMAC using SHA-256 *)
     | `HS256  (** RSASSA-PKCS1-v1_5 using SHA-256 *)
     | `ES256  (** ECDSA using P-256 and SHA-256 *)
+    | `ES384  (** ECDSA using P-384 and SHA-384 *)
     | `ES512  (** ECDSA using P-521 and SHA-512 *)
     | `RSA_OAEP  (** RSAES OAEP using default parameters *)
     | `RSA1_5  (** RSA PKCS 1 *)
@@ -79,6 +80,12 @@ module Jwk : sig
   type pub_es256 = Mirage_crypto_ec.P256.Dsa.pub jwk
   (** [es256] represents a private JWK with [kty] [`EC] and a [P256.priv] key *)
 
+  type priv_es384 = Mirage_crypto_ec.P384.Dsa.priv jwk
+  (** [es384] represents a public JWK with [kty] [`EC] and a [P384.pub] key *)
+
+  type pub_es384 = Mirage_crypto_ec.P384.Dsa.pub jwk
+  (** [es384] represents a private JWK with [kty] [`EC] and a [P384.priv] key *)
+
   type priv_es512 = Mirage_crypto_ec.P521.Dsa.priv jwk
   (** [es512] represents a public JWK with [kty] [`EC] and a [P512.pub] key *)
 
@@ -92,6 +99,8 @@ module Jwk : sig
     | Rsa_pub : pub_rsa -> public t
     | Es256_priv : priv_es256 -> priv t
     | Es256_pub : pub_es256 -> public t
+    | Es384_priv : priv_es384 -> priv t
+    | Es384_pub : pub_es384 -> public t
     | Es512_priv : priv_es512 -> priv t
     | Es512_pub : pub_es512 -> public t
 
@@ -153,6 +162,16 @@ module Jwk : sig
   val to_priv_pem : priv t -> (string, [> `Msg of string | `Not_rsa ]) result
   (** [to_priv_pem t] takes a JWK and returns a result PEM string or a message
       of what went wrong. *)
+
+  val of_priv_x509 :
+    ?use:use ->
+    X509.Private_key.t ->
+    (priv t, [> `Msg of string | `Not_rsa ]) result
+
+  val of_pub_x509 :
+    ?use:use ->
+    X509.Public_key.t ->
+    (public t, [> `Msg of string | `Not_rsa ]) result
 
   val of_priv_json :
     Yojson.Safe.t ->
@@ -234,7 +253,6 @@ end
 module Header : sig
   type t = {
     alg : Jwa.alg;
-    jku : string option;
     jwk : Jwk.public Jwk.t option;
     kid : string option;
     x5t : string option;
@@ -242,21 +260,32 @@ module Header : sig
     typ : string option;
     cty : string option;
     enc : Jwa.enc option;
+    extra : (string * Yojson.Safe.t) list option;
   }
-  (** The [header] has the following properties: - [alg] Jwa - RS256 and none is
-      currently the only supported algs - [jku] JWK Set URL - [jwk] JSON Web Key
-      - [kid] Key ID - We currently always expect this to be there, this can
-      change in the future - [x5t] X.509 Certificate SHA-1 Thumbprint -
-      [x5t#S256] X.509 Certificate SHA-256 Thumbprint - [typ] Type - [cty]
-      Content Type Not implemented: - [x5u] X.509 URL - [x5c] X.509 Certficate
-      Chain - [crit] Critical
+  (** The [header] has the following properties:
+  
+  - [alg] {! Jwa.alg }
+  - [jwk] JSON Web Key
+  - [kid] Key ID - We currently always expect this to be there, this can change in the future
+  - [x5t] X.509 Certificate SHA-1 Thumbprint -
+  - [x5t#S256] X.509 Certificate SHA-256 Thumbprint
+  - [typ] Type
+  - [cty] Content Type Not implemented
+  
+      {{: https://tools.ietf.org/html/rfc7515#section-4.1 } Link to RFC }
 
-      {{: https://tools.ietf.org/html/rfc7515#section-4.1 } Link to RFC } *)
+      {{: https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-header-parameters } Complete list of registered header parameters} *)
 
   val make_header :
-    ?typ:string -> ?alg:Jwa.alg -> ?enc:Jwa.enc -> Jwk.priv Jwk.t -> t
+    ?typ:string ->
+    ?alg:Jwa.alg ->
+    ?enc:Jwa.enc ->
+    ?extra:(string * Yojson.Safe.t) list ->
+    ?jwk_header:bool ->
+    Jwk.priv Jwk.t ->
+    t
   (** [make_header typ alg enc jwk] if [alg] is not provided it will be derived
-      from [jwk]. *)
+      from [jwk]. [jwk_header] decides if the jwk should be put in the header. *)
 
   val of_string : string -> (t, [> `Msg of string ]) result
   val to_string : t -> string
@@ -277,8 +306,12 @@ module Jws : sig
     signature : signature;
   }
 
-  val of_string : string -> (t, [> `Msg of string ]) result
-  val to_string : t -> string
+  type serialization = [ `Compact | `General | `Flattened ]
+
+  val of_string :
+    string -> (t, [> `Msg of string | `Not_json | `Not_supported ]) result
+
+  val to_string : ?serialization:serialization -> t -> string
 
   val validate :
     jwk:'a Jwk.t -> t -> (t, [> `Invalid_signature | `Msg of string ]) result
@@ -315,15 +348,23 @@ module Jwt : sig
   val get_yojson_claim : t -> string -> Yojson.Safe.t option
   val get_string_claim : t -> string -> string option
   val get_int_claim : t -> string -> int option
-  val to_string : t -> string
+  val to_string : ?serialization:Jws.serialization -> t -> string
 
   val of_string :
     jwk:'a Jwk.t ->
     string ->
-    (t, [> `Expired | `Invalid_signature | `Msg of string ]) result
+    ( t,
+      [> `Expired
+      | `Invalid_signature
+      | `Msg of string
+      | `Not_json
+      | `Not_supported ] )
+    result
   (** [of_string ~jwk jwt_string] parses and validates the encoded JWT string. *)
 
-  val unsafe_of_string : string -> (t, [> `Msg of string ]) result
+  val unsafe_of_string :
+    string -> (t, [> `Msg of string | `Not_json | `Not_supported ]) result
+
   val to_jws : t -> Jws.t
   val of_jws : Jws.t -> t
 

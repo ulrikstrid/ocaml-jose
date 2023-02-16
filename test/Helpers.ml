@@ -8,7 +8,9 @@ type 'a error_t =
   | `Invalid_JWE
   | `Invalid_JWK
   | `Decrypt_cek_failed
-  | `Unsafe ]
+  | `Unsafe
+  | `Not_json
+  | `Not_supported ]
   as
   'a
 
@@ -24,6 +26,8 @@ let result_t : _ error_t Alcotest.testable =
     | `Invalid_JWK -> Fmt.string ppf "Invalid JWK"
     | `Decrypt_cek_failed -> Fmt.string ppf "Failed to decrypt cek"
     | `Unsafe -> Fmt.string ppf "Unsafe"
+    | `Not_json -> Fmt.string ppf "Not_json"
+    | `Not_supported -> Fmt.string ppf "Not_supported"
   in
   Alcotest.testable pp ( = )
 
