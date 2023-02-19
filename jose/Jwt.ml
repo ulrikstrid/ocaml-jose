@@ -6,7 +6,6 @@ type claim = string * Yojson.Safe.t
 type error =
   [ `Msg of string
   | `Expired
-  | `Not_rsa
   | `Json_parse_failed of string
   | `Unsupported_kty
   | `Invalid_signature ]

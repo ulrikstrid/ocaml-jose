@@ -74,9 +74,9 @@ let jwt_suite, _ =
               let jwk =
                 Jwk.of_priv_pem Fixtures.es256_test_priv
                 |> CCResult.map_err (function
-                     | `Not_rsa ->
-                         print_endline "not_rsa";
-                         `Not_rsa
+                     | `Unsupported_kty ->
+                         print_endline "Unsupported_kty";
+                         `Unsupported_kty
                      | `Msg s ->
                          print_endline s;
                          `Msg s)

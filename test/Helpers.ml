@@ -1,7 +1,6 @@
 type 'a error_t =
   [> `Msg of string
   | `Expired
-  | `Not_rsa
   | `Json_parse_failed of string
   | `Unsupported_kty
   | `Invalid_signature
@@ -18,7 +17,6 @@ let result_t : _ error_t Alcotest.testable =
   let pp ppf = function
     | `Msg e -> Fmt.string ppf e
     | `Expired -> Fmt.string ppf "expired"
-    | `Not_rsa -> Fmt.string ppf "Expected RSA"
     | `Json_parse_failed s -> Fmt.string ppf ("Badly formed json " ^ s)
     | `Unsupported_kty -> Fmt.string ppf "Unsupported kty"
     | `Invalid_signature -> Fmt.string ppf "Invalid signature"
