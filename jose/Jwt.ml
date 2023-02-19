@@ -81,9 +81,7 @@ let check_expiration ~(now : Ptime.t) t =
       in
 
       if is_earlier = Some true then Ok t else Error `Expired
-  | None ->
-      print_endline "no exp";
-      Ok t
+  | None -> Ok t
 
 let validate_signature (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
   Jws.validate ~jwk (to_jws t) |> U_Result.map of_jws
