@@ -75,8 +75,7 @@ let jws_suite, _ =
               let jws_result = Jose.Jws.of_string jws_string in
               check_result_string "failing to parse"
                 (Result.map (fun (jws : Jose.Jws.t) -> jws.payload) jws_result)
-                (Error
-                   (`Msg "token didn't include header, payload or signature")));
+                (Error (`Msg "no payload")));
           Alcotest.test_case "parses a flattened json representation correctly"
             `Quick (fun () ->
               let jws_string =
