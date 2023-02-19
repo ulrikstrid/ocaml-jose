@@ -277,7 +277,7 @@ module Header : sig
     typ : string option;
     cty : string option;
     enc : Jwa.enc option;
-    extra : (string * Yojson.Safe.t) list option;
+    extra : (string * Yojson.Safe.t) list;
   }
   (** The [header] has the following properties:
   

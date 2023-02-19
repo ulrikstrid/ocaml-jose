@@ -9,7 +9,7 @@ type t = {
   typ : string option;
   cty : string option;
   enc : Jwa.enc option;
-  extra : (string * Yojson.Safe.t) list option;
+  extra : (string * Yojson.Safe.t) list;
 }
 
 (* TODO: This is probably very slow *)
@@ -49,7 +49,7 @@ let make_header ?typ ?alg ?enc ?(extra = []) ?(jwk_header = false)
     typ;
     cty = None;
     enc;
-    extra = (match extra with [] -> None | extra -> Some extra);
+    extra;
   }
 
 module Json = Yojson.Safe.Util
@@ -58,8 +58,8 @@ let get_extra_headers (json : Yojson.Safe.t) =
   match json with
   | `Assoc vals -> (
       let extra = remove_supported vals in
-      match extra with [] -> None | extra -> Some extra)
-  | _ -> None (* TODO: raise here? *)
+      match extra with [] -> [] | extra -> extra)
+  | _ -> [] (* TODO: raise here? *)
 
 let of_json json =
   try
@@ -98,8 +98,7 @@ let to_json t =
       |> U_Opt.map (fun enc -> ("enc", `String enc));
     ]
   in
-  let extra = Option.value ~default:[] t.extra in
-  `Assoc (U_List.filter_map (fun x -> x) values @ extra)
+  `Assoc (U_List.filter_map (fun x -> x) values @ t.extra)
 
 let of_string header_str =
   U_Base64.url_decode header_str
