@@ -38,21 +38,21 @@ module Util = struct
            k |> U_Result.get_exn)
 
   let get_ES256_x_y =
-    get_ESXXX_x_y ~split_at:32
+    get_ESXXX_x_y ~split_at:32 (* 64 octets split in 2 *)
       ~pub_to_cstruct:Mirage_crypto_ec.P256.Dsa.pub_to_cstruct
 
   let make_ES256_of_x_y =
     make_ESXXX_of_x_y ~pub_of_cstruct:Mirage_crypto_ec.P256.Dsa.pub_of_cstruct
 
   let get_ES384_x_y =
-    get_ESXXX_x_y ~split_at:48
+    get_ESXXX_x_y ~split_at:48 (* 96 octets split in 2 *)
       ~pub_to_cstruct:Mirage_crypto_ec.P384.Dsa.pub_to_cstruct
 
   let make_ES384_of_x_y =
     make_ESXXX_of_x_y ~pub_of_cstruct:Mirage_crypto_ec.P384.Dsa.pub_of_cstruct
 
   let get_ES512_x_y =
-    get_ESXXX_x_y ~split_at:66
+    get_ESXXX_x_y ~split_at:66 (* 132 octets split in 2 *)
       ~pub_to_cstruct:Mirage_crypto_ec.P521.Dsa.pub_to_cstruct
 
   let make_ES512_of_x_y =
