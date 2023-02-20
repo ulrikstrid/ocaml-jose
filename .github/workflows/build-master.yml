@@ -33,10 +33,7 @@ jobs:
         run: nix develop --accept-flake-config -c dune build @doc
 
       - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@releases/v3
+        uses: JamesIves/github-pages-deploy-action@releases/v4
         with:
-          # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-          BRANCH: gh-pages
-          CLEAN: true
-          FOLDER: _build/default/_doc/_html
+          clean: true
+          folder: _build/default/_doc/_html
