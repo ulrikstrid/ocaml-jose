@@ -1,4 +1,4 @@
-next
+0.9.0
 --------------
 - Support all serialization formats, previously only the compact serialization was supported, now we support both general and flattened JSON format (by @ulrikstrid) 
 - Add support for ES384 (P-384 with SHA384) (by @ulrikstrid) 
