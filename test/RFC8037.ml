@@ -28,7 +28,7 @@ let ed25519_jws_header =
       typ = None;
       cty = None;
       enc = None;
-      extra = None;
+      extra = [];
     }
 
 let ed25519_jws_payload = "Example of Ed25519 signing"

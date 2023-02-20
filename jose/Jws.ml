@@ -26,7 +26,9 @@ let of_json_string token =
     let module Json = Yojson.Safe.Util in
     let json = Yojson.Safe.from_string token in
     let payload =
-      Json.member "payload" json |> Json.to_string |> U_Base64.url_decode
+      Json.member "payload" json |> Json.to_string_option
+      |> Option.to_result ~none:(`Msg "no payload")
+      |> U_Result.flat_map U_Base64.url_decode
     in
 
     match (payload, Json.member "signature" json |> Json.to_string_option) with
@@ -44,10 +46,10 @@ let of_json_string token =
   with _ -> Error `Not_json
 
 let of_string token =
-  match of_json_string token with
-  | Ok t -> Ok t
-  | Error `Not_json -> of_compact_string token
-  | e -> e
+  (* If the first char is '{' we assume it's JSON since a compact representation starts with ey *)
+  match String.index_opt token '{' with
+  | Some 0 -> of_json_string token
+  | _ -> of_compact_string token
 
 let to_flattened_json t =
   let payload_str = t.payload |> U_Base64.url_encode_string in

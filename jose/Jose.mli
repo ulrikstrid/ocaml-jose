@@ -124,11 +124,14 @@ module Jwk : sig
       a result t or a message of what went wrong. *)
 
   val of_pub_pem :
-    ?use:use -> string -> (public t, [> `Msg of string | `Not_rsa ]) result
+    ?use:use ->
+    string ->
+    (public t, [> `Msg of string | `Unsupported_kty ]) result
   (** [of_pub_pem use pem] takes a PEM as a string and returns a [public t] or a
       message of what went wrong. *)
 
-  val to_pub_pem : 'a t -> (string, [> `Msg of string | `Not_rsa ]) result
+  val to_pub_pem :
+    'a t -> (string, [> `Msg of string | `Unsupported_kty ]) result
   (** [to_pub_pem t] takes a JWK and returns a result PEM string or a message of
       what went wrong. *)
 
@@ -163,26 +166,29 @@ module Jwk : sig
       returns a priv t or a message of what went wrong. *)
 
   val of_priv_pem :
-    ?use:use -> string -> (priv t, [> `Msg of string | `Not_rsa ]) result
+    ?use:use ->
+    string ->
+    (priv t, [> `Msg of string | `Unsupported_kty ]) result
   (** [of_priv_pem use pem] takes a PEM as a string and returns a [priv t] or a
       message of what went wrong. *)
 
   val make_oct : ?use:use -> string -> priv t
   (** [make_oct use secret] creates a [priv t] from a shared secret *)
 
-  val to_priv_pem : priv t -> (string, [> `Msg of string | `Not_rsa ]) result
+  val to_priv_pem :
+    priv t -> (string, [> `Msg of string | `Unsupported_kty ]) result
   (** [to_priv_pem t] takes a JWK and returns a result PEM string or a message
       of what went wrong. *)
 
   val of_priv_x509 :
     ?use:use ->
     X509.Private_key.t ->
-    (priv t, [> `Msg of string | `Not_rsa ]) result
+    (priv t, [> `Msg of string | `Unsupported_kty ]) result
 
   val of_pub_x509 :
     ?use:use ->
     X509.Public_key.t ->
-    (public t, [> `Msg of string | `Not_rsa ]) result
+    (public t, [> `Msg of string | `Unsupported_kty ]) result
 
   val of_priv_json :
     Yojson.Safe.t ->
@@ -271,7 +277,7 @@ module Header : sig
     typ : string option;
     cty : string option;
     enc : Jwa.enc option;
-    extra : (string * Yojson.Safe.t) list option;
+    extra : (string * Yojson.Safe.t) list;
   }
   (** The [header] has the following properties:
   

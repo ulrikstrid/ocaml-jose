@@ -2,6 +2,8 @@ let () = Mirage_crypto_rng_unix.initialize ()
 
 open Helpers
 
+let now = Ptime.of_date (2023, 2, 19) |> Option.get
+
 let jwt_suite, _ =
   Junit_alcotest.run_and_report ~package:"jose" "JWT"
     [
@@ -9,7 +11,6 @@ let jwt_suite, _ =
         [
           Alcotest.test_case "Can validate a RSA256 JWT" `Quick (fun () ->
               let open Jose in
-              let now = Ptime.of_float_s (Unix.time ()) |> Option.get in
               let jwk =
                 Jwk.of_pub_pem Fixtures.rsa_test_pub |> CCResult.get_exn
               in
@@ -22,7 +23,6 @@ let jwt_suite, _ =
                 (Yojson.Safe.to_string jwt.payload));
           Alcotest.test_case "Can validate a HS256 JWT" `Quick (fun () ->
               let open Jose in
-              let now = Ptime.of_float_s (Unix.time ()) |> Option.get in
               let jwk = Jwk.make_oct Fixtures.oct_key_string in
               let jwt =
                 Jwt.unsafe_of_string Fixtures.oct_jwt_string
@@ -74,9 +74,9 @@ let jwt_suite, _ =
               let jwk =
                 Jwk.of_priv_pem Fixtures.es256_test_priv
                 |> CCResult.map_err (function
-                     | `Not_rsa ->
-                         print_endline "not_rsa";
-                         `Not_rsa
+                     | `Unsupported_kty ->
+                         print_endline "Unsupported_kty";
+                         `Unsupported_kty
                      | `Msg s ->
                          print_endline s;
                          `Msg s)
@@ -100,7 +100,6 @@ let jwt_suite, _ =
           Alcotest.test_case "Can validate my own RSA JWT (priv rsa)" `Quick
             (fun () ->
               let open Jose in
-              let now = Ptime.of_float_s (Unix.time ()) |> Option.get in
               let jwk =
                 Jwk.of_priv_pem Fixtures.rsa_test_priv |> CCResult.get_exn
               in
@@ -118,7 +117,6 @@ let jwt_suite, _ =
           Alcotest.test_case "Can validate my own RSA JWT (pub rsa)" `Quick
             (fun () ->
               let open Jose in
-              let now = Ptime.of_float_s (Unix.time ()) |> Option.get in
               let jwk =
                 Jwk.of_priv_pem Fixtures.rsa_test_priv |> CCResult.get_exn
               in
@@ -135,7 +133,6 @@ let jwt_suite, _ =
                 (Ok Fixtures.external_jwt_string)
                 (CCResult.map Jwt.to_string jwt_r));
           Alcotest.test_case "Can validate my own OCT JWT" `Quick (fun () ->
-              let now = Ptime.of_float_s (Unix.time ()) |> Option.get in
               let open Jose in
               let jwk = Jwk.make_oct ~use:`Sig Fixtures.oct_key_string in
               let header = Header.make_header ~typ:"JWT" jwk in
@@ -152,7 +149,6 @@ let jwt_suite, _ =
           Alcotest.test_case "Can validate my own EC JWT (pub es256)" `Quick
             (fun () ->
               let open Jose in
-              let now = Ptime.of_float_s (Unix.time ()) |> Option.get in
               let jwk =
                 Jwk.of_priv_pem Fixtures.es256_test_priv |> CCResult.get_exn
               in
@@ -171,7 +167,6 @@ let jwt_suite, _ =
           Alcotest.test_case "Can validate my own EC JWT (pub es256)" `Quick
             (fun () ->
               let open Jose in
-              let now = Ptime.of_float_s (Unix.time ()) |> Option.get in
               let jwk =
                 Jwk.of_priv_pem Fixtures.es256_test_priv |> CCResult.get_exn
               in
@@ -190,7 +185,6 @@ let jwt_suite, _ =
           Alcotest.test_case "Can validate my own EC JWT (pub es512)" `Quick
             (fun () ->
               let open Jose in
-              let now = Ptime.of_float_s (Unix.time ()) |> Option.get in
               let jwk =
                 Jwk.of_priv_pem Fixtures.es512_test_priv |> CCResult.get_exn
               in
@@ -216,7 +210,6 @@ let jwt_suite, _ =
           Alcotest.test_case "Checks for expiration when calling `of_string`"
             `Quick (fun () ->
               let open Jose in
-              let now = Ptime.of_float_s (Unix.time ()) |> Option.get in
               let jwt_s =
                 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGFpbSI6ImZvbyIsImV4cCI6MTY0NDkxNTQ4Mn0.HSKBoJuoUSnh-JCxdE5B615qqRlyoThnAvPSnxktgt4"
               in
@@ -228,7 +221,6 @@ let jwt_suite, _ =
           Alcotest.test_case "Expiration in the future doesn't fail" `Quick
             (fun () ->
               let open Jose in
-              let now = Ptime.of_float_s (Unix.time ()) |> Option.get in
               let exp =
                 Ptime.add_span now @@ Ptime.Span.of_int_s 100 |> Option.get
               in
@@ -267,7 +259,6 @@ let jwt_suite, _ =
                 (Jwt.get_int_claim jwt "missing"));
           Alcotest.test_case "Can create JWT without header" `Quick (fun () ->
               let open Jose in
-              let now = Ptime.of_float_s (Unix.time ()) |> Option.get in
               let jwk =
                 Jwk.of_priv_pem Fixtures.rsa_test_priv |> CCResult.get_exn
               in

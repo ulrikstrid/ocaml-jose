@@ -123,7 +123,7 @@ let jws_tests =
                 typ = None;
                 cty = None;
                 enc = None;
-                extra = None;
+                extra = [];
               }
           in
           let jwk =

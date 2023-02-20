@@ -38,21 +38,21 @@ module Util = struct
            k |> U_Result.get_exn)
 
   let get_ES256_x_y =
-    get_ESXXX_x_y ~split_at:32
+    get_ESXXX_x_y ~split_at:32 (* 64 octets split in 2 *)
       ~pub_to_cstruct:Mirage_crypto_ec.P256.Dsa.pub_to_cstruct
 
   let make_ES256_of_x_y =
     make_ESXXX_of_x_y ~pub_of_cstruct:Mirage_crypto_ec.P256.Dsa.pub_of_cstruct
 
   let get_ES384_x_y =
-    get_ESXXX_x_y ~split_at:48
+    get_ESXXX_x_y ~split_at:48 (* 96 octets split in 2 *)
       ~pub_to_cstruct:Mirage_crypto_ec.P384.Dsa.pub_to_cstruct
 
   let make_ES384_of_x_y =
     make_ESXXX_of_x_y ~pub_of_cstruct:Mirage_crypto_ec.P384.Dsa.pub_of_cstruct
 
   let get_ES512_x_y =
-    get_ESXXX_x_y ~split_at:66
+    get_ESXXX_x_y ~split_at:66 (* 132 octets split in 2 *)
       ~pub_to_cstruct:Mirage_crypto_ec.P521.Dsa.pub_to_cstruct
 
   let make_ES512_of_x_y =
@@ -338,12 +338,26 @@ let make_pub_es512 ?use (es512_pub : Mirage_crypto_ec.P521.Dsa.pub) : public t =
   let jwk = { alg; kty; use; key = es512_pub; kid = None } in
   Es512_pub { jwk with kid = make_kid (Es512_pub jwk) }
 
-let of_pub_pem ?use pem : (public t, [> `Not_rsa ]) result =
+let of_priv_x509 ?use x509 : (priv t, [> `Unsupported_kty ]) result =
+  match x509 with
+  | `RSA priv_key -> Ok (make_priv_rsa ?use priv_key)
+  | `P256 priv_key -> Ok (make_priv_es256 ?use priv_key)
+  | `P384 priv_key -> Ok (make_priv_es384 ?use priv_key)
+  | `P521 priv_key -> Ok (make_priv_es512 ?use priv_key)
+  | _ -> Error `Unsupported_kty
+
+let of_pub_x509 ?use (x509 : X509.Public_key.t) :
+    (public t, [> `Unsupported_kty ]) result =
+  match x509 with
+  | `RSA public_key -> Ok (make_pub_rsa ?use public_key)
+  | `P256 public_key -> Ok (make_pub_es256 ?use public_key)
+  | `P384 public_key -> Ok (make_pub_es384 ?use public_key)
+  | `P521 public_key -> Ok (make_pub_es512 ?use public_key)
+  | _ -> Error `Unsupported_kty
+
+let of_pub_pem ?use pem : (public t, [> `Unsupported_kty ]) result =
   Cstruct.of_string pem |> X509.Public_key.decode_pem
-  |> U_Result.flat_map (function
-       | `RSA pub_key -> Ok pub_key
-       | _ -> Error `Not_rsa)
-  |> U_Result.map (make_pub_rsa ?use)
+  |> U_Result.flat_map (of_pub_x509 ?use)
 
 let to_pub_pem (type a) (jwk : a t) =
   match jwk with
@@ -353,38 +367,44 @@ let to_pub_pem (type a) (jwk : a t) =
       rsa.key |> Mirage_crypto_pk.Rsa.pub_of_priv
       |> (fun key -> X509.Public_key.encode_pem (`RSA key))
       |> Cstruct.to_string |> U_Result.return
-  | _ -> Error `Not_rsa
+  | Es256_pub ec ->
+      Ok (X509.Public_key.encode_pem (`P256 ec.key) |> Cstruct.to_string)
+  | Es256_priv ec ->
+      ec.key |> Mirage_crypto_ec.P256.Dsa.pub_of_priv
+      |> (fun key ->
+           X509.Public_key.encode_pem (`P256 key) |> Cstruct.to_string)
+      |> U_Result.return
+  | Es384_pub ec ->
+      Ok (X509.Public_key.encode_pem (`P384 ec.key) |> Cstruct.to_string)
+  | Es384_priv ec ->
+      ec.key |> Mirage_crypto_ec.P384.Dsa.pub_of_priv
+      |> (fun key ->
+           X509.Public_key.encode_pem (`P384 key) |> Cstruct.to_string)
+      |> U_Result.return
+  | Es512_pub ec ->
+      Ok (X509.Public_key.encode_pem (`P521 ec.key) |> Cstruct.to_string)
+  | Es512_priv ec ->
+      ec.key |> Mirage_crypto_ec.P521.Dsa.pub_of_priv
+      |> (fun key ->
+           X509.Public_key.encode_pem (`P521 key) |> Cstruct.to_string)
+      |> U_Result.return
+  | _ -> Error `Unsupported_kty
 
-let of_priv_pem ?use pem : (priv t, [> `Not_rsa ]) result =
+let of_priv_pem ?use pem : (priv t, [> `Unsupported_kty ]) result =
   Cstruct.of_string pem |> X509.Private_key.decode_pem
-  |> U_Result.flat_map (function
-       | `RSA priv_key -> Ok (make_priv_rsa ?use priv_key)
-       | `P256 priv_key -> Ok (make_priv_es256 ?use priv_key)
-       | `P521 priv_key -> Ok (make_priv_es512 ?use priv_key)
-       | _ -> Error `Not_rsa)
+  |> U_Result.flat_map (of_priv_x509 ?use)
 
 let to_priv_pem (jwk : priv t) =
   match jwk with
   | Rsa_priv rsa ->
       Ok (X509.Private_key.encode_pem (`RSA rsa.key) |> Cstruct.to_string)
-  | _ -> Error `Not_rsa
-
-let of_priv_x509 ?use x509 : (priv t, [> `Not_rsa ]) result =
-  match x509 with
-  | `RSA priv_key -> Ok (make_priv_rsa ?use priv_key)
-  | `P256 priv_key -> Ok (make_priv_es256 ?use priv_key)
-  | `P384 priv_key -> Ok (make_priv_es384 ?use priv_key)
-  | `P521 priv_key -> Ok (make_priv_es512 ?use priv_key)
-  | _ -> Error (`Msg "key type not supported")
-
-let of_pub_x509 ?use (x509 : X509.Public_key.t) :
-    (public t, [> `Not_rsa ]) result =
-  match x509 with
-  | `RSA public_key -> Ok (make_pub_rsa ?use public_key)
-  | `P256 public_key -> Ok (make_pub_es256 ?use public_key)
-  | `P384 public_key -> Ok (make_pub_es384 ?use public_key)
-  | `P521 public_key -> Ok (make_pub_es512 ?use public_key)
-  | _ -> Error (`Msg "key type not supported")
+  | Es256_priv ec ->
+      Ok (X509.Private_key.encode_pem (`P256 ec.key) |> Cstruct.to_string)
+  | Es384_priv ec ->
+      Ok (X509.Private_key.encode_pem (`P384 ec.key) |> Cstruct.to_string)
+  | Es512_priv ec ->
+      Ok (X509.Private_key.encode_pem (`P521 ec.key) |> Cstruct.to_string)
+  | _ -> Error `Unsupported_kty
 
 let oct_to_json (oct : oct) =
   let values =
