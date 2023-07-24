@@ -3,7 +3,10 @@ opam-version: "2.0"
 synopsis: "JOSE implementation for OCaml and ReasonML"
 description:
   "JavaScript Object Signing and Encryption built ontop of pure OCaml libs"
-maintainer: ["ulrik.strid@outlook.com"]
+maintainer: [
+  "Ulrik Strid <ulrik.strid@outlook.com>"
+  "Antonio Nuno Monteiro <anmonteiro@gmail.com>"
+]
 authors: ["Ulrik Strid"]
 license: "MIT"
 homepage: "https://ulrikstrid.github.io/reason-jose"
@@ -21,7 +24,7 @@ depends: [
   "yojson" {>= "1.6.0"}
   "zarith"
   "ptime"
-  "mirage-crypto-rng" {with-test & < "0.11.0"}
+  "mirage-crypto-rng" {with-test & >= "0.11.0"}
   "containers" {with-test}
   "bisect_ppx" {with-test}
   "alcotest" {with-test}
