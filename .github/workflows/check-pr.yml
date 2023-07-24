@@ -45,12 +45,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: cachix/install-nix-action@v15
+      - uses: cachix/install-nix-action@v22
         with:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - uses: cachix/cachix-action@v10
+      - uses: cachix/cachix-action@v12
         with:
           name: anmonteiro
 
