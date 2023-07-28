@@ -18,7 +18,7 @@ let payload_to_string payload =
 
 let payload_of_string payload_str =
   let payload = U_Base64.url_decode payload_str in
-  U_Result.map Yojson.Safe.from_string payload
+  Result.map Yojson.Safe.from_string payload
 
 type t = {
   header : Header.t;
@@ -66,7 +66,7 @@ let to_string ?serialization t =
   let jws = to_jws t in
   Jws.to_string ?serialization jws
 
-let unsafe_of_string token = Jws.of_string token |> U_Result.map of_jws
+let unsafe_of_string token = Jws.of_string token |> Result.map of_jws
 
 let check_expiration ~(now : Ptime.t) t =
   let module Json = Yojson.Safe.Util in
@@ -83,7 +83,7 @@ let check_expiration ~(now : Ptime.t) t =
   | None -> Ok t
 
 let validate_signature (type a) ~(jwk : a Jwk.t) (t : t) : (t, 'error) result =
-  Jws.validate ~jwk (to_jws t) |> U_Result.map of_jws
+  Jws.validate ~jwk (to_jws t) |> Result.map of_jws
 
 let validate (type a) ~(jwk : a Jwk.t) ~now (t : t) : (t, 'error) result =
   match validate_signature ~jwk t with
@@ -91,7 +91,7 @@ let validate (type a) ~(jwk : a Jwk.t) ~now (t : t) : (t, 'error) result =
   | Error e -> Error e
 
 let of_string ~jwk ~now s =
-  U_Result.bind (unsafe_of_string s) (validate ~jwk ~now)
+  Result.bind (unsafe_of_string s) (validate ~jwk ~now)
 
 let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
   let header =
@@ -104,5 +104,5 @@ let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
     with _ -> Error (`Msg "Can't serialize payload")
   in
   match payload with
-  | Ok payload -> Jws.sign ~header ~payload jwk |> U_Result.map of_jws
+  | Ok payload -> Jws.sign ~header ~payload jwk |> Result.map of_jws
   | Error e -> Error e

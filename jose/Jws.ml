@@ -16,9 +16,10 @@ let of_compact_string token =
   | [ header_str; payload_str; signature ] ->
       let header = Header.of_string header_str in
       let payload = payload_str |> U_Base64.url_decode in
-      U_Result.both header payload
-      |> U_Result.map (fun (header, payload) ->
-             { header; raw_header = header_str; payload; signature })
+      (match header, payload with
+      | Ok header, Ok payload ->
+          Ok { header; raw_header = header_str; payload; signature }
+      | Error e, _ | _, Error e -> Error e)
   | _ -> Error (`Msg "token didn't include header, payload or signature")
 
 let of_json_string token =
@@ -26,9 +27,11 @@ let of_json_string token =
     let module Json = Yojson.Safe.Util in
     let json = Yojson.Safe.from_string token in
     let payload =
-      Json.member "payload" json |> Json.to_string_option
-      |> Option.to_result ~none:(`Msg "no payload")
-      |> U_Result.flat_map U_Base64.url_decode
+      let payload =
+        Json.member "payload" json |> Json.to_string_option
+        |> Option.to_result ~none:(`Msg "no payload")
+      in
+      Result.bind payload U_Base64.url_decode
     in
 
     match (payload, Json.member "signature" json |> Json.to_string_option) with
@@ -36,7 +39,7 @@ let of_json_string token =
         let protected = Json.member "protected" json |> Json.to_string in
         Ok
           {
-            header = Header.of_string protected |> U_Result.get_exn;
+            header = Header.of_string protected |> Result.get_ok;
             raw_header = protected;
             payload;
             signature;
@@ -101,18 +104,18 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str str =
       | None -> Error `Invalid_signature
       | Some message -> Ok message)
   | Jwk.Oct jwk ->
-      Jwk.oct_to_sign_key jwk
-      |> U_Result.flat_map (fun key ->
-             let computed_signature =
-               Mirage_crypto.Hash.SHA256.hmac ~key (Cstruct.of_string input_str)
-             in
-             (* From RFC7518§3.2:
-              *   The comparison of the computed HMAC value to the JWS Signature
-              *   value MUST be done in a constant-time manner to thwart timing
-              *   attacks. *)
-             if Eqaf_cstruct.equal str computed_signature then
-               Ok computed_signature
-             else Error `Invalid_signature)
+      let key = Jwk.oct_to_sign_key jwk in
+      Result.bind key (fun key ->
+        let computed_signature =
+          Mirage_crypto.Hash.SHA256.hmac ~key (Cstruct.of_string input_str)
+        in
+        (* From RFC7518§3.2:
+         *   The comparison of the computed HMAC value to the JWS Signature
+         *   value MUST be done in a constant-time manner to thwart timing
+         *   attacks. *)
+        if Eqaf_cstruct.equal str computed_signature then
+          Ok computed_signature
+        else Error `Invalid_signature)
   | Jwk.Es256_pub pub_jwk ->
       let r, s = Cstruct.split str 32 in
       let message =
@@ -177,25 +180,27 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str str =
 let verify_internal (type a) ~(jwk : a Jwk.t) t =
   let payload_str = U_Base64.url_encode_string t.payload in
   let input_str = Printf.sprintf "%s.%s" t.raw_header payload_str in
-  U_Base64.url_decode t.signature
-  |> U_Result.map Cstruct.of_string
-  |> U_Result.flat_map (verify_jwk ~jwk ~input_str)
+  let unverified_jwk =
+    U_Base64.url_decode t.signature |> Result.map Cstruct.of_string
+  in
+  Result.bind unverified_jwk (verify_jwk ~jwk ~input_str)
 
 let validate (type a) ~(jwk : a Jwk.t) t =
   let header = t.header in
-  (match header.alg with
-  | `RS256 -> Ok header.alg
-  | `HS256 -> Ok header.alg
-  | `ES256 -> Ok header.alg
-  | `ES384 -> Ok header.alg
-  | `ES512 -> Ok header.alg
-  | `EdDSA -> Ok header.alg
-  | `Unsupported _ | `RSA_OAEP | `RSA1_5 | `None ->
-      Error (`Msg "alg not supported for signing"))
-  |> U_Result.flat_map (fun _alg ->
-         match verify_internal ~jwk t with
-         | Ok _sig -> Ok t
-         | Error e -> Error e)
+  let alg = match header.alg with
+    | `RS256 -> Ok header.alg
+    | `HS256 -> Ok header.alg
+    | `ES256 -> Ok header.alg
+    | `ES384 -> Ok header.alg
+    | `ES512 -> Ok header.alg
+    | `EdDSA -> Ok header.alg
+    | `Unsupported _ | `RSA_OAEP | `RSA1_5 | `None ->
+        Error (`Msg "alg not supported for signing")
+  in
+  Result.bind alg (fun _alg ->
+    match verify_internal ~jwk t with
+    | Ok _sig -> Ok t
+    | Error e -> Error e)
 
 (* Assumes a well formed header. *)
 let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
@@ -240,7 +245,7 @@ let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
           | `Digest _ -> raise (Invalid_argument "Digest"))
     | Jwk.Oct oct ->
         Jwk.oct_to_sign_key oct
-        |> U_Result.map (fun key -> function
+        |> Result.map (fun key -> function
              | `Message x -> Mirage_crypto.Hash.SHA256.hmac ~key x
              | `Digest _ -> raise (Invalid_argument "Digest"))
   in
