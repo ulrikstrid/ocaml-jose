@@ -8,7 +8,7 @@ module Util = struct
   let get_component ?(pad = false) e =
     U_Base64.url_decode ~pad e
     |> Result.map (fun x ->
-           U_String.pad 8 ~c:'\000' x |> U_String.rev |> Z.of_bits)
+           U_String.pad ~len:8 ~c:'\000' x |> U_String.rev |> Z.of_bits)
 
   let kid_of_json json =
     Yojson.Safe.to_string json |> Cstruct.of_string

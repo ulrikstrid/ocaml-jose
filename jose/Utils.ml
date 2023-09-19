@@ -8,15 +8,15 @@ end
 
 module U_String = struct
   let rev s =
-    let len = Astring.String.length s in
-    Astring.String.mapi (fun i _ -> s.[len - (i + 1)]) s
+    let len = String.length s in
+    String.mapi (fun i _ -> s.[len - (i + 1)]) s
 
-  let pad ~c length s =
-    let len = Astring.String.length s in
-    if len >= length then s
+  let pad ~c ~len:pad_length s =
+    let len = String.length s in
+    if len >= pad_length then s
     else
-      let diff = length - len in
-      Astring.String.v ~len:length (fun i ->
+      let diff = pad_length - len in
+      Astring.String.v ~len:pad_length (fun i ->
           if i < diff then c else s.[i - diff])
 
   let trim_leading_null s =
@@ -24,14 +24,14 @@ module U_String = struct
 end
 
 module U_Base64 = struct
-  let url_encode_string ?pad payload =
-    Base64.encode_string ?pad ~alphabet:Base64.uri_safe_alphabet payload
+  let url_encode_string ?(pad=false) payload =
+    Base64.encode_string ~pad ~alphabet:Base64.uri_safe_alphabet payload
 
-  let url_encode ?pad ?off ?len payload =
-    Base64.encode ?pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
+  let url_encode ?(pad=false) ?off ?len payload =
+    Base64.encode ~pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
 
-  let url_decode ?pad ?off ?len payload =
-    Base64.decode ?pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
+  let url_decode ?(pad=false) ?off ?len payload =
+    Base64.decode ~pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
 end
 
 module RJson = struct
