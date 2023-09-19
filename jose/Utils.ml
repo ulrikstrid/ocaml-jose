@@ -18,14 +18,6 @@ module U_String = struct
       let diff = length - len in
       Astring.String.v ~len:length (fun i ->
           if i < diff then c else s.[i - diff])
-  (* let pad ~c ~len:pad_length s = *)
-    (* let len = String.length s in *)
-    (* if pad_length >= len then s *)
-    (* else *)
-      (* let diff = len - pad_length in *)
-      (* Astring.String.v ~len:pad_length (fun i -> *)
-          (* if i < diff then c else s.[i - diff]) *)
-
 
   let trim_leading_null s =
     Astring.String.trim ~drop:(function '\000' -> true | _ -> false) s
