@@ -69,8 +69,8 @@ let of_json json =
         jwk =
           json |> Json.member "jwk"
           |> Json.to_option (fun jwk_json ->
-                 Jwk.of_pub_json jwk_json |> U_Result.to_opt)
-          |> U_Opt.flatten;
+                 Jwk.of_pub_json jwk_json |> Result.to_option)
+          |> Option.join;
         kid = json |> Json.member "kid" |> Json.to_string_option;
         x5t = json |> Json.member "x5t" |> Json.to_string_option;
         x5t256 = json |> Json.member "x5t#256" |> Json.to_string_option;
@@ -78,7 +78,7 @@ let of_json json =
         cty = json |> Json.member "cty" |> Json.to_string_option;
         enc =
           json |> Json.member "enc" |> Json.to_string_option
-          |> U_Opt.map Jwa.enc_of_string;
+          |> Option.map Jwa.enc_of_string;
         extra = get_extra_headers json;
       }
   with Json.Type_error (s, _) -> Error (`Msg s)
@@ -89,21 +89,22 @@ let to_json t =
       RJson.to_json_string_opt "typ" t.typ;
       Some ("alg", Jwa.alg_to_json t.alg);
       RJson.to_json_string_opt "kid" t.kid;
-      U_Opt.map Jwk.to_pub_json t.jwk |> U_Opt.map (fun jwk -> ("jwk", jwk));
+      Option.map Jwk.to_pub_json t.jwk |> Option.map (fun jwk -> ("jwk", jwk));
       RJson.to_json_string_opt "x5t" t.x5t;
       RJson.to_json_string_opt "x5t#256" t.x5t256;
       RJson.to_json_string_opt "cty" t.cty;
       t.enc
-      |> U_Opt.map Jwa.enc_to_string
-      |> U_Opt.map (fun enc -> ("enc", `String enc));
+      |> Option.map Jwa.enc_to_string
+      |> Option.map (fun enc -> ("enc", `String enc));
     ]
   in
-  `Assoc (U_List.filter_map (fun x -> x) values @ t.extra)
+  `Assoc (List.filter_map Fun.id values @ t.extra)
 
 let of_string header_str =
-  U_Base64.url_decode header_str
-  |> U_Result.flat_map (fun decoded_header ->
-         Yojson.Safe.from_string decoded_header |> of_json)
+  let s = U_Base64.url_decode header_str
+  in
+  Result.bind s (fun decoded_header ->
+    Yojson.Safe.from_string decoded_header |> of_json)
 
 let to_string header =
   to_json header |> Yojson.Safe.to_string |> U_Base64.url_encode_string
