@@ -9,7 +9,7 @@ type t = {
   aad : string option;
 }
 
-module RSA_OAEP = Mirage_crypto_pk.Rsa.OAEP (Mirage_crypto.Hash.SHA1)
+module RSA_OAEP = Mirage_crypto_pk.Rsa.OAEP (Digestif.SHA1)
 
 (*
 Steps to create a JWE
@@ -31,17 +31,15 @@ let make_cek (header : Header.t) =
   | Some enc ->
       let key_length = Jwa.enc_to_length enc in
       Mirage_crypto_rng.generate (key_length / 8)
-      |> Cstruct.to_string |> Result.ok
+      |> Result.ok
   | None -> Error `Missing_enc
 
 let make_iv (header : Header.t) =
   match header.alg with
   | `RSA_OAEP ->
-      Mirage_crypto_rng.generate Mirage_crypto.Cipher_block.AES.GCM.block_size
-      |> Cstruct.to_string |> Result.ok
+    Ok (Mirage_crypto_rng.generate Mirage_crypto.AES.GCM.block_size)
   | `RSA1_5 ->
-      Mirage_crypto_rng.generate Mirage_crypto.Cipher_block.AES.CBC.block_size
-      |> Cstruct.to_string |> Result.ok
+    Ok (Mirage_crypto_rng.generate Mirage_crypto.AES.CBC.block_size)
   | _ -> Error `Unsupported_alg
 
 let make ~header payload =
@@ -53,47 +51,46 @@ let make ~header payload =
     Ok { header; cek; iv; aad; payload }))
 
 let encrypt_payload ?enc ~cek ~iv ~aad payload =
-  let iv = Cstruct.of_string iv in
   match enc with
   | Some `A128CBC_HS256 ->
       (* RFC 7516 appendix B.1: first 128 bit hmac, last 128 bit aes *)
       let hmac_key, aes_key =
-        Cstruct.(
-          split (of_string cek) Mirage_crypto.Cipher_block.AES.CBC.block_size)
+        U_String.split cek Mirage_crypto.AES.CBC.block_size
       in
-      let key = Mirage_crypto.Cipher_block.AES.CBC.of_secret aes_key in
+      let key = Mirage_crypto.AES.CBC.of_secret aes_key in
       (* B.2 encryption in CBC mode *)
-      Mirage_crypto.Cipher_block.AES.CBC.encrypt ~key ~iv
+      Mirage_crypto.AES.CBC.encrypt ~key ~iv
         (Pkcs7.pad
-           (Cstruct.of_string payload)
-           Mirage_crypto.Cipher_block.AES.CBC.block_size)
+           payload
+           Mirage_crypto.AES.CBC.block_size
+           )
       |> fun data ->
       (* B.5 input to HMAC computation *)
       let hmac_input =
         (* B.3 64 bit big-endian AAD length (in bits!) *)
-        let aal = Cstruct.create 8 in
-        Cstruct.BE.set_uint64 aal 0 Int64.(mul 8L (of_int (String.length aad)));
-        Cstruct.(concat [ of_string aad; iv; data; aal ])
+        let aal = Bytes.create 8 in
+        Bytes.set_int64_be aal 0 Int64.(mul 8L (of_int (String.length aad)));
+        String.concat "" [ aad; iv; data; Bytes.unsafe_to_string aal ]
       in
       let computed_auth_tag =
-        let full = Mirage_crypto.Hash.SHA256.hmac ~key:hmac_key hmac_input in
+        let full =
+          Digestif.SHA256.hmac_string ~key:hmac_key hmac_input
+          |> Digestif.SHA256.to_raw_string
+        in
         (* B.7 truncate to 128 bit *)
-        Cstruct.sub full 0 16 |> Cstruct.to_string
+        String.sub full 0 16
       in
-      Ok (Cstruct.to_string data, computed_auth_tag)
+      Ok (data, computed_auth_tag)
   | Some `A256GCM ->
-      let module GCM = Mirage_crypto.Cipher_block.AES.GCM in
-      let cek = Cstruct.of_string cek in
+      let module GCM = Mirage_crypto.AES.GCM in
       let key = GCM.of_secret cek in
-      let adata = Cstruct.of_string aad in
-      GCM.authenticate_encrypt ~key ~nonce:iv ~adata (Cstruct.of_string payload)
+      let adata = aad in
+      GCM.authenticate_encrypt ~key ~nonce:iv ~adata payload
       |> fun cdata ->
       let cipher, tag_data =
-        Cstruct.split cdata (Cstruct.length cdata - GCM.tag_size)
+        U_String.split cdata (String.length cdata - GCM.tag_size)
       in
-      let ciphertext = Cstruct.to_string cipher in
-      let tag_string = Cstruct.to_string tag_data in
-      Ok (ciphertext, tag_string)
+      Ok (cipher, tag_data)
   | None -> Error `Missing_enc
   | _ -> Error `Unsupported_enc
 
@@ -114,16 +111,11 @@ let encrypt_cek (type a) alg (cek : string) ~(jwk : a Jwk.t) =
   Result.bind key (fun key ->
     match alg with
     | `RSA1_5 ->
-        let ecek =
-          cek |> Cstruct.of_string
-          |> Mirage_crypto_pk.Rsa.PKCS1.encrypt ~key
-          |> Cstruct.to_string
-        in
-        Ok ecek
+      let ecek = Mirage_crypto_pk.Rsa.PKCS1.encrypt ~key cek in
+      Ok ecek
     | `RSA_OAEP ->
-        let cek = Cstruct.of_string cek in
-        let jek = RSA_OAEP.encrypt ~key cek |> Cstruct.to_string in
-        Ok jek
+      let jek = RSA_OAEP.encrypt ~key cek in
+      Ok jek
     | _ -> Error `Invalid_alg)
 
 let encrypt (type a) ~(jwk : a Jwk.t) t =
@@ -150,71 +142,61 @@ let encrypt (type a) ~(jwk : a Jwk.t) t =
 
 let decrypt_cek alg str ~(jwk : Jwk.priv Jwk.t) =
   let of_opt_cstruct = function
-    | Some c -> Ok (Cstruct.to_string c)
+    | Some c -> Ok c
     | None -> Error `Decrypt_cek_failed
   in
   match (alg, jwk) with
   | `RSA1_5, Jwk.Rsa_priv rsa ->
       let decoded = Utils.U_Base64.url_decode str
-      |> Result.map (fun decoded ->
-          Cstruct.of_string decoded
-          |> Mirage_crypto_pk.Rsa.PKCS1.decrypt ~key:rsa.key)
+      |> Result.map (Mirage_crypto_pk.Rsa.PKCS1.decrypt ~key:rsa.key)
       in
       Result.bind decoded of_opt_cstruct
   | `RSA_OAEP, Jwk.Rsa_priv rsa ->
       let decoded =
         Utils.U_Base64.url_decode str
-        |> Result.map (fun decoded ->
-            Cstruct.of_string decoded
-            |> RSA_OAEP.decrypt ~key:rsa.key)
+        |> Result.map (RSA_OAEP.decrypt ~key:rsa.key)
       in
       Result.bind decoded of_opt_cstruct
   | _ -> Error `Invalid_JWK
 
 (* Move to Jwa? *)
 let decrypt_ciphertext enc ~cek ~iv ~auth_tag ~aad ciphertext =
-  let iv = Cstruct.of_string iv in
   let encrypted = U_Base64.url_decode ciphertext in
   Result.bind encrypted (fun encrypted ->
-    let encrypted = Cstruct.of_string encrypted in
     match enc with
     | Some `A128CBC_HS256 ->
         (* RFC 7516 appendix B.1: first 128 bit hmac, last 128 bit aes *)
-        let hmac_key, aes_key = Cstruct.(split (of_string cek) 16) in
-        let key = Mirage_crypto.Cipher_block.AES.CBC.of_secret aes_key in
+        let hmac_key, aes_key = U_String.split cek 16 in
+        let key = Mirage_crypto.AES.CBC.of_secret aes_key in
 
         (* B.5 input to HMAC computation *)
         let hmac_input =
           (* B.3 64 bit big-endian AAD length (in bits!) *)
-          let aal = Cstruct.create 8 in
-          Cstruct.BE.set_uint64 aal 0 Int64.(mul 8L (of_int (String.length aad)));
-          Cstruct.(concat [ of_string aad; iv; encrypted; aal ])
-          in
+          let aal = Bytes.create 8 in
+          Bytes.set_int64_be aal 0 Int64.(mul 8L (of_int (String.length aad)));
+          String.concat "" [ aad; iv; encrypted; Bytes.unsafe_to_string aal ]
+        in
         let computed_auth_tag =
-          let full = Mirage_crypto.Hash.SHA256.hmac ~key:hmac_key hmac_input in
+          let full = Digestif.SHA256.hmac_string ~key:hmac_key hmac_input in
           (* B.7 truncate to 128 bit *)
-          Cstruct.sub full 0 16 |> Cstruct.to_string
+          String.sub (Digestif.SHA256.to_raw_string full) 0 16
           in
         if not (String.equal computed_auth_tag auth_tag) then
           Error (`Msg "invalid auth tag")
         else
           (* B.2 encryption in CBC mode *)
-          let data =
-            Mirage_crypto.Cipher_block.AES.CBC.decrypt ~key ~iv encrypted
-            |> Pkcs7.unpad
-          in
-          Result.bind data (fun data -> Ok (Cstruct.to_string data))
+          Mirage_crypto.AES.CBC.decrypt ~key ~iv encrypted
+          |> Pkcs7.unpad
     | Some `A256GCM ->
-        let module GCM = Mirage_crypto.Cipher_block.AES.GCM in
-        let cek = Cstruct.of_string cek in
+        let module GCM = Mirage_crypto.AES.GCM in
         let key = GCM.of_secret cek in
-        let adata = Cstruct.of_string aad in
-        let encrypted = Cstruct.append encrypted (Cstruct.of_string auth_tag) in
-        Mirage_crypto.Cipher_block.AES.GCM.authenticate_decrypt ~key ~nonce:iv
+        let adata = aad in
+        let encrypted = encrypted ^ auth_tag in
+        Mirage_crypto.AES.GCM.authenticate_decrypt ~key ~nonce:iv
           ~adata encrypted
     |> fun message ->
         message
-        |> Option.map (fun x -> Ok (Cstruct.to_string x))
+        |> Option.map (fun x -> Ok x)
         |> Option.value ~default:(Error (`Msg "invalid auth tag"))
         | _ -> Error (`Msg "unsupported encryption"))
 

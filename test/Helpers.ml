@@ -50,4 +50,4 @@ let url_encode_string ?(pad = false) payload =
   Base64.encode_string ~pad ~alphabet:Base64.uri_safe_alphabet payload
 
 let url_encode_cstruct payload =
-  payload |> Cstruct.to_string |> url_encode_string
+  payload |> url_encode_string

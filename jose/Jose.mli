@@ -219,7 +219,7 @@ module Jwk : sig
       symetric key. *)
 
   (** {1 Utils }
-  
+
   Utils to get different data from a JWK *)
 
   val get_kid : 'a t -> string option
@@ -232,7 +232,7 @@ module Jwk : sig
   (** [get_alg jwk] is a convencience function to get the algorithm *)
 
   val get_thumbprint :
-    Mirage_crypto.Hash.hash -> 'a t -> (Cstruct.t, [> `Unsafe ]) result
+    Digestif.hash' -> 'a t -> (string, [> `Unsafe ]) result
   (** [get_thumbprint hash jwk] calculates the thumbprint of [jwk] with [hash],
       following {{: https://tools.ietf.org/html/rfc7638 } RFC 7638 }.
 
@@ -280,7 +280,7 @@ module Header : sig
     extra : (string * Yojson.Safe.t) list;
   }
   (** The [header] has the following properties:
-  
+
   - [alg] {! Jwa.alg }
   - [jwk] JSON Web Key
   - [kid] Key ID - We currently always expect this to be there, this can change in the future
@@ -288,7 +288,7 @@ module Header : sig
   - [x5t#S256] X.509 Certificate SHA-256 Thumbprint
   - [typ] Type
   - [cty] Content Type Not implemented
-  
+
       {{: https://tools.ietf.org/html/rfc7515#section-4.1 } Link to RFC }
 
       {{: https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-header-parameters } Complete list of registered header parameters} *)

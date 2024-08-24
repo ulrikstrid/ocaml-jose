@@ -5,6 +5,7 @@
   astring
   eqaf
   yojson
+  digestif
   mirage-crypto
   mirage-crypto-pk
   mirage-crypto-ec

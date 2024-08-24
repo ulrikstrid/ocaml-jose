@@ -6,8 +6,9 @@ let get_ok_thumbprint jwk = get_thumbprint jwk |> CCResult.get_exn
 
 let public_rsa_thumbprint () =
   let hashable_reference =
-    Fixtures.public_jwk_string_rfc_7638_hashable |> Cstruct.of_string
-    |> Mirage_crypto.Hash.SHA256.digest |> url_encode_cstruct
+    Fixtures.public_jwk_string_rfc_7638_hashable
+    |> Digestif.SHA256.digest_string
+    |> Digestif.SHA256.to_raw_string |> url_encode_cstruct
   in
   let hashed_reference = Fixtures.public_jwk_string_rfc_7638_hashed in
   let thumbprint =
