@@ -50,12 +50,11 @@ let a_3 () =
   let jwk = Jwk.of_pub_json_string ed25519_public_json in
   check_result_string "Correct thumbprint"
     (Ok "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k")
-    (CCResult.flat_map get_thumbprint jwk |> CCResult.map url_encode_cstruct);
+    (CCResult.flat_map get_thumbprint jwk |> CCResult.map url_encode_string);
   let priv_jwk = Jwk.of_priv_json_string ed25519_private_json in
   check_result_string "Correct thumbprint from private"
     (Ok "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k")
-    (CCResult.flat_map get_thumbprint priv_jwk
-    |> CCResult.map url_encode_cstruct)
+    (CCResult.flat_map get_thumbprint priv_jwk |> CCResult.map url_encode_string)
 
 let a_4 () =
   let jwk = Jwk.of_priv_json_string ed25519_private_json in

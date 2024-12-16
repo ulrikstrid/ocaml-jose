@@ -23,17 +23,17 @@ module U_String = struct
     Astring.String.trim ~drop:(function '\000' -> true | _ -> false) s
 
   let split s len =
-    String.sub s 0 len, String.sub s len (String.length s - len)
+    (String.sub s 0 len, String.sub s len (String.length s - len))
 end
 
 module U_Base64 = struct
-  let url_encode_string ?(pad=false) payload =
+  let url_encode_string ?(pad = false) payload =
     Base64.encode_string ~pad ~alphabet:Base64.uri_safe_alphabet payload
 
-  let url_encode ?(pad=false) ?off ?len payload =
+  let url_encode ?(pad = false) ?off ?len payload =
     Base64.encode ~pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
 
-  let url_decode ?(pad=false) ?off ?len payload =
+  let url_decode ?(pad = false) ?off ?len payload =
     Base64.decode ~pad ~alphabet:Base64.uri_safe_alphabet ?off ?len payload
 end
 
@@ -67,4 +67,3 @@ module Pkcs7 = struct
     in
     if check 0 then Ok data else Error (`Msg "bad padding")
 end
-

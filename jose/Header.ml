@@ -101,10 +101,9 @@ let to_json t =
   `Assoc (List.filter_map Fun.id values @ t.extra)
 
 let of_string header_str =
-  let s = U_Base64.url_decode header_str
-  in
+  let s = U_Base64.url_decode header_str in
   Result.bind s (fun decoded_header ->
-    Yojson.Safe.from_string decoded_header |> of_json)
+      Yojson.Safe.from_string decoded_header |> of_json)
 
 let to_string header =
   to_json header |> Yojson.Safe.to_string |> U_Base64.url_encode_string

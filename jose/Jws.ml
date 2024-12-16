@@ -13,10 +13,10 @@ type serialization = [ `Compact | `General | `Flattened ]
 
 let of_compact_string token =
   String.split_on_char '.' token |> function
-  | [ header_str; payload_str; signature ] ->
+  | [ header_str; payload_str; signature ] -> (
       let header = Header.of_string header_str in
       let payload = payload_str |> U_Base64.url_decode in
-      (match header, payload with
+      match (header, payload) with
       | Ok header, Ok payload ->
           Ok { header; raw_header = header_str; payload; signature }
       | Error e, _ | _, Error e -> Error e)
@@ -96,7 +96,8 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
   match jwk with
   | Jwk.Rsa_priv jwk -> (
       let pub_jwk = Jwk.pub_of_priv_rsa jwk in
-      Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:pub_jwk.key signature |> function
+      Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:pub_jwk.key signature
+      |> function
       | None -> Error `Invalid_signature
       | Some message -> Ok message)
   | Jwk.Rsa_pub jwk -> (
@@ -106,22 +107,20 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
   | Jwk.Oct jwk ->
       let key = Jwk.oct_to_sign_key jwk in
       Result.bind key (fun key ->
-        let computed_signature =
-          Digestif.SHA256.hmac_string ~key input_str
-          |> Digestif.SHA256.to_raw_string
-      in
-        (* From RFC7518§3.2:
-         *   The comparison of the computed HMAC value to the JWS Signature
-         *   value MUST be done in a constant-time manner to thwart timing
-         *   attacks. *)
-        if Eqaf.equal signature computed_signature then
-          Ok computed_signature
-        else Error `Invalid_signature)
+          let computed_signature =
+            Digestif.SHA256.hmac_string ~key input_str
+            |> Digestif.SHA256.to_raw_string
+          in
+          (* From RFC7518§3.2:
+           *   The comparison of the computed HMAC value to the JWS Signature
+           *   value MUST be done in a constant-time manner to thwart timing
+           *   attacks. *)
+          if Eqaf.equal signature computed_signature then Ok computed_signature
+          else Error `Invalid_signature)
   | Jwk.Es256_pub pub_jwk ->
       let r, s = U_String.split signature 32 in
       let message =
-        Digestif.SHA256.digest_string input_str
-        |> Digestif.SHA256.to_raw_string
+        Digestif.SHA256.digest_string input_str |> Digestif.SHA256.to_raw_string
       in
       if Mirage_crypto_ec.P256.Dsa.verify ~key:pub_jwk.key (r, s) message then
         Ok signature
@@ -129,8 +128,7 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
   | Jwk.Es256_priv jwk ->
       let r, s = U_String.split signature 32 in
       let message =
-        Digestif.SHA256.digest_string input_str
-        |> Digestif.SHA256.to_raw_string
+        Digestif.SHA256.digest_string input_str |> Digestif.SHA256.to_raw_string
       in
       let pub_jwk = Jwk.pub_of_priv_es256 jwk in
       if Mirage_crypto_ec.P256.Dsa.verify ~key:pub_jwk.key (r, s) message then
@@ -139,8 +137,7 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
   | Jwk.Es384_pub pub_jwk ->
       let r, s = U_String.split signature 48 in
       let message =
-        Digestif.SHA384.digest_string input_str
-        |> Digestif.SHA384.to_raw_string
+        Digestif.SHA384.digest_string input_str |> Digestif.SHA384.to_raw_string
       in
       if Mirage_crypto_ec.P384.Dsa.verify ~key:pub_jwk.key (r, s) message then
         Ok signature
@@ -148,8 +145,7 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
   | Jwk.Es384_priv jwk ->
       let r, s = U_String.split signature 48 in
       let message =
-        Digestif.SHA384.digest_string input_str
-        |> Digestif.SHA384.to_raw_string
+        Digestif.SHA384.digest_string input_str |> Digestif.SHA384.to_raw_string
       in
       let pub_jwk = Jwk.pub_of_priv_es384 jwk in
       if Mirage_crypto_ec.P384.Dsa.verify ~key:pub_jwk.key (r, s) message then
@@ -158,8 +154,7 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
   | Jwk.Es512_pub pub_jwk ->
       let r, s = U_String.split signature 66 in
       let message =
-        Digestif.SHA512.digest_string input_str
-        |> Digestif.SHA512.to_raw_string
+        Digestif.SHA512.digest_string input_str |> Digestif.SHA512.to_raw_string
       in
       if Mirage_crypto_ec.P521.Dsa.verify ~key:pub_jwk.key (r, s) message then
         Ok signature
@@ -167,8 +162,7 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
   | Jwk.Es512_priv jwk ->
       let r, s = U_String.split signature 66 in
       let message =
-        Digestif.SHA512.digest_string input_str
-        |> Digestif.SHA512.to_raw_string
+        Digestif.SHA512.digest_string input_str |> Digestif.SHA512.to_raw_string
       in
       let pub_jwk = Jwk.pub_of_priv_es512 jwk in
       if Mirage_crypto_ec.P521.Dsa.verify ~key:pub_jwk.key (r, s) message then
@@ -181,7 +175,8 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
       else Error `Invalid_signature
   | Jwk.Ed25519_pub jwk ->
       let msg = input_str in
-      if Mirage_crypto_ec.Ed25519.verify ~key:jwk.key signature ~msg then Ok signature
+      if Mirage_crypto_ec.Ed25519.verify ~key:jwk.key signature ~msg then
+        Ok signature
       else Error `Invalid_signature
 
 let verify_internal (type a) ~(jwk : a Jwk.t) t =
@@ -192,7 +187,8 @@ let verify_internal (type a) ~(jwk : a Jwk.t) t =
 
 let validate (type a) ~(jwk : a Jwk.t) t =
   let header = t.header in
-  let alg = match header.alg with
+  let alg =
+    match header.alg with
     | `RS256 -> Ok header.alg
     | `HS256 -> Ok header.alg
     | `ES256 -> Ok header.alg
@@ -203,9 +199,7 @@ let validate (type a) ~(jwk : a Jwk.t) t =
         Error (`Msg "alg not supported for signing")
   in
   Result.bind alg (fun _alg ->
-    match verify_internal ~jwk t with
-    | Ok _sig -> Ok t
-    | Error e -> Error e)
+      match verify_internal ~jwk t with Ok _sig -> Ok t | Error e -> Error e)
 
 (* Assumes a well formed header. *)
 let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
@@ -256,10 +250,11 @@ let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
     | Jwk.Oct oct ->
         Jwk.oct_to_sign_key oct
         |> Result.map (fun key msg ->
-            match msg with
-            | `Message x ->
-              Digestif.SHA256.hmac_string ~key x |> Digestif.SHA256.to_raw_string
-            | `Digest _ -> raise (Invalid_argument "Digest"))
+               match msg with
+               | `Message x ->
+                   Digestif.SHA256.hmac_string ~key x
+                   |> Digestif.SHA256.to_raw_string
+               | `Digest _ -> raise (Invalid_argument "Digest"))
   in
   match sign_f with
   | Ok sign_f ->

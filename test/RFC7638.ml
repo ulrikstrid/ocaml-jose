@@ -7,8 +7,8 @@ let get_ok_thumbprint jwk = get_thumbprint jwk |> CCResult.get_exn
 let public_rsa_thumbprint () =
   let hashable_reference =
     Fixtures.public_jwk_string_rfc_7638_hashable
-    |> Digestif.SHA256.digest_string
-    |> Digestif.SHA256.to_raw_string |> url_encode_cstruct
+    |> Digestif.SHA256.digest_string |> Digestif.SHA256.to_raw_string
+    |> url_encode_string
   in
   let hashed_reference = Fixtures.public_jwk_string_rfc_7638_hashed in
   let thumbprint =
@@ -16,18 +16,18 @@ let public_rsa_thumbprint () =
     |> CCResult.get_exn |> get_ok_thumbprint
   in
   check_string "Hashes must match" hashable_reference
-    (url_encode_cstruct thumbprint);
+    (url_encode_string thumbprint);
   check_string "Hashes must match" hashed_reference
-    (url_encode_cstruct thumbprint)
+    (url_encode_string thumbprint)
 
 let private_rsa_thumbprint () =
   let private_thumbprint =
     Fixtures.private_jwk_string |> Jwk.of_priv_json_string |> CCResult.get_exn
-    |> get_ok_thumbprint |> url_encode_cstruct
+    |> get_ok_thumbprint |> url_encode_string
   in
   let public_thumbprint =
     Fixtures.public_jwk_string |> Jwk.of_pub_json_string |> CCResult.get_exn
-    |> get_ok_thumbprint |> url_encode_cstruct
+    |> get_ok_thumbprint |> url_encode_string
   in
   check_string "Hashes must match" public_thumbprint private_thumbprint
 
@@ -36,7 +36,7 @@ let symmetric_thumbprint () =
     Fixtures.oct_jwk_string |> Jwk.of_pub_json_string |> CCResult.get_exn
   in
   check_result_string "Errors must match" (Error `Unsafe)
-    (Result.map url_encode_cstruct @@ get_thumbprint jwk)
+    (Result.map url_encode_string @@ get_thumbprint jwk)
 
 let tests =
   List.map make_test_case
