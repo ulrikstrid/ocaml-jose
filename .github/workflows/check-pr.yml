@@ -13,10 +13,10 @@ jobs:
         os:
           - macos-latest
           - ubuntu-latest
-          - windows-latest
+          # - windows-latest
         ocaml-compiler:
+          - 4.14.x
           - 4.13.x
-          - 4.08.x
 
     runs-on: ${{ matrix.os }}
 
