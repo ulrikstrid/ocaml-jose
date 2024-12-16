@@ -1,3 +1,7 @@
+next
+--------------
+- Upgrade mirage-crypto and remove cstruct
+
 0.9.0
 --------------
 - Support all serialization formats, previously only the compact serialization was supported, now we support both general and flattened JSON format (by @ulrikstrid) 
