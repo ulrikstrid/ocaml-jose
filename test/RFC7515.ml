@@ -44,6 +44,9 @@ let payload_str =
 "http://example.com/is_root":true}|}
   |> payload_to_same
 
+let a_4_jws =
+  {|eyJhbGciOiJFUzUxMiJ9.UGF5bG9hZA.AWflgP1EaMjD8wn0_zbfv-ig7HqR_fIPutaspBmLdEA-4jq_lJSiXVScImGj9H15HwnQCV9rEqz_1IY7L07REF7rAGbY03ZbfpKy8sFRybi12kMjsgU8vGKHJPZl6BT9G930CnEfL7MpSJiZEpxO-CeMyQQFOxPvVh4N6n20NSK9Tlho|}
+
 open Helpers
 
 let jws_tests =
@@ -85,10 +88,8 @@ let jws_tests =
           |> CCResult.map (fun (jws : Jose.Jws.t) ->
                  payload_to_same jws.payload)
           |> check_result_string "Validated payload is correct" (Ok payload_str));
-      Alcotest.test_case "A.4" `Quick (fun () ->
-          let expected_str =
-            {|eyJhbGciOiJFUzUxMiJ9.UGF5bG9hZA.AdwMgeerwtHoh-l192l60hp9wAHZFVJbLfD_UxMi70cwnZOYaRI1bKPWROc-mZZqwqT2SI-KGDKB34XO0aw_7XdtAG8GaSwFKdCAPZgoXD2YBJZCPEX3xKpRwcdOO8KpEHwJjyqOgzDO7iKvU8vcnwNrmxYbSW9ERBXukOXolLzeO_Jn|}
-          in
+      Alcotest.test_case "A.4 - validate" `Quick (fun () ->
+          let expected_str = a_4_jws in
           let jwk =
             Jose.Jwk.of_priv_json_string ec_priv_json_es512 |> CCResult.get_exn
           in
@@ -96,6 +97,28 @@ let jws_tests =
           |> CCResult.flat_map (Jose.Jws.validate ~jwk)
           |> CCResult.map (fun (jws : Jose.Jws.t) -> jws.payload)
           |> check_result_string "Validated payload is correct" (Ok "Payload"));
+      Alcotest.test_case "A.4 - recreate JWS" `Quick (fun () ->
+          let expected_str = a_4_jws in
+          let jwk =
+            Jose.Jwk.of_priv_json_string ec_priv_json_es512 |> CCResult.get_exn
+          in
+          let header =
+            Jose.Header.
+              {
+                alg = `ES512;
+                jwk = None;
+                kid = None;
+                x5t = None;
+                x5t256 = None;
+                typ = None;
+                cty = None;
+                enc = None;
+                extra = [];
+              }
+          in
+          Jose.Jws.sign ~header ~payload:"Payload" jwk
+          |> CCResult.map Jose.Jws.to_string
+          |> check_result_string "Validated JWS is same" (Ok expected_str));
       (* We currently do not support `none` *)
       Alcotest.test_case "A.5" `Quick (fun () ->
           let expected_str =

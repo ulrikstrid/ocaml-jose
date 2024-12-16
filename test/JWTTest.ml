@@ -229,7 +229,7 @@ let jwt_suite, _ =
                 Jose.Jwt.sign
                   ~payload:
                     (`Assoc
-                      [ ("exp", `Int (Ptime.to_float_s exp |> int_of_float)) ])
+                       [ ("exp", `Int (Ptime.to_float_s exp |> int_of_float)) ])
                   jwk
               in
               let jwt = (CCResult.flat_map (Jose.Jwt.validate ~now ~jwk)) jwt in

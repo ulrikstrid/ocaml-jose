@@ -11,57 +11,54 @@ module Util = struct
            U_String.pad ~len:8 ~c:'\000' x |> U_String.rev |> Z.of_bits)
 
   let kid_of_json json =
-    Yojson.Safe.to_string json |> Cstruct.of_string
-    |> Mirage_crypto.Hash.SHA256.digest |> Cstruct.to_bytes |> Bytes.to_string
-    |> U_Base64.url_encode_string
+    Yojson.Safe.to_string json |> Digestif.SHA256.digest_string
+    |> Digestif.SHA256.to_raw_string |> U_Base64.url_encode_string
 
-  let get_JWK_x5t fingerprint =
-    fingerprint |> Cstruct.to_bytes |> Bytes.to_string
-    |> U_Base64.url_encode ~len:20
+  let get_JWK_x5t fingerprint = U_Base64.url_encode ~len:20 fingerprint
 
-  let get_ESXXX_x_y ~split_at ~pub_to_cstruct key =
-    let point = pub_to_cstruct key in
-    let x_cs, y_cs = Cstruct.(split (shift point 1) split_at) in
-    let x = x_cs |> Cstruct.to_string |> U_Base64.url_encode_string in
-    let y = y_cs |> Cstruct.to_string |> U_Base64.url_encode_string in
+  let get_ESXXX_x_y ~split_at ~pub_to_string key =
+    let point = pub_to_string key in
+    let x_cs, y_cs =
+      U_String.split (String.sub point 1 (String.length point - 1)) split_at
+    in
+    let x = x_cs |> U_Base64.url_encode_string in
+    let y = y_cs |> U_Base64.url_encode_string in
     (x, y)
 
-  let make_ESXXX_of_x_y ~pub_of_cstruct (x, y) =
-    let x = U_Base64.url_decode x |> Result.map Cstruct.of_string in
-    let y = U_Base64.url_decode y |> Result.map Cstruct.of_string in
-    match x,y with
+  let make_ESXXX_of_x_y ~pub_of_string (x, y) =
+    let x = U_Base64.url_decode x in
+    let y = U_Base64.url_decode y in
+    match (x, y) with
     | Ok x, Ok y ->
-      let four =
-        let cs = Cstruct.create 1 in
-        Cstruct.set_uint8 cs 0 4;
-        cs
-      in
-      let point = Cstruct.concat [ four; x; y ] in
-      pub_of_cstruct point
-      |> Result.get_ok
-      |> Result.ok
+        let four =
+          let cs = Bytes.create 1 in
+          Bytes.set_uint8 cs 0 4;
+          Bytes.unsafe_to_string cs
+        in
+        let point = String.concat "" [ four; x; y ] in
+        pub_of_string point |> Result.get_ok |> Result.ok
     | Error e, _ | _, Error e -> Error e
 
   let get_ES256_x_y =
     get_ESXXX_x_y ~split_at:32 (* 64 octets split in 2 *)
-      ~pub_to_cstruct:Mirage_crypto_ec.P256.Dsa.pub_to_cstruct
+      ~pub_to_string:Mirage_crypto_ec.P256.Dsa.pub_to_octets
 
   let make_ES256_of_x_y =
-    make_ESXXX_of_x_y ~pub_of_cstruct:Mirage_crypto_ec.P256.Dsa.pub_of_cstruct
+    make_ESXXX_of_x_y ~pub_of_string:Mirage_crypto_ec.P256.Dsa.pub_of_octets
 
   let get_ES384_x_y =
     get_ESXXX_x_y ~split_at:48 (* 96 octets split in 2 *)
-      ~pub_to_cstruct:Mirage_crypto_ec.P384.Dsa.pub_to_cstruct
+      ~pub_to_string:Mirage_crypto_ec.P384.Dsa.pub_to_octets
 
   let make_ES384_of_x_y =
-    make_ESXXX_of_x_y ~pub_of_cstruct:Mirage_crypto_ec.P384.Dsa.pub_of_cstruct
+    make_ESXXX_of_x_y ~pub_of_string:Mirage_crypto_ec.P384.Dsa.pub_of_octets
 
   let get_ES512_x_y =
     get_ESXXX_x_y ~split_at:66 (* 132 octets split in 2 *)
-      ~pub_to_cstruct:Mirage_crypto_ec.P521.Dsa.pub_to_cstruct
+      ~pub_to_string:Mirage_crypto_ec.P521.Dsa.pub_to_octets
 
   let make_ES512_of_x_y =
-    make_ESXXX_of_x_y ~pub_of_cstruct:Mirage_crypto_ec.P521.Dsa.pub_of_cstruct
+    make_ESXXX_of_x_y ~pub_of_string:Mirage_crypto_ec.P521.Dsa.pub_of_octets
 end
 
 type use = [ `Sig | `Enc | `Unsupported of string ]
@@ -260,7 +257,7 @@ let make_kid (type a) (t : a t) =
     | Ed25519_priv okt ->
         let x =
           Mirage_crypto_ec.Ed25519.pub_of_priv okt.key
-          |> Mirage_crypto_ec.Ed25519.pub_to_cstruct |> Cstruct.to_string
+          |> Mirage_crypto_ec.Ed25519.pub_to_octets
           |> U_Base64.url_encode_string
         in
         `Assoc
@@ -270,8 +267,8 @@ let make_kid (type a) (t : a t) =
         |> Util.kid_of_json
     | Ed25519_pub okt ->
         let x =
-          Mirage_crypto_ec.Ed25519.pub_to_cstruct okt.key
-          |> Cstruct.to_string |> U_Base64.url_encode_string
+          Mirage_crypto_ec.Ed25519.pub_to_octets okt.key
+          |> U_Base64.url_encode_string
         in
         `Assoc
           [
@@ -361,60 +358,42 @@ let of_pub_x509 ?use (x509 : X509.Public_key.t) :
   | _ -> Error `Unsupported_kty
 
 let of_pub_pem ?use pem : (public t, [> `Unsupported_kty ]) result =
-  let pem =
-    let pem_cs = Cstruct.of_string pem in
-    X509.Public_key.decode_pem pem_cs
-  in
-  Result.bind pem (fun pem -> of_pub_x509 ?use pem)
+  Result.bind (X509.Public_key.decode_pem pem) (of_pub_x509 ?use)
 
 let to_pub_pem (type a) (jwk : a t) =
   match jwk with
-  | Rsa_pub rsa ->
-      Ok (X509.Public_key.encode_pem (`RSA rsa.key) |> Cstruct.to_string)
+  | Rsa_pub rsa -> Ok (X509.Public_key.encode_pem (`RSA rsa.key))
   | Rsa_priv rsa ->
       rsa.key |> Mirage_crypto_pk.Rsa.pub_of_priv
       |> (fun key -> X509.Public_key.encode_pem (`RSA key))
-      |> Cstruct.to_string |> Result.ok
-  | Es256_pub ec ->
-      Ok (X509.Public_key.encode_pem (`P256 ec.key) |> Cstruct.to_string)
+      |> Result.ok
+  | Es256_pub ec -> Ok (X509.Public_key.encode_pem (`P256 ec.key))
   | Es256_priv ec ->
       ec.key |> Mirage_crypto_ec.P256.Dsa.pub_of_priv
-      |> (fun key ->
-           X509.Public_key.encode_pem (`P256 key) |> Cstruct.to_string)
+      |> (fun key -> X509.Public_key.encode_pem (`P256 key))
       |> Result.ok
-  | Es384_pub ec ->
-      Ok (X509.Public_key.encode_pem (`P384 ec.key) |> Cstruct.to_string)
+  | Es384_pub ec -> Ok (X509.Public_key.encode_pem (`P384 ec.key))
   | Es384_priv ec ->
       ec.key |> Mirage_crypto_ec.P384.Dsa.pub_of_priv
-      |> (fun key ->
-           X509.Public_key.encode_pem (`P384 key) |> Cstruct.to_string)
+      |> (fun key -> X509.Public_key.encode_pem (`P384 key))
       |> Result.ok
-  | Es512_pub ec ->
-      Ok (X509.Public_key.encode_pem (`P521 ec.key) |> Cstruct.to_string)
+  | Es512_pub ec -> Ok (X509.Public_key.encode_pem (`P521 ec.key))
   | Es512_priv ec ->
       ec.key |> Mirage_crypto_ec.P521.Dsa.pub_of_priv
-      |> (fun key ->
-           X509.Public_key.encode_pem (`P521 key) |> Cstruct.to_string)
+      |> (fun key -> X509.Public_key.encode_pem (`P521 key))
       |> Result.ok
   | _ -> Error `Unsupported_kty
 
 let of_priv_pem ?use pem : (priv t, [> `Unsupported_kty ]) result =
-  let pem =
-    let pem_cs = Cstruct.of_string pem in
-    X509.Private_key.decode_pem pem_cs
-  in
-  Result.bind pem (fun pem -> of_priv_x509 ?use pem)
+  let pem = X509.Private_key.decode_pem pem in
+  Result.bind pem (of_priv_x509 ?use)
 
 let to_priv_pem (jwk : priv t) =
   match jwk with
-  | Rsa_priv rsa ->
-      Ok (X509.Private_key.encode_pem (`RSA rsa.key) |> Cstruct.to_string)
-  | Es256_priv ec ->
-      Ok (X509.Private_key.encode_pem (`P256 ec.key) |> Cstruct.to_string)
-  | Es384_priv ec ->
-      Ok (X509.Private_key.encode_pem (`P384 ec.key) |> Cstruct.to_string)
-  | Es512_priv ec ->
-      Ok (X509.Private_key.encode_pem (`P521 ec.key) |> Cstruct.to_string)
+  | Rsa_priv rsa -> Ok (X509.Private_key.encode_pem (`RSA rsa.key))
+  | Es256_priv ec -> Ok (X509.Private_key.encode_pem (`P256 ec.key))
+  | Es384_priv ec -> Ok (X509.Private_key.encode_pem (`P384 ec.key))
+  | Es512_priv ec -> Ok (X509.Private_key.encode_pem (`P521 ec.key))
   | _ -> Error `Unsupported_kty
 
 let oct_to_json (oct : oct) =
@@ -514,12 +493,10 @@ let pub_esXXX_to_pub_json ~get_ESXXX_x_y ~crv (pub : 'a) : Yojson.Safe.t =
   in
   `Assoc (List.filter_map Fun.id values)
 
-let priv_esXXX_to_priv_json ~get_ESXXX_x_y ~pub_of_priv ~priv_to_cstruct ~crv
+let priv_esXXX_to_priv_json ~get_ESXXX_x_y ~pub_of_priv ~priv_to_string ~crv
     (priv : 'a) : Yojson.Safe.t =
   let x, y = get_ESXXX_x_y (pub_of_priv priv.key) in
-  let d =
-    priv_to_cstruct priv.key |> Cstruct.to_string |> U_Base64.url_encode_string
-  in
+  let d = priv_to_string priv.key |> U_Base64.url_encode_string in
   let values =
     [
       Option.map (fun alg -> ("alg", Jwa.alg_to_json alg)) priv.alg;
@@ -543,7 +520,7 @@ let priv_es256_to_pub_json (priv_es256 : priv_es256) : Yojson.Safe.t =
 let priv_es256_to_priv_json =
   priv_esXXX_to_priv_json ~get_ESXXX_x_y:Util.get_ES256_x_y
     ~pub_of_priv:Mirage_crypto_ec.P256.Dsa.pub_of_priv
-    ~priv_to_cstruct:Mirage_crypto_ec.P256.Dsa.priv_to_cstruct ~crv:"P-256"
+    ~priv_to_string:Mirage_crypto_ec.P256.Dsa.priv_to_octets ~crv:"P-256"
 
 let pub_es384_to_pub_json (pub_es384 : pub_es384) : Yojson.Safe.t =
   pub_esXXX_to_pub_json ~get_ESXXX_x_y:Util.get_ES384_x_y ~crv:"P-384" pub_es384
@@ -554,7 +531,7 @@ let priv_es384_to_pub_json (priv_es384 : priv_es384) : Yojson.Safe.t =
 let priv_es384_to_priv_json =
   priv_esXXX_to_priv_json ~get_ESXXX_x_y:Util.get_ES384_x_y
     ~pub_of_priv:Mirage_crypto_ec.P384.Dsa.pub_of_priv
-    ~priv_to_cstruct:Mirage_crypto_ec.P384.Dsa.priv_to_cstruct ~crv:"P-384"
+    ~priv_to_string:Mirage_crypto_ec.P384.Dsa.priv_to_octets ~crv:"P-384"
 
 let pub_es512_to_pub_json (pub_es512 : pub_es512) : Yojson.Safe.t =
   pub_esXXX_to_pub_json ~get_ESXXX_x_y:Util.get_ES512_x_y ~crv:"P-521" pub_es512
@@ -565,7 +542,7 @@ let priv_es512_to_pub_json (priv_es512 : priv_es512) : Yojson.Safe.t =
 let priv_es512_to_priv_json =
   priv_esXXX_to_priv_json ~get_ESXXX_x_y:Util.get_ES512_x_y
     ~pub_of_priv:Mirage_crypto_ec.P521.Dsa.pub_of_priv
-    ~priv_to_cstruct:Mirage_crypto_ec.P521.Dsa.priv_to_cstruct ~crv:"P-521"
+    ~priv_to_string:Mirage_crypto_ec.P521.Dsa.priv_to_octets ~crv:"P-521"
 
 let pub_ed25519_to_pub_json okp =
   `Assoc
@@ -574,8 +551,8 @@ let pub_ed25519_to_pub_json okp =
       ("crv", `String "Ed25519");
       ( "x",
         `String
-          (okp.key |> Mirage_crypto_ec.Ed25519.pub_to_cstruct
-         |> Cstruct.to_string |> U_Base64.url_encode_string) );
+          (okp.key |> Mirage_crypto_ec.Ed25519.pub_to_octets
+         |> U_Base64.url_encode_string) );
     ]
 
 let priv_ed25519_to_pub_json okp =
@@ -589,12 +566,12 @@ let priv_ed25519_to_priv_json okp =
       ("crv", `String "Ed25519");
       ( "d",
         `String
-          (okp.key |> Mirage_crypto_ec.Ed25519.priv_to_cstruct
-         |> Cstruct.to_string |> U_Base64.url_encode_string) );
+          (okp.key |> Mirage_crypto_ec.Ed25519.priv_to_octets
+         |> U_Base64.url_encode_string) );
       ( "x",
         `String
-          (pub_key |> Mirage_crypto_ec.Ed25519.pub_to_cstruct
-         |> Cstruct.to_string |> U_Base64.url_encode_string) );
+          (pub_key |> Mirage_crypto_ec.Ed25519.pub_to_octets
+         |> U_Base64.url_encode_string) );
     ]
 
 let to_pub_json (type a) (jwk : a t) : Yojson.Safe.t =
@@ -631,44 +608,44 @@ let pub_rsa_of_json json : (public t, 'error) result =
   try
     let e = json |> Json.member "e" |> Json.to_string |> Util.get_component in
     let n = json |> Json.member "n" |> Json.to_string |> Util.get_component in
-    match e, n with
+    match (e, n) with
     | Error e, _ | _, Error e -> Error e
     | Ok e, Ok n ->
-      let pub = Mirage_crypto_pk.Rsa.pub ~e ~n in
-      Result.bind pub (fun key ->
-        let alg =
-          json |> Json.member "alg" |> Json.to_string_option
-          |> Option.map Jwa.alg_of_string
-        in
-        let use =
-          json |> Json.member "use" |> Json.to_string_option
-          |> Option.map use_of_string
-        in
-        let kid = json |> Json.member "kid" |> Json.to_string_option in
-        let kty = `RSA in
-        match (alg, use) with
-        | Some _, Some _ -> Ok (Rsa_pub { alg; kty; use; key; kid })
-        | Some alg, None ->
-            Ok
-              (Rsa_pub
-                 {
-                   alg = Some alg;
-                   kty;
-                   use = Some (use_of_alg alg);
-                   key;
-                   kid;
-                 })
-        | None, Some use ->
-            Ok
-              (Rsa_pub
-                 {
-                   alg = Some (alg_of_use_and_kty ~use kty);
-                   kty;
-                   use = Some use;
-                   key;
-                   kid;
-                 })
-        | alg, use -> Ok (Rsa_pub { alg; kty; use; key; kid }))
+        let pub = Mirage_crypto_pk.Rsa.pub ~e ~n in
+        Result.bind pub (fun key ->
+            let alg =
+              json |> Json.member "alg" |> Json.to_string_option
+              |> Option.map Jwa.alg_of_string
+            in
+            let use =
+              json |> Json.member "use" |> Json.to_string_option
+              |> Option.map use_of_string
+            in
+            let kid = json |> Json.member "kid" |> Json.to_string_option in
+            let kty = `RSA in
+            match (alg, use) with
+            | Some _, Some _ -> Ok (Rsa_pub { alg; kty; use; key; kid })
+            | Some alg, None ->
+                Ok
+                  (Rsa_pub
+                     {
+                       alg = Some alg;
+                       kty;
+                       use = Some (use_of_alg alg);
+                       key;
+                       kid;
+                     })
+            | None, Some use ->
+                Ok
+                  (Rsa_pub
+                     {
+                       alg = Some (alg_of_use_and_kty ~use kty);
+                       kty;
+                       use = Some use;
+                       key;
+                       kid;
+                     })
+            | alg, use -> Ok (Rsa_pub { alg; kty; use; key; kid }))
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
 let priv_rsa_of_json json : (priv t, 'error) result =
@@ -683,43 +660,38 @@ let priv_rsa_of_json json : (priv t, 'error) result =
     let dq = json |> Json.member "dq" |> Json.to_string |> Util.get_component in
     let qi = json |> Json.member "qi" |> Json.to_string |> Util.get_component in
     let all8 = U_Result.all8 e n d p q dp dq qi in
-    let priv = Result.bind all8 (fun (e, n, d, p, q, dp, dq, qi) ->
-       Mirage_crypto_pk.Rsa.priv ~e ~n ~d ~p ~q ~dp ~dq ~q':qi)
+    let priv =
+      Result.bind all8 (fun (e, n, d, p, q, dp, dq, qi) ->
+          Mirage_crypto_pk.Rsa.priv ~e ~n ~d ~p ~q ~dp ~dq ~q':qi)
     in
     Result.bind priv (fun key ->
-      let alg =
-        json |> Json.member "alg" |> Json.to_string_option
-        |> Option.map Jwa.alg_of_string
-      in
-      let use =
-        json |> Json.member "use" |> Json.to_string_option
-        |> Option.map use_of_string
-      in
-      let kid = json |> Json.member "kid" |> Json.to_string_option in
-      let kty = `RSA in
-      match (alg, use) with
-      | Some _, Some _ -> Ok (Rsa_priv { alg; kty; use; key; kid })
-      | Some alg, None ->
-          Ok
-            (Rsa_priv
-               {
-                 alg = Some alg;
-                 kty;
-                 use = Some (use_of_alg alg);
-                 key;
-                 kid;
-               })
-      | None, Some use ->
-          Ok
-            (Rsa_priv
-               {
-                 alg = Some (alg_of_use_and_kty ~use kty);
-                 kty;
-                 use = Some use;
-                 key;
-                 kid;
-               })
-      | None, None -> Ok (Rsa_priv { alg; kty; use; key; kid }))
+        let alg =
+          json |> Json.member "alg" |> Json.to_string_option
+          |> Option.map Jwa.alg_of_string
+        in
+        let use =
+          json |> Json.member "use" |> Json.to_string_option
+          |> Option.map use_of_string
+        in
+        let kid = json |> Json.member "kid" |> Json.to_string_option in
+        let kty = `RSA in
+        match (alg, use) with
+        | Some _, Some _ -> Ok (Rsa_priv { alg; kty; use; key; kid })
+        | Some alg, None ->
+            Ok
+              (Rsa_priv
+                 { alg = Some alg; kty; use = Some (use_of_alg alg); key; kid })
+        | None, Some use ->
+            Ok
+              (Rsa_priv
+                 {
+                   alg = Some (alg_of_use_and_kty ~use kty);
+                   kty;
+                   use = Some use;
+                   key;
+                   kid;
+                 })
+        | None, None -> Ok (Rsa_priv { alg; kty; use; key; kid }))
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
 let oct_of_json json =
@@ -786,10 +758,7 @@ let priv_ec_of_json json =
       |> Option.map Jwa.alg_of_string
     in
     let crv = json |> Json.member "crv" |> Json.to_string in
-    let d =
-      json |> Json.member "d" |> Json.to_string |> U_Base64.url_decode
-      |> Result.map Cstruct.of_string
-    in
+    let d = json |> Json.member "d" |> Json.to_string |> U_Base64.url_decode in
     let make_jwk key =
       {
         alg;
@@ -804,15 +773,15 @@ let priv_ec_of_json json =
     in
     match (crv, d) with
     | "P-256", Ok d ->
-        Mirage_crypto_ec.P256.Dsa.priv_of_cstruct d
+        Mirage_crypto_ec.P256.Dsa.priv_of_octets d
         |> Result.map_error (fun _ -> `Msg "Could not create key")
         |> Result.map (fun key -> Es256_priv (make_jwk key))
     | "P-384", Ok d ->
-        Mirage_crypto_ec.P384.Dsa.priv_of_cstruct d
+        Mirage_crypto_ec.P384.Dsa.priv_of_octets d
         |> Result.map_error (fun _ -> `Msg "Could not create key")
         |> Result.map (fun key -> Es384_priv (make_jwk key))
     | "P-521", Ok d ->
-        Mirage_crypto_ec.P521.Dsa.priv_of_cstruct d
+        Mirage_crypto_ec.P521.Dsa.priv_of_octets d
         |> Result.map_error (fun _ -> `Msg "Could not create key")
         |> Result.map (fun key -> Es512_priv (make_jwk key))
     | _ -> Error (`Msg "kty and alg doesn't match")
@@ -827,10 +796,7 @@ let pub_okp_of_json json =
     in
     (* TODO: This is needed if we want more curves *)
     let _crv = json |> Json.member "crv" |> Json.to_string in
-    let x =
-      json |> Json.member "x" |> Json.to_string |> U_Base64.url_decode
-      |> Result.map Cstruct.of_string
-    in
+    let x = json |> Json.member "x" |> Json.to_string |> U_Base64.url_decode in
     let make_jwk key =
       {
         alg;
@@ -843,9 +809,9 @@ let pub_okp_of_json json =
         kid = json |> Json.member "kid" |> Json.to_string_option;
       }
     in
-    Result.bind x (fun cstruct ->
-         Mirage_crypto_ec.Ed25519.pub_of_cstruct cstruct
-         |> Result.map_error (fun _ -> `Msg "Could not create key"))
+    Result.bind x (fun str ->
+        Mirage_crypto_ec.Ed25519.pub_of_octets str
+        |> Result.map_error (fun _ -> `Msg "Could not create key"))
     |> Result.map (fun key -> Ed25519_pub (make_jwk key))
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
@@ -858,10 +824,7 @@ let priv_okp_of_json json =
     in
     (* TODO: This is needed if we want more curves *)
     let _crv = json |> Json.member "crv" |> Json.to_string in
-    let d =
-      json |> Json.member "d" |> Json.to_string |> U_Base64.url_decode
-      |> Result.map Cstruct.of_string
-    in
+    let d = json |> Json.member "d" |> Json.to_string |> U_Base64.url_decode in
     let make_jwk key =
       {
         alg;
@@ -874,9 +837,9 @@ let priv_okp_of_json json =
         kid = json |> Json.member "kid" |> Json.to_string_option;
       }
     in
-    Result.bind d (fun cstruct ->
-           Mirage_crypto_ec.Ed25519.priv_of_cstruct cstruct
-           |> Result.map_error (fun _ -> `Msg "Could not create key"))
+    Result.bind d (fun str ->
+        Mirage_crypto_ec.Ed25519.priv_of_octets str
+        |> Result.map_error (fun _ -> `Msg "Could not create key"))
     |> Result.map (fun key -> Ed25519_priv (make_jwk key))
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
@@ -917,13 +880,13 @@ let pub_of_priv (jwk : priv t) : public t =
   | Es512_priv es -> Es512_pub (pub_of_priv_es512 es)
   | Ed25519_priv okt -> Ed25519_pub (pub_of_priv_ed25519 okt)
 
-let oct_to_sign_key (oct : oct) : (Cstruct.t, [> `Msg of string ]) result =
-  U_Base64.url_decode oct.key |> Result.map Cstruct.of_string
+let oct_to_sign_key (oct : oct) : (string, [> `Msg of string ]) result =
+  U_Base64.url_decode oct.key
 
 let hash_values hash values =
-  let module Hash = (val Mirage_crypto.Hash.module_of hash) in
+  let module Hash = (val Digestif.module_of_hash' hash) in
   `Assoc (List.filter_map Fun.id values)
-  |> Yojson.to_string |> Cstruct.of_string |> Hash.digest
+  |> Yojson.to_string |> Hash.digest_string |> Hash.to_raw_string
 
 let pub_rsa_to_thumbprint hash (pub_rsa : Mirage_crypto_pk.Rsa.pub jwk) =
   let e = Util.get_JWK_component pub_rsa.key.e in
@@ -993,8 +956,8 @@ let priv_es512_to_thumbprint hash (priv_es512 : priv_es512) =
 let pub_ed25519_to_thumbprint hash (pub_ed25519 : pub_ed25519) =
   let kty = Jwa.kty_to_string pub_ed25519.kty in
   let x =
-    Mirage_crypto_ec.Ed25519.pub_to_cstruct pub_ed25519.key
-    |> Cstruct.to_string |> U_Base64.url_encode_string
+    Mirage_crypto_ec.Ed25519.pub_to_octets pub_ed25519.key
+    |> U_Base64.url_encode_string
   in
   let values =
     [
@@ -1008,7 +971,7 @@ let pub_ed25519_to_thumbprint hash (pub_ed25519 : pub_ed25519) =
 let priv_ed25519_to_thumbprint hash (priv_ed25519 : priv_ed25519) =
   pub_of_priv_ed25519 priv_ed25519 |> pub_ed25519_to_thumbprint hash
 
-let get_thumbprint (type a) (hash : Mirage_crypto.Hash.hash) (jwk : a t) =
+let get_thumbprint (type a) (hash : Digestif.hash') (jwk : a t) =
   match jwk with
   | Rsa_pub rsa -> Ok (pub_rsa_to_thumbprint hash rsa)
   | Rsa_priv rsa -> Ok (priv_rsa_to_thumbprint hash rsa)

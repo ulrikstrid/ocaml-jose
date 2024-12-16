@@ -13,9 +13,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          persist-credentials: falsene
+          persist-credentials: false
 
-      - uses: cachix/install-nix-action@v22
+      - uses: cachix/install-nix-action@v30
         with:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
