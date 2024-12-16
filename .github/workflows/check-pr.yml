@@ -57,7 +57,7 @@ jobs:
         run: nix develop --accept-flake-config -c dune build @runtest --instrument-with bisect_ppx --force
 
       - name: Upload coverage
-        run: nix develop --accept-flake-config -c bisect-ppx-report send-to Codecov
+        run: nix develop --accept-flake-config -c bisect-ppx-report send-to Codecov --repo-token="${{ secrets.CODECOV_TOKEN }}"
 
       - name: Build docs
         run: nix develop --accept-flake-config -c dune build @doc
