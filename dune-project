@@ -33,7 +33,7 @@
   (eqaf
    (>= 0.7))
   (mirage-crypto
-   (>= 0.10.0))
+   (>= 1.0.0))
   (x509
    (>= 0.13.0))
   (cstruct
@@ -46,7 +46,8 @@
   (mirage-crypto-rng
    (and
     :with-test
-    (>= 0.11.0)))
+    (>= 1.0.0)))
+  digestif
   (containers :with-test)
   (bisect_ppx :with-test)
   (alcotest :with-test)

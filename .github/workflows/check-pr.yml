@@ -3,7 +3,7 @@ name: Check PR
 on:
   pull_request:
     branches:
-    - master
+      - master
 
 jobs:
   opam:
@@ -49,10 +49,6 @@ jobs:
         with:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-
-      - uses: cachix/cachix-action@v12
-        with:
-          name: anmonteiro
 
       - name: Build
         run: nix develop --accept-flake-config -c dune build
