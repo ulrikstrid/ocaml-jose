@@ -1,4 +1,4 @@
-next
+0.10.0
 --------------
 - Upgrade mirage-crypto and remove cstruct
 
