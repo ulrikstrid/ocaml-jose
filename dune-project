@@ -5,11 +5,11 @@
 (license MIT)
 
 (source
- (github ulrikstrid/reason-jose))
+ (github ulrikstrid/ocaml-jose))
 
-(homepage https://ulrikstrid.github.io/reason-jose)
+(homepage https://ulrikstrid.github.io/ocaml-jose)
 
-(documentation https://ulrikstrid.github.io/reason-jose)
+(documentation https://ulrikstrid.github.io/ocaml-jose)
 
 (authors "Ulrik Strid")
 

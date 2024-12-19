@@ -1,6 +1,6 @@
 0.10.0
 --------------
-- Upgrade mirage-crypto and remove cstruct
+- Upgrade mirage-crypto and remove cstruct (by @anmonteiro, special thanks to @hannesm for help with debugging a unexpected test failure)
 
 0.9.0
 --------------

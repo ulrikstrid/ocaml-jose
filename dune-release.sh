@@ -10,18 +10,20 @@ fi
 
 step()
 {
+  local step_name="$1"
+  echo "Next step is $step_name"
   printf "Continue? [Yn] "
   read action
-  if [ "x$action" == "xn" ]; then exit 2; fi
-  if [ "x$action" == "xN" ]; then exit 2; fi
+  if [ "$action" = "n" ]; then exit 2; fi
+  if [ "$action" = "N" ]; then exit 2; fi
 }
 
 dune-release tag "$TAG"
-step
+step "distrib"
 dune-release distrib -p jose -t "$TAG" --skip-tests #--skip-lint
-step
+step "publish distrib"
 dune-release publish distrib -p jose -t "$TAG"
-step
+step "opam pkg"
 dune-release opam pkg -p jose -t "$TAG"
-step
+step "opam submit"
 dune-release opam submit -p jose -t "$TAG"
