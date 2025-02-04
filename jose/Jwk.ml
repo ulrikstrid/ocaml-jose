@@ -545,34 +545,43 @@ let priv_es512_to_priv_json =
     ~priv_to_string:Mirage_crypto_ec.P521.Dsa.priv_to_octets ~crv:"P-521"
 
 let pub_ed25519_to_pub_json okp =
-  `Assoc
+  let values =
     [
-      ("kty", `String "OKP");
-      ("crv", `String "Ed25519");
-      ( "x",
-        `String
-          (okp.key |> Mirage_crypto_ec.Ed25519.pub_to_octets
-         |> U_Base64.url_encode_string) );
+      Some ("kty", `String "OKP");
+      Some ("crv", `String "Ed25519");
+      Some
+        ( "x",
+          `String
+            (okp.key |> Mirage_crypto_ec.Ed25519.pub_to_octets
+           |> U_Base64.url_encode_string) );
+      RJson.to_json_string_opt "kid" okp.kid;
     ]
+  in
+  `Assoc (List.filter_map Fun.id values)
 
 let priv_ed25519_to_pub_json okp =
   pub_of_priv_ed25519 okp |> pub_ed25519_to_pub_json
 
 let priv_ed25519_to_priv_json okp =
   let pub_key = Mirage_crypto_ec.Ed25519.pub_of_priv okp.key in
-  `Assoc
+  let values =
     [
-      ("kty", `String "OKP");
-      ("crv", `String "Ed25519");
-      ( "d",
-        `String
-          (okp.key |> Mirage_crypto_ec.Ed25519.priv_to_octets
-         |> U_Base64.url_encode_string) );
-      ( "x",
-        `String
-          (pub_key |> Mirage_crypto_ec.Ed25519.pub_to_octets
-         |> U_Base64.url_encode_string) );
+      Some ("kty", `String "OKP");
+      Some ("crv", `String "Ed25519");
+      Some
+        ( "d",
+          `String
+            (okp.key |> Mirage_crypto_ec.Ed25519.priv_to_octets
+           |> U_Base64.url_encode_string) );
+      Some
+        ( "x",
+          `String
+            (pub_key |> Mirage_crypto_ec.Ed25519.pub_to_octets
+           |> U_Base64.url_encode_string) );
+      RJson.to_json_string_opt "kid" okp.kid;
     ]
+  in
+  `Assoc (List.filter_map Fun.id values)
 
 let to_pub_json (type a) (jwk : a t) : Yojson.Safe.t =
   match jwk with
