@@ -1,3 +1,7 @@
+0.10.1
+--------------
+- Add `kid` to output ed25519 json representation as this was missed when implementing it. Reported by @patricoferris, fixed by @ulrikstrid.
+
 0.10.0
 --------------
 - Upgrade mirage-crypto and remove cstruct (by @anmonteiro, special thanks to @hannesm for help with debugging a unexpected test failure)
