@@ -26,8 +26,8 @@ jobs:
       - name: Test with coverage
         run: nix develop --accept-flake-config -c dune build @runtest --instrument-with bisect_ppx --force
 
-      - name: Upload coverage
-        run: nix develop --accept-flake-config -c bisect-ppx-report send-to Codecov
+      # - name: Upload coverage
+      #   run: nix develop --accept-flake-config -c bisect-ppx-report send-to Codecov
 
       - name: Build docs
         run: nix develop --accept-flake-config -c dune build @doc
