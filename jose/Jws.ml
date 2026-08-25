@@ -91,6 +91,8 @@ let to_string ?(serialization = `Compact) t =
   | `Compact -> to_compact_string t
   | `General -> to_general_string t
   | `Flattened -> to_flattened_string t
+let verify_rsa ~key ~signature ~message =
+  Mirage_crypto_pk.Rsa.PKCS1.verify ~hashp:(fun _ -> true) ~key ~signature (`Message message)
 
 let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
   match jwk with
@@ -99,11 +101,13 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
       Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:pub_jwk.key signature
       |> function
       | None -> Error `Invalid_signature
-      | Some message -> Ok message)
+      | Some _message when verify_rsa ~key:pub_jwk.key ~signature ~message:input_str -> Ok signature
+      | Some _ -> Error (`Msg "payload does not match"))
   | Jwk.Rsa_pub jwk -> (
       Mirage_crypto_pk.Rsa.PKCS1.sig_decode ~key:jwk.key signature |> function
       | None -> Error `Invalid_signature
-      | Some message -> Ok message)
+      | Some _message when verify_rsa ~key:jwk.key ~signature ~message:input_str -> Ok signature
+      | Some _ -> Error (`Msg "payload does not match"))
   | Jwk.Oct jwk ->
       let key = Jwk.oct_to_sign_key jwk in
       Result.bind key (fun key ->
