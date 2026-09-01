@@ -142,6 +142,21 @@ let jws_suite, _ =
 
               check_result_string "Correct payload" (Ok "hello")
                 (Result.map (fun (jws : Jose.Jws.t) -> jws.payload) validated));
+          Alcotest.test_case "Fails validation when RSA JWK has incompatible alg" `Quick (fun () ->
+              let jws = Jose.Jws.sign ~payload:"hello" testkey_jwk |> Result.get_ok in
+              let jws_string = Jose.Jws.to_string jws in
+              let incompatible_jwk =
+                match testkey_jwk with
+                | Jose.Jwk.Rsa_priv jwk -> Jose.Jwk.Rsa_priv { jwk with alg = Some `RSA_OAEP }
+                | _ -> assert false
+              in
+              let validation =
+                Jose.Jws.of_string jws_string
+                |> CCResult.flat_map (Jose.Jws.validate ~jwk:incompatible_jwk)
+              in
+              check_result_bool "Validation failed due to incompatible alg"
+                (Ok true)
+                (Ok (CCResult.is_error validation)));
         ] );
     ]
 
