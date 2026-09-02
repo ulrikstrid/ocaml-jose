@@ -158,6 +158,25 @@ let jws_tests =
                (* We currently don't have a notion of Unprotected Headers Values so this is not exactly correct*)
                (Ok
                   {|{"payload":"eyJpc3MiOiJqb2UiLCJleHAiOjEzMDA4MTkzODAsImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ","protected":"eyJhbGciOiJFUzI1NiJ9","signature":"4XSeJsUDLhZisF7Vhx7iYI_q9x7a3Mk8-wsj-jpf39DRe-bDEt-w7UlN1xwfpiouuoGssgJKAT9GwEeORjzuIg"}|}));
+      (* RFC 7515 Section 4.1.8: x5t#S256 header parameter *)
+      Alcotest.test_case "4.1.8 - x5t#S256 header parameter" `Quick (fun () ->
+          let header_json =
+            `Assoc
+              [
+                ("alg", `String "RS256");
+                ("x5t#S256", `String "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k");
+              ]
+          in
+          let header = Jose.Header.of_json header_json |> CCResult.get_exn in
+          check_option_string "x5t256 is parsed from x5t#S256"
+            "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k" header.x5t256;
+          let serialized_json = Jose.Header.to_json header in
+          let serialized_x5t256 =
+            Yojson.Safe.Util.member "x5t#S256" serialized_json
+            |> Yojson.Safe.Util.to_string_option
+          in
+          check_option_string "x5t256 is serialized as x5t#S256"
+            "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k" serialized_x5t256);
     ] )
 
 (* Begin tests *)

@@ -74,7 +74,7 @@ let of_json json =
           |> Option.join;
         kid = json |> Json.member "kid" |> Json.to_string_option;
         x5t = json |> Json.member "x5t" |> Json.to_string_option;
-        x5t256 = json |> Json.member "x5t#256" |> Json.to_string_option;
+        x5t256 = json |> Json.member "x5t#S256" |> Json.to_string_option;
         typ = json |> Json.member "typ" |> Json.to_string_option;
         cty = json |> Json.member "cty" |> Json.to_string_option;
         enc =
@@ -92,7 +92,7 @@ let to_json t =
       RJson.to_json_string_opt "kid" t.kid;
       Option.map Jwk.to_pub_json t.jwk |> Option.map (fun jwk -> ("jwk", jwk));
       RJson.to_json_string_opt "x5t" t.x5t;
-      RJson.to_json_string_opt "x5t#256" t.x5t256;
+      RJson.to_json_string_opt "x5t#S256" t.x5t256;
       RJson.to_json_string_opt "cty" t.cty;
       t.enc
       |> Option.map Jwa.enc_to_string
