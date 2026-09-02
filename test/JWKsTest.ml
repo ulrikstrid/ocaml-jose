@@ -49,6 +49,19 @@ let jwks_suite, _ =
               check_option_string "Should find key" microsoft_jwk_kid
                 (Jose.Jwks.find_key jwks microsoft_jwk_kid
                 |> CCOption.get_exn_or "fail" |> Jose.Jwk.get_kid));
+          Alcotest.test_case "find_key returns None on missing key or key without kid" `Quick
+            (fun () ->
+              let rsa_pub_no_kid =
+                match Jose.Jwk.of_pub_pem Fixtures.rsa_test_pub |> CCResult.get_exn with
+                | Jose.Jwk.Rsa_pub jwk -> Jose.Jwk.Rsa_pub { jwk with kid = None }
+                | _ -> assert false
+              in
+              let jwks = { Jose.Jwks.keys = [ rsa_pub_no_kid ] } in
+              Alcotest.(check bool) "None for key without kid" true
+                (Option.is_none (Jose.Jwks.find_key jwks "any-kid"));
+              let jwks_parsed = Jose.Jwks.of_string expected_jwks_string in
+              Alcotest.(check bool) "None for non-existent kid" true
+                (Option.is_none (Jose.Jwks.find_key jwks_parsed "non-existent-kid")));
         ] );
     ]
 

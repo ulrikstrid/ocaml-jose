@@ -300,8 +300,65 @@ let jwt_suite, _ =
               let validation = Jwt.validate ~jwk ~now forged in
               check_result_bool "JWT validation failed"
                 (Ok true)
-                (Ok (CCResult.is_error validation))
-            )
+                (Ok (CCResult.is_error validation)));
+          Alcotest.test_case "JWT serialization formats" `Quick (fun () ->
+              let open Jose in
+              let jwk = Jwk.of_priv_pem Fixtures.rsa_test_priv |> CCResult.get_exn in
+              let payload = Jwt.empty_payload |> Jwt.add_claim "sub" (`String "tester") in
+              let jwt = Jwt.sign ~payload jwk |> CCResult.get_exn in
+              let compact = Jwt.to_string ~serialization:`Compact jwt in
+              let general = Jwt.to_string ~serialization:`General jwt in
+              let flattened = Jwt.to_string ~serialization:`Flattened jwt in
+              Alcotest.(check bool) "compact format" true (CCString.prefix ~pre:"ey" compact);
+              Alcotest.(check bool) "general format" true (CCString.prefix ~pre:"{" general);
+              Alcotest.(check bool) "flattened format" true (CCString.prefix ~pre:"{" flattened));
+          Alcotest.test_case "JWT claim type mismatch and getters" `Quick (fun () ->
+              let open Jose in
+              let jwk = Jwk.of_priv_pem Fixtures.rsa_test_priv |> CCResult.get_exn in
+              let payload =
+                Jwt.empty_payload
+                |> Jwt.add_claim "str" (`String "value")
+                |> Jwt.add_claim "num" (`Int 42)
+              in
+              let jwt = Jwt.sign ~payload jwk |> CCResult.get_exn in
+              Alcotest.(check bool) "get_yojson_claim exists" true
+                (Jwt.get_yojson_claim jwt "str" = Some (`String "value"));
+              Alcotest.(check bool) "get_yojson_claim missing returns Some `Null" true
+                (Jwt.get_yojson_claim jwt "missing" = Some `Null);
+              Alcotest.(check bool) "get_string_claim on existing" true
+                (Jwt.get_string_claim jwt "str" = Some "value");
+              Alcotest.(check bool) "get_string_claim on missing returns None" true
+                (Option.is_none (Jwt.get_string_claim jwt "missing"));
+              Alcotest.(check bool) "get_int_claim on existing" true
+                (Jwt.get_int_claim jwt "num" = Some 42);
+              Alcotest.(check bool) "get_int_claim on missing returns None" true
+                (Option.is_none (Jwt.get_int_claim jwt "missing")));
+          Alcotest.test_case "JWT validate_signature without time check" `Quick (fun () ->
+              let open Jose in
+              let jwk = Jwk.of_priv_pem Fixtures.rsa_test_priv |> CCResult.get_exn in
+              let payload = Jwt.empty_payload |> Jwt.add_claim "sub" (`String "tester") in
+              let jwt = Jwt.sign ~payload jwk |> CCResult.get_exn in
+              Alcotest.(check bool) "validate_signature succeeds" true
+                (CCResult.is_ok (Jwt.validate_signature ~jwk jwt)));
+          Alcotest.test_case "JWT signing and validation with ES384 and Ed25519" `Quick (fun () ->
+              let open Jose in
+              (* ES384 *)
+              let es384_priv, _ = Mirage_crypto_ec.P384.Dsa.generate () in
+              let es384_jwk = Jwk.of_priv_x509 (`P384 es384_priv) |> CCResult.get_exn in
+              let payload = Jwt.empty_payload |> Jwt.add_claim "sub" (`String "es384") in
+              let jwt_es384 = Jwt.sign ~payload es384_jwk |> CCResult.get_exn in
+              Alcotest.(check bool) "ES384 JWT validates" true
+                (CCResult.is_ok (Jwt.validate ~jwk:es384_jwk ~now jwt_es384));
+
+              (* Ed25519 *)
+              let ed_priv, _ = Mirage_crypto_ec.Ed25519.generate () in
+              let ed_jwk =
+                Jwk.Ed25519_priv
+                  { alg = None; kty = `OKP; use = None; kid = None; key = ed_priv }
+              in
+              let jwt_ed = Jwt.sign ~payload ed_jwk |> CCResult.get_exn in
+              Alcotest.(check bool) "Ed25519 JWT validates" true
+                (CCResult.is_ok (Jwt.validate ~jwk:ed_jwk ~now jwt_ed)));
         ] );
     ]
 

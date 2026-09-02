@@ -157,6 +157,220 @@ let jws_suite, _ =
               check_result_bool "Validation failed due to incompatible alg"
                 (Ok true)
                 (Ok (CCResult.is_error validation)));
+          Alcotest.test_case "of_compact_string error cases" `Quick (fun () ->
+              let res_2segs = Jose.Jws.of_string "header.payload" in
+              Alcotest.(check bool) "fails with 2 segments" true
+                (res_2segs = Error (`Msg "token didn't include header, payload or signature"));
+              let res_4segs = Jose.Jws.of_string "a.b.c.d" in
+              Alcotest.(check bool) "fails with 4 segments" true
+                (res_4segs = Error (`Msg "token didn't include header, payload or signature"));
+              let header_str = Jose.Header.to_string (Jose.Header.make_header testkey_jwk) in
+              let res_bad_payload = Jose.Jws.of_string (header_str ^ ".???invalid-b64???.sig") in
+              Alcotest.(check bool) "fails on bad base64 payload" true
+                (CCResult.is_error res_bad_payload));
+          Alcotest.test_case "of_json_string error cases" `Quick (fun () ->
+              let res_no_sig =
+                Jose.Jws.of_string {|{"payload":"eyJNc2ciOiJIZWxsbyJ9","protected":"eyJhbGciOiJSUzI1NiJ9"}|}
+              in
+              Alcotest.(check bool) "fails with Not_supported when signature missing" true
+                (res_no_sig = Error `Not_supported);
+              let res_bad_json = Jose.Jws.of_string "{not valid json" in
+              Alcotest.(check bool) "fails with Not_json on malformed json" true
+                (res_bad_json = Error `Not_json));
+          Alcotest.test_case "to_string serializations" `Quick (fun () ->
+              let jws = Jose.Jws.sign ~payload:"test payload" testkey_jwk |> CCResult.get_exn in
+              let compact = Jose.Jws.to_string ~serialization:`Compact jws in
+              let general = Jose.Jws.to_string ~serialization:`General jws in
+              let flattened = Jose.Jws.to_string ~serialization:`Flattened jws in
+              Alcotest.(check bool) "compact starts with ey" true
+                (CCString.prefix ~pre:"ey" compact);
+              Alcotest.(check bool) "general returns Not_supported on of_string" true
+                (Jose.Jws.of_string general = Error `Not_supported);
+              Alcotest.(check bool) "flattened parses as JSON" true
+                (CCResult.is_ok (Jose.Jws.of_string flattened)));
+          Alcotest.test_case "Signing and verifying with ES256, ES512, Ed25519, and Oct" `Quick
+            (fun () ->
+              (* ES256 *)
+              let es256_jwk_priv =
+                Jose.Jwk.of_priv_pem Fixtures.es256_test_priv |> CCResult.get_exn
+              in
+              let es256_jwk_pub = Jose.Jwk.pub_of_priv es256_jwk_priv in
+              let jws_es256 = Jose.Jws.sign ~payload:"es256 payload" es256_jwk_priv |> CCResult.get_exn in
+              Alcotest.(check bool) "ES256 validates with priv" true
+                (CCResult.is_ok (Jose.Jws.validate ~jwk:es256_jwk_priv jws_es256));
+              Alcotest.(check bool) "ES256 validates with pub" true
+                (CCResult.is_ok (Jose.Jws.validate ~jwk:es256_jwk_pub jws_es256));
+
+              (* ES512 *)
+              let es512_jwk_priv =
+                Jose.Jwk.of_priv_pem Fixtures.es512_test_priv |> CCResult.get_exn
+              in
+              let es512_jwk_pub = Jose.Jwk.pub_of_priv es512_jwk_priv in
+              let jws_es512 = Jose.Jws.sign ~payload:"es512 payload" es512_jwk_priv |> CCResult.get_exn in
+              Alcotest.(check bool) "ES512 validates with priv" true
+                (CCResult.is_ok (Jose.Jws.validate ~jwk:es512_jwk_priv jws_es512));
+              Alcotest.(check bool) "ES512 validates with pub" true
+                (CCResult.is_ok (Jose.Jws.validate ~jwk:es512_jwk_pub jws_es512));
+
+              (* Ed25519 *)
+              let ed_priv, _ = Mirage_crypto_ec.Ed25519.generate () in
+              let ed_jwk_priv =
+                Jose.Jwk.Ed25519_priv
+                  { alg = None; kty = `OKP; use = None; kid = None; key = ed_priv }
+              in
+              let ed_jwk_pub = Jose.Jwk.pub_of_priv ed_jwk_priv in
+              let jws_ed = Jose.Jws.sign ~payload:"ed payload" ed_jwk_priv |> CCResult.get_exn in
+              Alcotest.(check bool) "Ed25519 validates with priv" true
+                (CCResult.is_ok (Jose.Jws.validate ~jwk:ed_jwk_priv jws_ed));
+              Alcotest.(check bool) "Ed25519 validates with pub" true
+                (CCResult.is_ok (Jose.Jws.validate ~jwk:ed_jwk_pub jws_ed));
+
+              (* Oct *)
+              let oct_jwk = Jose.Jwk.make_oct "shared-secret" in
+              let jws_oct = Jose.Jws.sign ~payload:"oct payload" oct_jwk |> CCResult.get_exn in
+              Alcotest.(check bool) "Oct validates" true
+                (CCResult.is_ok (Jose.Jws.validate ~jwk:oct_jwk jws_oct)));
+          Alcotest.test_case "Invalid signature detection across all key types" `Quick
+            (fun () ->
+              let bad_sig = url_encode_string (String.make 64 '\x00') in
+              let bad_sig_96 = url_encode_string (String.make 96 '\x00') in
+              let bad_sig_132 = url_encode_string (String.make 132 '\x00') in
+              let bad_sig_32 = url_encode_string (String.make 32 '\x00') in
+              let bad_sig_64 = url_encode_string (String.make 64 '\x00') in
+
+              (* RSA Pub *)
+              let rsa_pub = Jose.Jwk.pub_of_priv testkey_jwk in
+              let jws_rsa = Jose.Jws.sign ~payload:"hello" testkey_jwk |> CCResult.get_exn in
+              let jws_rsa_tampered = { jws_rsa with payload = "tampered" } in
+              Alcotest.(check bool) "RSA pub detects tampered payload" true
+                (Jose.Jws.validate ~jwk:rsa_pub jws_rsa_tampered = Error (`Msg "payload does not match"));
+              let jws_rsa_short_sig = { jws_rsa with signature = url_encode_string "short" } in
+              Alcotest.(check bool) "RSA priv catches Invalid_argument on short signature" true
+                (CCResult.is_error (Jose.Jws.validate ~jwk:testkey_jwk jws_rsa_short_sig));
+              Alcotest.(check bool) "RSA pub catches Invalid_argument on short signature" true
+                (CCResult.is_error (Jose.Jws.validate ~jwk:rsa_pub jws_rsa_short_sig));
+
+              (* ES256 *)
+              let es256_priv =
+                Jose.Jwk.of_priv_pem Fixtures.es256_test_priv |> CCResult.get_exn
+              in
+              let es256_pub = Jose.Jwk.pub_of_priv es256_priv in
+              let jws_es256 = Jose.Jws.sign ~payload:"hello" es256_priv |> CCResult.get_exn in
+              let jws_es256_bad = { jws_es256 with signature = bad_sig } in
+              Alcotest.(check bool) "ES256 pub invalid sig" true
+                (Jose.Jws.validate ~jwk:es256_pub jws_es256_bad = Error `Invalid_signature);
+              Alcotest.(check bool) "ES256 priv invalid sig" true
+                (Jose.Jws.validate ~jwk:es256_priv jws_es256_bad = Error `Invalid_signature);
+
+              (* ES384 *)
+              let es384_priv, _ = Mirage_crypto_ec.P384.Dsa.generate () in
+              let es384_jwk_priv =
+                Jose.Jwk.of_priv_x509 (`P384 es384_priv) |> CCResult.get_exn
+              in
+              let es384_jwk_pub = Jose.Jwk.pub_of_priv es384_jwk_priv in
+              let jws_es384 = Jose.Jws.sign ~payload:"hello" es384_jwk_priv |> CCResult.get_exn in
+              let jws_es384_bad = { jws_es384 with signature = bad_sig_96 } in
+              Alcotest.(check bool) "ES384 pub invalid sig" true
+                (Jose.Jws.validate ~jwk:es384_jwk_pub jws_es384_bad = Error `Invalid_signature);
+              Alcotest.(check bool) "ES384 priv invalid sig" true
+                (Jose.Jws.validate ~jwk:es384_jwk_priv jws_es384_bad = Error `Invalid_signature);
+
+              (* ES512 *)
+              let es512_priv =
+                Jose.Jwk.of_priv_pem Fixtures.es512_test_priv |> CCResult.get_exn
+              in
+              let es512_pub = Jose.Jwk.pub_of_priv es512_priv in
+              let jws_es512 = Jose.Jws.sign ~payload:"hello" es512_priv |> CCResult.get_exn in
+              let jws_es512_bad = { jws_es512 with signature = bad_sig_132 } in
+              Alcotest.(check bool) "ES512 pub invalid sig" true
+                (Jose.Jws.validate ~jwk:es512_pub jws_es512_bad = Error `Invalid_signature);
+              Alcotest.(check bool) "ES512 priv invalid sig" true
+                (Jose.Jws.validate ~jwk:es512_priv jws_es512_bad = Error `Invalid_signature);
+
+              (* Ed25519 *)
+              let ed_priv, _ = Mirage_crypto_ec.Ed25519.generate () in
+              let ed_jwk_priv =
+                Jose.Jwk.Ed25519_priv
+                  { alg = None; kty = `OKP; use = None; kid = None; key = ed_priv }
+              in
+              let ed_jwk_pub = Jose.Jwk.pub_of_priv ed_jwk_priv in
+              let jws_ed = Jose.Jws.sign ~payload:"hello" ed_jwk_priv |> CCResult.get_exn in
+              let jws_ed_bad = { jws_ed with signature = bad_sig_64 } in
+              Alcotest.(check bool) "Ed25519 pub invalid sig" true
+                (Jose.Jws.validate ~jwk:ed_jwk_pub jws_ed_bad = Error `Invalid_signature);
+              Alcotest.(check bool) "Ed25519 priv invalid sig" true
+                (Jose.Jws.validate ~jwk:ed_jwk_priv jws_ed_bad = Error `Invalid_signature);
+
+              (* Oct *)
+              let oct_jwk = Jose.Jwk.make_oct "secret" in
+              let jws_oct = Jose.Jws.sign ~payload:"hello" oct_jwk |> CCResult.get_exn in
+              let jws_oct_bad = { jws_oct with signature = bad_sig_32 } in
+              Alcotest.(check bool) "Oct invalid sig" true
+                (Jose.Jws.validate ~jwk:oct_jwk jws_oct_bad = Error `Invalid_signature));
+          Alcotest.test_case "rsa_validate_hash for RS384, RS512 and None alg" `Quick
+            (fun () ->
+              let rsa_priv =
+                match testkey_jwk with
+                | Jose.Jwk.Rsa_priv jwk -> jwk
+                | _ -> assert false
+              in
+              let header_rs256 = Jose.Header.make_header testkey_jwk in
+              let header_str = Jose.Header.to_string header_rs256 in
+              let payload_str = url_encode_string "hello rsa" in
+              let input_str = Printf.sprintf "%s.%s" header_str payload_str in
+
+              (* Sign with SHA384 *)
+              let sig384 =
+                Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA384 ~key:rsa_priv.key (`Message input_str)
+                |> url_encode_string
+              in
+              let jws384 : Jose.Jws.t =
+                {
+                  header = header_rs256;
+                  raw_header = header_str;
+                  payload = "hello rsa";
+                  signature = sig384;
+                }
+              in
+              let jwk_rs384 = Jose.Jwk.Rsa_priv { rsa_priv with alg = Some (`Unsupported "RS384") } in
+              let jwk_none = Jose.Jwk.Rsa_priv { rsa_priv with alg = None } in
+              Alcotest.(check bool) "validates with RS384 alg" true
+                (CCResult.is_ok (Jose.Jws.validate ~jwk:jwk_rs384 jws384));
+              Alcotest.(check bool) "validates with None alg on SHA384" true
+                (CCResult.is_ok (Jose.Jws.validate ~jwk:jwk_none jws384));
+
+              (* Sign with SHA512 *)
+              let sig512 =
+                Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA512 ~key:rsa_priv.key (`Message input_str)
+                |> url_encode_string
+              in
+              let jws512 : Jose.Jws.t =
+                {
+                  header = header_rs256;
+                  raw_header = header_str;
+                  payload = "hello rsa";
+                  signature = sig512;
+                }
+              in
+              let jwk_rs512 = Jose.Jwk.Rsa_priv { rsa_priv with alg = Some (`Unsupported "RS512") } in
+              Alcotest.(check bool) "validates with RS512 alg" true
+                (CCResult.is_ok (Jose.Jws.validate ~jwk:jwk_rs512 jws512));
+              Alcotest.(check bool) "validates with None alg on SHA512" true
+                (CCResult.is_ok (Jose.Jws.validate ~jwk:jwk_none jws512)));
+          Alcotest.test_case "sign with invalid Oct key errors" `Quick (fun () ->
+              let bad_oct_jwk =
+                Jose.Jwk.Oct
+                  {
+                    alg = Some `HS256;
+                    kty = `oct;
+                    use = None;
+                    kid = None;
+                    key = "???invalid-b64???";
+                  }
+              in
+              let res = Jose.Jws.sign ~payload:"hello" bad_oct_jwk in
+              Alcotest.(check bool) "sign fails on invalid oct key" true
+                (CCResult.is_error res));
         ] );
     ]
 
