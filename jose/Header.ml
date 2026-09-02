@@ -12,13 +12,14 @@ type t = {
   extra : (string * Yojson.Safe.t) list;
 }
 
-(* TODO: This is probably very slow *)
 let remove_supported (l : (string * Yojson.Safe.t) list) =
-  l |> List.remove_assoc "alg" |> List.remove_assoc "jwk"
-  |> List.remove_assoc "kid" |> List.remove_assoc "x5t"
-  |> List.remove_assoc "x5t#256"
-  |> List.remove_assoc "typ" |> List.remove_assoc "cty"
-  |> List.remove_assoc "enc"
+  List.filter
+    (fun (key, _) ->
+      match key with
+      | "alg" | "jwk" | "kid" | "x5t" | "x5t#S256"
+      | "typ" | "cty" | "enc" -> false
+      | _ -> true)
+    l
 
 let make_header ?typ ?alg ?enc ?(extra = []) ?(jwk_header = false)
     (jwk : Jwk.priv Jwk.t) =
