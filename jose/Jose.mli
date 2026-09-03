@@ -11,6 +11,9 @@ module Jwa : sig
     | `EdDSA
         (** EdDSA signature algorithm
             {{:https://www.rfc-editor.org/rfc/rfc8037.html} Link to RFC} *)
+    | `Ed25519
+        (** EdDSA signature algorithm with Ed25519
+            {{:https://www.rfc-editor.org/rfc/rfc9864.html} Link to RFC} *)
     | `RSA_OAEP  (** RSAES OAEP using default parameters *)
     | `RSA1_5  (** RSA PKCS 1 *)
     | `None

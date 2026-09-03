@@ -32,7 +32,7 @@ let make_header ?typ ?alg ?enc ?(extra = []) ?(jwk_header = false)
         | Jwk.Es256_priv _ -> `ES256
         | Jwk.Es384_priv _ -> `ES384
         | Jwk.Es512_priv _ -> `ES512
-        | Jwk.Ed25519_priv _ -> `EdDSA)
+        | Jwk.Ed25519_priv _ -> `Ed25519)
   in
   let kid =
     match List.assoc_opt "kid" extra with
@@ -69,7 +69,7 @@ let of_json json =
         jwk =
           json |> Json.member "jwk"
           |> Json.to_option (fun jwk_json ->
-                 Jwk.of_pub_json jwk_json |> Result.to_option)
+              Jwk.of_pub_json jwk_json |> Result.to_option)
           |> Option.join;
         kid = json |> Json.member "kid" |> Json.to_string_option;
         x5t = json |> Json.member "x5t" |> Json.to_string_option;

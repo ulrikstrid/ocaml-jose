@@ -109,13 +109,13 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
   | Jwk.Rsa_priv jwk -> (
       let pub_jwk = Jwk.pub_of_priv_rsa jwk in
       try (Mirage_crypto_pk.Rsa.PKCS1.verify ~hashp:(rsa_validate_hash ?alg:jwk.alg) ~key:pub_jwk.key ~signature (`Message input_str) |> function
-      | false -> Error (`Msg "payload does not match")
+        | false -> Error (`Msg "payload does not match")
       | true -> Ok signature) with
       | Mirage_crypto_pk.Rsa.Insufficient_key -> Error (`Msg "Insufficient key length")
       | Invalid_argument m -> Error (`Msg m))
   | Jwk.Rsa_pub jwk -> (
       try (Mirage_crypto_pk.Rsa.PKCS1.verify ~hashp:(rsa_validate_hash ?alg:jwk.alg) ~key:jwk.key ~signature (`Message input_str) |> function
-      | false -> Error (`Msg "payload does not match")
+        | false -> Error (`Msg "payload does not match")
       | true -> Ok signature) with
       | Mirage_crypto_pk.Rsa.Insufficient_key -> Error (`Msg "Insufficient key length")
       | Invalid_argument m -> Error (`Msg m))
@@ -210,6 +210,7 @@ let validate (type a) ~(jwk : a Jwk.t) t =
     | `ES384 -> Ok header.alg
     | `ES512 -> Ok header.alg
     | `EdDSA -> Ok header.alg
+    | `Ed25519 -> Ok header.alg
     | `Unsupported _ | `RSA_OAEP | `RSA1_5 | `None ->
         Error (`Msg "alg not supported for signing")
   in
@@ -265,11 +266,11 @@ let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
     | Jwk.Oct oct ->
         Jwk.oct_to_sign_key oct
         |> Result.map (fun key msg ->
-               match msg with
-               | `Message x ->
-                   Digestif.SHA256.hmac_string ~key x
-                   |> Digestif.SHA256.to_raw_string
-               | `Digest _ -> raise (Invalid_argument "Digest"))
+            match msg with
+            | `Message x ->
+                Digestif.SHA256.hmac_string ~key x
+                |> Digestif.SHA256.to_raw_string
+            | `Digest _ -> raise (Invalid_argument "Digest"))
   in
   match sign_f with
   | Ok sign_f ->

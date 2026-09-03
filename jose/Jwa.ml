@@ -26,6 +26,7 @@ type alg =
   | `ES384  (** ECDSA using P-384 and SHA-384 *)
   | `ES512  (** ECDSA using P-521 and SHA-512 *)
   | `EdDSA  (** EdDSA signature algorithm *)
+  | `Ed25519  (** Ed25519 signature algorithm (RFC 9864) *)
   | `RSA_OAEP  (** RSAES OAEP using default parameters *)
   | `RSA1_5  (** RSA PKCS 1 *)
   | `None
@@ -38,6 +39,7 @@ let alg_to_string = function
   | `ES384 -> "ES384"
   | `ES512 -> "ES512"
   | `EdDSA -> "EdDSA"
+  | `Ed25519 -> "Ed25519"
   | `RSA_OAEP -> "RSA-OAEP"
   | `RSA1_5 -> "RSA1_5"
   | `None -> "none"
@@ -50,6 +52,7 @@ let alg_of_string = function
   | "ES384" -> `ES384
   | "ES512" -> `ES512
   | "EdDSA" -> `EdDSA
+  | "Ed25519" -> `Ed25519
   | "RSA-OAEP" -> `RSA_OAEP
   | "RSA1_5" -> `RSA1_5
   | "none" -> `None
