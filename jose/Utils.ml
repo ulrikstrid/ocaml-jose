@@ -59,11 +59,15 @@ module Pkcs7 = struct
 
   let unpad cs =
     let cs_len = String.length cs in
-    let pad_len = String.get_uint8 cs (cs_len - 1) in
-    let data, padding = U_String.split cs (cs_len - pad_len) in
-    let rec check idx =
-      if idx >= pad_len then true
-      else String.get_uint8 padding idx = pad_len && check (idx + 1)
-    in
-    if check 0 then Ok data else Error (`Msg "bad padding")
+    if cs_len = 0 then Error (`Msg "bad padding")
+    else
+      let pad_len = String.get_uint8 cs (cs_len - 1) in
+      if pad_len = 0 || pad_len > cs_len then Error (`Msg "bad padding")
+      else
+        let data, padding = U_String.split cs (cs_len - pad_len) in
+        let rec check idx =
+          if idx >= pad_len then true
+          else String.get_uint8 padding idx = pad_len && check (idx + 1)
+        in
+        if check 0 then Ok data else Error (`Msg "bad padding")
 end
