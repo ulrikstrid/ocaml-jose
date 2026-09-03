@@ -5,6 +5,7 @@
 - We had some potential for raising in our unpad function
 - Constant time string comparison everywhere
 - Fix a bug in RSA validation
+- EdDSA is deprecated in rfc 9864, we should use Ed25519 as a less ambiguous name
 
 0.10.0
 --------------

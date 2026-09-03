@@ -8,7 +8,7 @@ module Util = struct
   let get_component ?(pad = false) e =
     U_Base64.url_decode ~pad e
     |> Result.map (fun x ->
-           U_String.pad ~len:8 ~c:'\000' x |> U_String.rev |> Z.of_bits)
+        U_String.pad ~len:8 ~c:'\000' x |> U_String.rev |> Z.of_bits)
 
   let kid_of_json json =
     Yojson.Safe.to_string json |> Digestif.SHA256.digest_string
@@ -74,7 +74,7 @@ let alg_of_use_and_kty ?(use : use = `Sig) (kty : Jwa.kty) : Jwa.alg =
   | `Sig, `oct -> `HS256
   | `Sig, `RSA -> `RS256
   | `Sig, `EC -> `ES512
-  | `Sig, `OKP -> `EdDSA
+  | `Sig, `OKP -> `Ed25519
   | `Enc, `RSA -> `RSA_OAEP
   | `Enc, `oct -> `Unsupported "encryption with oct is not supported yet"
   | `Enc, `EC ->
@@ -91,7 +91,7 @@ let use_of_alg (alg : Jwa.alg) =
   | `ES256 -> `Sig
   | `ES384 -> `Sig
   | `ES512 -> `Sig
-  | `EdDSA -> `Sig
+  | `EdDSA | `Ed25519 -> `Sig
   | `RSA_OAEP -> `Enc
   | `RSA1_5 -> `Enc
   | `None -> `Unsupported "none"
