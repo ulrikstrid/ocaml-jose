@@ -13,6 +13,7 @@ let () =
         RFC7520.suite;
         RFC7638.suite;
         RFC8037.suite;
+        UtilsTest.utils_suite;
       ]
   in
   match path with Some path -> Junit.to_file report path | None -> ()
