@@ -9,6 +9,7 @@ let () =
         JWTTest.jwt_suite;
         JWETest.jwe_suite;
         RFC7515.suite;
+        RFC7516.suite;
         RFC7520.suite;
         RFC7638.suite;
         RFC8037.suite;
