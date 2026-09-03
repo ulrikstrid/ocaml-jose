@@ -5,3 +5,7 @@ module Jwt = Jwt
 module Jwa = Jwa
 module Header = Header
 module Jwe = Jwe
+
+module Private = struct
+  module Utils = Utils
+end

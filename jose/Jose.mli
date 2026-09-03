@@ -462,3 +462,55 @@ module Jwe : sig
   (** [decrypt jwk string] decrypts a compact string formated JWE into a {! t }
   *)
 end
+
+module Private : sig
+  module Utils : sig
+    module U_Result : sig
+      val all8 :
+        ('a, 'b) result ->
+        ('c, 'd) result ->
+        ('e, 'f) result ->
+        ('g, 'h) result ->
+        ('i, 'j) result ->
+        ('k, 'l) result ->
+        ('m, 'n) result ->
+        ('o, 'p) result ->
+        ('a * 'c * 'e * 'g * 'i * 'k * 'm * 'o, [> `Msg of string ]) result
+    end
+
+    module U_String : sig
+      val rev : string -> string
+      val pad : c:char -> len:int -> string -> string
+      val trim_leading_null : string -> string
+      val split : string -> int -> string * string
+    end
+
+    module U_Base64 : sig
+      val url_encode_string : ?pad:bool -> string -> string
+
+      val url_encode :
+        ?pad:bool ->
+        ?off:int ->
+        ?len:int ->
+        string ->
+        (string, [> `Msg of string ]) result
+
+      val url_decode :
+        ?pad:bool ->
+        ?off:int ->
+        ?len:int ->
+        string ->
+        (string, [> `Msg of string ]) result
+    end
+
+    module RJson : sig
+      val to_json_string_opt :
+        'a -> 'b option -> ('a * [> `String of 'b ]) option
+    end
+
+    module Pkcs7 : sig
+      val pad : string -> int -> string
+      val unpad : string -> (string, [> `Msg of string ]) result
+    end
+  end
+end
