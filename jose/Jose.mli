@@ -3,12 +3,14 @@
     {{:https://www.tools.ietf.org/rfc/rfc7518.html} Link to RFC} *)
 module Jwa : sig
   type alg =
-    [ `RS256  (** HMAC using SHA-256 *)
-    | `HS256  (** RSASSA-PKCS1-v1_5 using SHA-256 *)
+    [ `RS256  (** RSASSA-PKCS1-v1_5 using SHA-256 *)
+    | `HS256  (** HMAC using SHA-256 *)
     | `ES256  (** ECDSA using P-256 and SHA-256 *)
     | `ES384  (** ECDSA using P-384 and SHA-384 *)
     | `ES512  (** ECDSA using P-521 and SHA-512 *)
     | `EdDSA
+        (** EdDSA signature algorithm
+            {{:https://www.rfc-editor.org/rfc/rfc8037.html} Link to RFC} *)
     | `RSA_OAEP  (** RSAES OAEP using default parameters *)
     | `RSA1_5  (** RSA PKCS 1 *)
     | `None
@@ -242,7 +244,7 @@ module Jwk : sig
       following {{:https://tools.ietf.org/html/rfc7638} RFC 7638}.
 
       Returns an error for symmetric keys: sharing the hash may leak information
-      about the key itself ans it's deemed unsafe. *)
+      about the key itself and it's deemed unsafe. *)
 
   val use_to_string : use -> string
   val use_of_string : string -> use
