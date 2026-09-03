@@ -1,6 +1,10 @@
-0.10.1
+0.11.0
 --------------
 - Add `kid` to output ed25519 json representation as this was missed when implementing it. Reported by @patricoferris, fixed by @ulrikstrid.
+- Correct IV length `enc` is A256GCM
+- We had some potential for raising in our unpad function
+- Constant time string comparison everywhere
+- Fix a bug in RSA validation
 
 0.10.0
 --------------
