@@ -175,7 +175,7 @@ let decrypt_ciphertext enc ~cek ~iv ~auth_tag ~aad ciphertext =
             (* B.7 truncate to 128 bit *)
             String.sub (Digestif.SHA256.to_raw_string full) 0 16
           in
-          if not (String.equal computed_auth_tag auth_tag) then
+          if not (Eqaf.equal computed_auth_tag auth_tag) then
             Error (`Msg "invalid auth tag")
           else
             (* B.2 encryption in CBC mode *)
