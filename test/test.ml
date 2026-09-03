@@ -14,6 +14,7 @@ let () =
         RFC7520.suite;
         RFC7638.suite;
         RFC8037.suite;
+        RFC9864.suite;
         UtilsTest.utils_suite;
       ]
   in
