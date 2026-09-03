@@ -75,3 +75,8 @@ let enc_of_string enc =
   | _ -> raise Not_found
 
 let enc_to_length = function `A128CBC_HS256 -> 256 | `A256GCM -> 256
+
+let enc_to_iv_length = function
+  | `A128CBC_HS256 -> Mirage_crypto.AES.CBC.block_size
+  (* https://www.rfc-editor.org/info/rfc7518/#section-5.3 12*8 = 96 bits*)
+  | `A256GCM -> 12

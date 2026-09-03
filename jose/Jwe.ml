@@ -34,11 +34,9 @@ let make_cek (header : Header.t) =
   | None -> Error `Missing_enc
 
 let make_iv (header : Header.t) =
-  match header.alg with
-  | `RSA_OAEP ->
-      Ok (Mirage_crypto_rng.generate Mirage_crypto.AES.GCM.block_size)
-  | `RSA1_5 -> Ok (Mirage_crypto_rng.generate Mirage_crypto.AES.CBC.block_size)
-  | _ -> Error `Unsupported_alg
+  match header.enc with
+  | Some enc -> Ok (Mirage_crypto_rng.generate @@ Jwa.enc_to_iv_length enc)
+  | None -> Error `Missing_enc
 
 let make ~header payload =
   let cek = make_cek header in
