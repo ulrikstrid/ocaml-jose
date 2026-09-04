@@ -3,6 +3,8 @@ let () =
   let report =
     Junit.make
       [
+        HeaderTest.header_suite;
+        JwaTest.jwa_suite;
         JWKsTest.jwks_suite;
         JWKTest.jwk_suite;
         JWSTest.jws_suite;
