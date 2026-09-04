@@ -26,7 +26,8 @@ let rfc9864_tests =
             Jose.Jws.sign ~header ~payload ed25519_priv |> CCResult.get_exn
           in
           let validated = Jose.Jws.validate ~jwk:ed25519_pub jws in
-          Alcotest.(check bool) "Ed25519 JWS validates with public key" true
+          Alcotest.(check bool)
+            "Ed25519 JWS validates with public key" true
             (CCResult.is_ok validated));
       Alcotest.test_case
         "RFC 9864: Header.make_header emits Ed25519 as default alg for \
@@ -48,7 +49,8 @@ let rfc9864_tests =
             Jose.Jws.sign ~header ~payload ed25519_priv |> CCResult.get_exn
           in
           let validated = Jose.Jws.validate ~jwk:ed25519_pub jws in
-          Alcotest.(check bool) "Legacy EdDSA JWS validates with public key" true
+          Alcotest.(check bool)
+            "Legacy EdDSA JWS validates with public key" true
             (CCResult.is_ok validated));
     ] )
 

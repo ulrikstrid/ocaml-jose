@@ -107,7 +107,7 @@ let jws_rsa_tests =
           let jws =
             CCResult.both jwk header
             |> CCResult.flat_map (fun (jwk, header) ->
-                   Jose.Jws.sign ~header ~payload:jws_payload jwk)
+                Jose.Jws.sign ~header ~payload:jws_payload jwk)
           in
           check_result_string "correct jws string" (Ok rsa_jws)
             (CCResult.map Jose.Jws.to_string jws));
@@ -139,16 +139,16 @@ let jws_ecdsa_tests =
           let jwk =
             Jose.Jwk.of_pub_json_string ec_pub_json
             |> CCResult.map_err (function
-                 | `Msg m ->
-                     print_endline m;
-                     `Msg m
-                 | `Json_parse_failed m ->
-                     print_endline m;
-                     `Json_parse_failed m
-                 | `Unsupported_kty ->
-                     print_endline "Unsupported_kty";
-                     `Unsupported_kty
-                 | x -> x)
+              | `Msg m ->
+                  print_endline m;
+                  `Msg m
+              | `Json_parse_failed m ->
+                  print_endline m;
+                  `Json_parse_failed m
+              | `Unsupported_kty ->
+                  print_endline "Unsupported_kty";
+                  `Unsupported_kty
+              | x -> x)
             |> CCResult.get_exn
           in
           let jws = Jose.Jws.of_string ecdsa_jws in
@@ -219,7 +219,7 @@ let jws_oct_tests =
           let jws =
             CCResult.both jwk header
             |> CCResult.flat_map (fun (jwk, header) ->
-                   Jose.Jws.sign ~header ~payload:jws_payload jwk)
+                Jose.Jws.sign ~header ~payload:jws_payload jwk)
           in
           check_result_string "correct jws string" (Ok oct_jws)
             (CCResult.map Jose.Jws.to_string jws));

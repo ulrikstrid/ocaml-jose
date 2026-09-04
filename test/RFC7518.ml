@@ -22,11 +22,13 @@ let jwa_tests =
             Jose.Jws.sign ~header ~payload es256_priv |> CCResult.get_exn
           in
           let validated = Jose.Jws.validate ~jwk:es256_pub jws in
-          Alcotest.(check bool) "ES256 signature validates with public key" true
+          Alcotest.(check bool)
+            "ES256 signature validates with public key" true
             (CCResult.is_ok validated);
           let tampered_jws = { jws with payload = "tampered payload" } in
           let res_tampered = Jose.Jws.validate ~jwk:es256_pub tampered_jws in
-          Alcotest.(check bool) "ES256 validation fails on tampered payload" true
+          Alcotest.(check bool)
+            "ES256 validation fails on tampered payload" true
             (CCResult.is_error res_tampered));
       Alcotest.test_case "4.1: RSA-OAEP-256 key management support in JWE"
         `Quick (fun () ->

@@ -74,12 +74,12 @@ let jwt_suite, _ =
               let jwk =
                 Jwk.of_priv_pem Fixtures.es256_test_priv
                 |> CCResult.map_err (function
-                     | `Unsupported_kty ->
-                         print_endline "Unsupported_kty";
-                         `Unsupported_kty
-                     | `Msg s ->
-                         print_endline s;
-                         `Msg s)
+                  | `Unsupported_kty ->
+                      print_endline "Unsupported_kty";
+                      `Unsupported_kty
+                  | `Msg s ->
+                      print_endline s;
+                      `Msg s)
                 |> CCResult.get_exn
               in
               let header = Header.make_header ~typ:"JWT" jwk in
@@ -272,7 +272,8 @@ let jwt_suite, _ =
               check_result_string "JWT is correctly created"
                 (Ok Fixtures.external_jwt_string)
                 (CCResult.map Jwt.to_string jwt_r));
-          Alcotest.test_case "Verifies signature correctly - RSA" `Quick (fun () ->
+          Alcotest.test_case "Verifies signature correctly - RSA" `Quick
+            (fun () ->
               let open Jose in
               let jwk =
                 Jwk.of_priv_pem Fixtures.rsa_test_priv |> CCResult.get_exn
@@ -294,14 +295,14 @@ let jwt_suite, _ =
               in
               let forged =
                 let seg n token = List.nth (String.split_on_char '.' token) n in
-                String.concat "." [ seg 0 jwt_alice; seg 1 jwt_admin; seg 2 jwt_alice ]
-                |> Jwt.unsafe_of_string |> Result.get_ok in
+                String.concat "."
+                  [ seg 0 jwt_alice; seg 1 jwt_admin; seg 2 jwt_alice ]
+                |> Jwt.unsafe_of_string |> Result.get_ok
+              in
 
               let validation = Jwt.validate ~jwk ~now forged in
-              check_result_bool "JWT validation failed"
-                (Ok true)
-                (Ok (CCResult.is_error validation))
-            )
+              check_result_bool "JWT validation failed" (Ok true)
+                (Ok (CCResult.is_error validation)));
         ] );
     ]
 

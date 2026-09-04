@@ -92,12 +92,12 @@ let to_string ?(serialization = `Compact) t =
   | `General -> to_general_string t
   | `Flattened -> to_flattened_string t
 
-let rsa_validate_hash ?(alg:Jwa.alg option) hash' =
-  match alg, hash' with
-  | (Some `RS256), `SHA256 -> true
+let rsa_validate_hash ?(alg : Jwa.alg option) hash' =
+  match (alg, hash') with
+  | Some `RS256, `SHA256 -> true
   (* We can't create signatures with these optional algs but we can validate them *)
   | Some (`Unsupported "RS384"), `SHA384 -> true
-  | Some (`Unsupported "RS512"), `SHA512 ->  true
+  | Some (`Unsupported "RS512"), `SHA512 -> true
   (* If we don't know the alg of the JWK we allow any of the valid values *)
   | None, `SHA256 -> true
   | None, `SHA384 -> true
@@ -108,16 +108,28 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
   match jwk with
   | Jwk.Rsa_priv jwk -> (
       let pub_jwk = Jwk.pub_of_priv_rsa jwk in
-      try (Mirage_crypto_pk.Rsa.PKCS1.verify ~hashp:(rsa_validate_hash ?alg:jwk.alg) ~key:pub_jwk.key ~signature (`Message input_str) |> function
+      try
+        Mirage_crypto_pk.Rsa.PKCS1.verify
+          ~hashp:(rsa_validate_hash ?alg:jwk.alg)
+          ~key:pub_jwk.key ~signature (`Message input_str)
+        |> function
         | false -> Error (`Msg "payload does not match")
-      | true -> Ok signature) with
-      | Mirage_crypto_pk.Rsa.Insufficient_key -> Error (`Msg "Insufficient key length")
+        | true -> Ok signature
+      with
+      | Mirage_crypto_pk.Rsa.Insufficient_key ->
+          Error (`Msg "Insufficient key length")
       | Invalid_argument m -> Error (`Msg m))
   | Jwk.Rsa_pub jwk -> (
-      try (Mirage_crypto_pk.Rsa.PKCS1.verify ~hashp:(rsa_validate_hash ?alg:jwk.alg) ~key:jwk.key ~signature (`Message input_str) |> function
+      try
+        Mirage_crypto_pk.Rsa.PKCS1.verify
+          ~hashp:(rsa_validate_hash ?alg:jwk.alg)
+          ~key:jwk.key ~signature (`Message input_str)
+        |> function
         | false -> Error (`Msg "payload does not match")
-      | true -> Ok signature) with
-      | Mirage_crypto_pk.Rsa.Insufficient_key -> Error (`Msg "Insufficient key length")
+        | true -> Ok signature
+      with
+      | Mirage_crypto_pk.Rsa.Insufficient_key ->
+          Error (`Msg "Insufficient key length")
       | Invalid_argument m -> Error (`Msg m))
   | Jwk.Oct jwk ->
       let key = Jwk.oct_to_sign_key jwk in

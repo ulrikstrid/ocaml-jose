@@ -62,7 +62,7 @@ let jws_tests =
           Jose.Jws.of_string expected_str
           |> CCResult.flat_map (Jose.Jws.validate ~jwk)
           |> CCResult.map (fun (jws : Jose.Jws.t) ->
-                 payload_to_same jws.payload)
+              payload_to_same jws.payload)
           |> check_result_string "Validated payload is correct" (Ok payload_str));
       Alcotest.test_case "A.2" `Quick (fun () ->
           let expected_str =
@@ -74,7 +74,7 @@ let jws_tests =
           Jose.Jws.of_string expected_str
           |> CCResult.flat_map (Jose.Jws.validate ~jwk)
           |> CCResult.map (fun (jws : Jose.Jws.t) ->
-                 payload_to_same jws.payload)
+              payload_to_same jws.payload)
           |> check_result_string "Validated payload is correct" (Ok payload_str));
       Alcotest.test_case "A.3" `Quick (fun () ->
           let expected_str =
@@ -86,7 +86,7 @@ let jws_tests =
           Jose.Jws.of_string expected_str
           |> CCResult.flat_map (Jose.Jws.validate ~jwk)
           |> CCResult.map (fun (jws : Jose.Jws.t) ->
-                 payload_to_same jws.payload)
+              payload_to_same jws.payload)
           |> check_result_string "Validated payload is correct" (Ok payload_str));
       Alcotest.test_case "A.4 - validate" `Quick (fun () ->
           let expected_str = a_4_jws in
@@ -130,7 +130,7 @@ let jws_tests =
           Jose.Jws.of_string expected_str
           |> CCResult.flat_map (Jose.Jws.validate ~jwk)
           |> CCResult.map (fun (jws : Jose.Jws.t) ->
-                 payload_to_same jws.payload)
+              payload_to_same jws.payload)
           |> check_result_string "Validated payload is correct"
                (Error (`Msg "alg not supported for signing")));
       (* A.6 uses multiple signatures which we don't support yet *)

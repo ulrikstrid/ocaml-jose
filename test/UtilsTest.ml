@@ -14,10 +14,10 @@ let pkcs7_tests =
             try (false, Pkcs7.unpad "")
             with e -> (true, Error (`Msg (Printexc.to_string e)))
           in
-          Alcotest.(check bool) "does not raise exception on empty string" false
-            raised;
-          Alcotest.(check bool) "returns Error on empty string" true
-            (CCResult.is_error res));
+          Alcotest.(check bool)
+            "does not raise exception on empty string" false raised;
+          Alcotest.(check bool)
+            "returns Error on empty string" true (CCResult.is_error res));
       Alcotest.test_case
         "unpad with pad_len > string length returns Error without raising \
          exception"
@@ -27,15 +27,16 @@ let pkcs7_tests =
             try (false, Pkcs7.unpad "\x10")
             with e -> (true, Error (`Msg (Printexc.to_string e)))
           in
-          Alcotest.(check bool) "does not raise exception on pad_len > len" false
-            raised;
-          Alcotest.(check bool) "returns Error on pad_len > len" true
-            (CCResult.is_error res));
+          Alcotest.(check bool)
+            "does not raise exception on pad_len > len" false raised;
+          Alcotest.(check bool)
+            "returns Error on pad_len > len" true (CCResult.is_error res));
       Alcotest.test_case "unpad with pad_len = 0 returns Error" `Quick
         (fun () ->
           let res = Pkcs7.unpad "hello\x00" in
-          Alcotest.(check bool) "pad_len 0 must be rejected as invalid padding"
-            true (CCResult.is_error res));
+          Alcotest.(check bool)
+            "pad_len 0 must be rejected as invalid padding" true
+            (CCResult.is_error res));
       Alcotest.test_case "unpad with inconsistent padding bytes returns Error"
         `Quick (fun () ->
           (* Last byte says 4 bytes of padding, but preceding bytes are \x05 *)
