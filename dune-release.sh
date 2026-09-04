@@ -21,8 +21,8 @@ step()
 dune-release tag "$TAG"
 step "distrib"
 dune-release distrib -p jose -t "$TAG" --skip-tests #--skip-lint
-step "publish distrib"
-dune-release publish distrib -p jose -t "$TAG"
+step "publish"
+dune-release publish -t "$TAG"
 step "opam pkg"
 dune-release opam pkg -p jose -t "$TAG"
 step "opam submit"
