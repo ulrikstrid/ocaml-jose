@@ -12,6 +12,7 @@ let () =
         RFC7516.suite;
         RFC7517.suite;
         RFC7518.suite;
+        RFC7519.suite;
         RFC7520.suite;
         RFC7638.suite;
         RFC8037.suite;
