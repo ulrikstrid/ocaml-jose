@@ -133,8 +133,20 @@ let jws_tests =
               payload_to_same jws.payload)
           |> check_result_string "Validated payload is correct"
                (Error (`Msg "alg not supported for signing")));
+      Alcotest.test_case "A.7 - validate Flattened JSON" `Quick (fun () ->
+          let a7_flattened_json =
+            {|{"payload":"eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ","protected":"eyJhbGciOiJFUzI1NiJ9","header":{"kid":"e9bc097a-ce51-4036-9562-d2ade882db0d"},"signature":"DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q"}|}
+          in
+          let jwk =
+            Jose.Jwk.of_priv_json_string ec_priv_json_es256 |> CCResult.get_exn
+          in
+          Jose.Jws.of_string a7_flattened_json
+          |> CCResult.flat_map (Jose.Jws.validate ~jwk)
+          |> CCResult.map (fun (jws : Jose.Jws.t) ->
+              payload_to_same jws.payload)
+          |> check_result_string "Validated payload is correct" (Ok payload_str));
       (* A.6 uses multiple signatures which we don't support yet *)
-      Alcotest.test_case "A.7" `Quick (fun () ->
+      Alcotest.test_case "A.7 - recreate Flattened JWS" `Quick (fun () ->
           let header =
             Jose.Header.
               {
