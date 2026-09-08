@@ -2,10 +2,11 @@
 let () = Mirage_crypto_rng_unix.use_default ()
 let rsa_priv = Jose.Jwk.of_priv_pem Fixtures.rsa_test_priv |> CCResult.get_exn
 let rsa_pub = Jose.Jwk.pub_of_priv rsa_priv
-let oct_jwk = Jose.Jwk.make_oct "my-secret-key-384-512-testing"
 
 let rsa_priv_jwk =
   Fixtures.rsa_priv_enc_json |> Jose.Jwk.of_priv_json_string |> CCResult.get_exn
+
+open Helpers
 
 let jwa_tests =
   ( "RFC7518",
@@ -51,6 +52,82 @@ let jwa_tests =
           Alcotest.(check int)
             "A256GCM IV length must be 12 bytes (96 bits)" 12
             (String.length jwe.iv));
+      Alcotest.test_case
+        "5.1 / 5.2.5: A256CBC-HS512 header parsing, CEK (64 bytes), IV (16 \
+         bytes), and JWE RSA-OAEP roundtrip"
+        `Quick (fun () ->
+          let header_json =
+            `Assoc
+              [
+                ("alg", `String "RSA-OAEP"); ("enc", `String "A256CBC-HS512");
+              ]
+          in
+          let header = Jose.Header.of_json header_json |> CCResult.get_exn in
+          let payload = "Secret message protected with A256CBC-HS512" in
+          let jwe = Jose.Jwe.make ~header payload |> CCResult.get_exn in
+          Alcotest.(check int)
+            "A256CBC-HS512 CEK length must be 64 bytes (512 bits)" 64
+            (String.length jwe.cek);
+          Alcotest.(check int)
+            "A256CBC-HS512 IV length must be 16 bytes (128 bits)" 16
+            (String.length jwe.iv);
+          let encrypted =
+            Jose.Jwe.encrypt ~jwk:rsa_priv_jwk jwe |> CCResult.get_exn
+          in
+          let decrypted =
+            Jose.Jwe.decrypt ~jwk:rsa_priv_jwk encrypted |> CCResult.get_exn
+          in
+          check_string "decrypted payload matches" payload decrypted.payload;
+          check_string "decrypted CEK matches" jwe.cek decrypted.cek;
+          check_string "decrypted IV matches" jwe.iv decrypted.iv);
+      Alcotest.test_case
+        "5.2.5: A256CBC-HS512 JWE RSA1_5 encryption and decryption roundtrip"
+        `Quick (fun () ->
+          let header_json =
+            `Assoc
+              [ ("alg", `String "RSA1_5"); ("enc", `String "A256CBC-HS512") ]
+          in
+          let header = Jose.Header.of_json header_json |> CCResult.get_exn in
+          let payload = "A256CBC-HS512 with RSA1_5 key management" in
+          let jwe = Jose.Jwe.make ~header payload |> CCResult.get_exn in
+          let encrypted =
+            Jose.Jwe.encrypt ~jwk:rsa_priv_jwk jwe |> CCResult.get_exn
+          in
+          let decrypted =
+            Jose.Jwe.decrypt ~jwk:rsa_priv_jwk encrypted |> CCResult.get_exn
+          in
+          check_string "decrypted payload matches" payload decrypted.payload);
+      Alcotest.test_case
+        "5.2.5: A256CBC-HS512 tampering detection on ciphertext and auth tag"
+        `Quick (fun () ->
+          let header_json =
+            `Assoc
+              [
+                ("alg", `String "RSA-OAEP"); ("enc", `String "A256CBC-HS512");
+              ]
+          in
+          let header = Jose.Header.of_json header_json |> CCResult.get_exn in
+          let jwe =
+            Jose.Jwe.make ~header "Integrity test for A256CBC-HS512"
+            |> CCResult.get_exn
+            |> Jose.Jwe.encrypt ~jwk:rsa_priv_jwk
+            |> CCResult.get_exn
+          in
+          let segs = String.split_on_char '.' jwe in
+          let tampered_jwe =
+            String.concat "."
+              [
+                List.nth segs 0;
+                List.nth segs 1;
+                List.nth segs 2;
+                url_encode_string "corrupted_ciphertext_bytes_here";
+                List.nth segs 4;
+              ]
+          in
+          let res = Jose.Jwe.decrypt ~jwk:rsa_priv_jwk tampered_jwe in
+          Alcotest.(check bool)
+            "decryption fails on tampered ciphertext" true
+            (CCResult.is_error res));
     ] )
 
 let suite, _ =
