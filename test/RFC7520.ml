@@ -72,9 +72,7 @@ let jwk_suite_tests =
           Alcotest.(check bool)
             "kid is correct" true
             (Jose.Jwk.get_kid key = Some "bilbo.baggins@hobbiton.example");
-          Alcotest.(check bool)
-            "kty is EC" true
-            (Jose.Jwk.get_kty key = `EC));
+          Alcotest.(check bool) "kty is EC" true (Jose.Jwk.get_kty key = `EC));
       Alcotest.test_case "3.2: Parse P-521 EC Private Key" `Quick (fun () ->
           let jwk = Jose.Jwk.of_priv_json_string ec_priv_sig_json in
           Alcotest.(check bool) "parses successfully" true (CCResult.is_ok jwk);
@@ -87,9 +85,7 @@ let jwk_suite_tests =
           let jwk = Jose.Jwk.of_pub_json_string rsa_pub_json in
           Alcotest.(check bool) "parses successfully" true (CCResult.is_ok jwk);
           let key = CCResult.get_exn jwk in
-          Alcotest.(check bool)
-            "kty is RSA" true
-            (Jose.Jwk.get_kty key = `RSA));
+          Alcotest.(check bool) "kty is RSA" true (Jose.Jwk.get_kty key = `RSA));
       Alcotest.test_case "3.4: Parse RSA Private Key" `Quick (fun () ->
           let jwk = Jose.Jwk.of_priv_json_string rsa_priv_sig_json in
           Alcotest.(check bool) "parses successfully" true (CCResult.is_ok jwk);
@@ -102,16 +98,12 @@ let jwk_suite_tests =
           let jwk = Jose.Jwk.of_priv_json_string oct_sig_json in
           Alcotest.(check bool) "parses successfully" true (CCResult.is_ok jwk);
           let key = CCResult.get_exn jwk in
-          Alcotest.(check bool)
-            "kty is oct" true
-            (Jose.Jwk.get_kty key = `oct));
+          Alcotest.(check bool) "kty is oct" true (Jose.Jwk.get_kty key = `oct));
       Alcotest.test_case "3.6: Parse Symmetric Encryption Key" `Quick (fun () ->
           let jwk = Jose.Jwk.of_priv_json_string oct_enc_json in
           Alcotest.(check bool) "parses successfully" true (CCResult.is_ok jwk);
           let key = CCResult.get_exn jwk in
-          Alcotest.(check bool)
-            "kty is oct" true
-            (Jose.Jwk.get_kty key = `oct));
+          Alcotest.(check bool) "kty is oct" true (Jose.Jwk.get_kty key = `oct));
     ] )
 
 (* ========================================================================= *)
@@ -137,10 +129,8 @@ let rsa_jws_flattened_json =
     [
       ( "payload",
         `String
-          "SXTigJlzIGEgZGFuZ2Vyb3VzIGJ1c2luZXNzLCBGcm9kbywgZ29pbmcgb3V0IHlvdXIg\
-           ZG9vci4gWW91IHN0ZXAgb250byB0aGUgcm9hZCwgYW5kIGlmIHlvdSBkb24ndCBrZWVw\
-           IHlvdXIgZmVldCwgdGhlcmXigJlzIG5vIGtub3dpbmcgd2hlcmUgeW91IG1pZ2h0IGJl\
-           IHN3ZXB0IG9mZiB0by4" );
+          "SXTigJlzIGEgZGFuZ2Vyb3VzIGJ1c2luZXNzLCBGcm9kbywgZ29pbmcgb3V0IHlvdXIgZG9vci4gWW91IHN0ZXAgb250byB0aGUgcm9hZCwgYW5kIGlmIHlvdSBkb24ndCBrZWVwIHlvdXIgZmVldCwgdGhlcmXigJlzIG5vIGtub3dpbmcgd2hlcmUgeW91IG1pZ2h0IGJlIHN3ZXB0IG9mZiB0by4"
+      );
       ( "protected",
         `String
           "eyJhbGciOiJSUzI1NiIsImtpZCI6ImJpbGJvLmJhZ2dpbnNAaG9iYml0b24uZXhhbXBsZSJ9"
@@ -262,8 +252,7 @@ let jws_ecdsa_tests =
           in
           let validated = Jose.Jws.validate ~jwk:pub_jwk signed_jws in
           Alcotest.(check bool)
-            "freshly signed ES512 JWS validates" true
-            (CCResult.is_ok validated);
+            "freshly signed ES512 JWS validates" true (CCResult.is_ok validated);
           check_string "payload matches" jws_payload
             (CCResult.get_exn validated).payload);
     ] )
@@ -495,6 +484,12 @@ let jwe_rsa_tests =
 (* Begin tests *)
 let rfc_suite, _ =
   Junit_alcotest.run_and_report ~package:"jose" "RFC7520"
-    [ jwk_suite_tests; jws_rsa_tests; jws_ecdsa_tests; jws_oct_tests; jwe_rsa_tests ]
+    [
+      jwk_suite_tests;
+      jws_rsa_tests;
+      jws_ecdsa_tests;
+      jws_oct_tests;
+      jwe_rsa_tests;
+    ]
 
 let suite = rfc_suite

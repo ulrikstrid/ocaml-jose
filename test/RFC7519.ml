@@ -43,8 +43,7 @@ let jwt_tests =
             "header typ is JWT" true
             (jwt.header.typ = Some "JWT");
           Alcotest.(check bool)
-            "header alg is HS256" true
-            (jwt.header.alg = `HS256));
+            "header alg is HS256" true (jwt.header.alg = `HS256));
       Alcotest.test_case "3.1: Expired token validation fails with `Expired"
         `Quick (fun () ->
           let jwk =
@@ -57,8 +56,8 @@ let jwt_tests =
           Alcotest.(check bool)
             "returns Expired error" true
             (match res with Error `Expired -> true | _ -> false));
-      Alcotest.test_case "6.1: Parse unsecured JWT with unsafe_of_string"
-        `Quick (fun () ->
+      Alcotest.test_case "6.1: Parse unsecured JWT with unsafe_of_string" `Quick
+        (fun () ->
           let jwt_res = Jose.Jwt.unsafe_of_string rfc7519_unsecured_jwt_str in
           Alcotest.(check bool)
             "unsafe_of_string parses unsecured JWT" true
@@ -69,8 +68,7 @@ let jwt_tests =
           check_option_int "exp claim is 1300819380" 1300819380
             (Jose.Jwt.get_int_claim jwt "exp");
           Alcotest.(check bool)
-            "header alg is None" true
-            (jwt.header.alg = `None));
+            "header alg is None" true (jwt.header.alg = `None));
     ] )
 
 let suite, _ =

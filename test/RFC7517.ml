@@ -53,16 +53,16 @@ let oct_hmac_json =
 let jwk_tests =
   ( "RFC7517",
     [
-      Alcotest.test_case "A.1: Parse JWK Set with Public EC and RSA keys"
-        `Quick (fun () ->
+      Alcotest.test_case "A.1: Parse JWK Set with Public EC and RSA keys" `Quick
+        (fun () ->
           let jwks = Jose.Jwks.of_string jwks_public_json in
           Alcotest.(check int) "contains 2 keys" 2 (List.length jwks.keys);
           let ec_key = Jose.Jwks.find_key jwks "1" in
-          Alcotest.(check bool) "found EC key by kid" true (Option.is_some ec_key);
+          Alcotest.(check bool)
+            "found EC key by kid" true (Option.is_some ec_key);
           let rsa_key = Jose.Jwks.find_key jwks "2011-04-29" in
           Alcotest.(check bool)
-            "found RSA key by kid" true
-            (Option.is_some rsa_key));
+            "found RSA key by kid" true (Option.is_some rsa_key));
       Alcotest.test_case "A.2: Parse EC P-256 Private Key" `Quick (fun () ->
           let jwk = Jose.Jwk.of_priv_json_string ec_priv_json in
           Alcotest.(check bool) "parses successfully" true (CCResult.is_ok jwk);
@@ -83,13 +83,9 @@ let jwk_tests =
             (Jose.Jwk.get_kty pub = `RSA));
       Alcotest.test_case "A.3: Parse Symmetric Keys" `Quick (fun () ->
           let kw_jwk = Jose.Jwk.of_priv_json_string oct_kw_json in
-          Alcotest.(check bool)
-            "parses A128KW key" true
-            (CCResult.is_ok kw_jwk);
+          Alcotest.(check bool) "parses A128KW key" true (CCResult.is_ok kw_jwk);
           let hmac_jwk = Jose.Jwk.of_priv_json_string oct_hmac_json in
-          Alcotest.(check bool)
-            "parses HMAC key" true
-            (CCResult.is_ok hmac_jwk);
+          Alcotest.(check bool) "parses HMAC key" true (CCResult.is_ok hmac_jwk);
           let hmac_key = CCResult.get_exn hmac_jwk in
           Alcotest.(check (option string))
             "HMAC kid matches"

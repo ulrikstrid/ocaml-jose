@@ -58,9 +58,7 @@ let jwa_tests =
         `Quick (fun () ->
           let header_json =
             `Assoc
-              [
-                ("alg", `String "RSA-OAEP"); ("enc", `String "A256CBC-HS512");
-              ]
+              [ ("alg", `String "RSA-OAEP"); ("enc", `String "A256CBC-HS512") ]
           in
           let header = Jose.Header.of_json header_json |> CCResult.get_exn in
           let payload = "Secret message protected with A256CBC-HS512" in
@@ -74,12 +72,20 @@ let jwa_tests =
           let encrypted =
             Jose.Jwe.encrypt ~jwk:rsa_priv_jwk jwe |> CCResult.get_exn
           in
-          let decrypted =
-            Jose.Jwe.decrypt ~jwk:rsa_priv_jwk encrypted |> CCResult.get_exn
+          let segs = String.split_on_char '.' encrypted in
+          let auth_tag =
+            url_decode_string (List.nth segs 4) |> CCResult.get_exn
           in
-          check_string "decrypted payload matches" payload decrypted.payload;
-          check_string "decrypted CEK matches" jwe.cek decrypted.cek;
-          check_string "decrypted IV matches" jwe.iv decrypted.iv);
+          Alcotest.(check int)
+            "A256CBC-HS512 Auth Tag length must be 32 bytes (256 bits)" 32
+            (String.length auth_tag);
+          let decrypted = Jose.Jwe.decrypt ~jwk:rsa_priv_jwk encrypted in
+          check_result_string "decrypted payload matches" (Ok payload)
+            (Result.map Jose.Jwe.(fun d -> d.payload) decrypted);
+          check_result_string "decrypted CEK matches" (Ok jwe.cek)
+            (Result.map Jose.Jwe.(fun d -> d.cek) decrypted);
+          check_result_string "decrypted IV matches" (Ok jwe.iv)
+            (Result.map Jose.Jwe.(fun d -> d.iv) decrypted));
       Alcotest.test_case
         "5.2.5: A256CBC-HS512 JWE RSA1_5 encryption and decryption roundtrip"
         `Quick (fun () ->
@@ -93,6 +99,13 @@ let jwa_tests =
           let encrypted =
             Jose.Jwe.encrypt ~jwk:rsa_priv_jwk jwe |> CCResult.get_exn
           in
+          let segs = String.split_on_char '.' encrypted in
+          let auth_tag =
+            url_decode_string (List.nth segs 4) |> CCResult.get_exn
+          in
+          Alcotest.(check int)
+            "A256CBC-HS512 Auth Tag length must be 32 bytes (256 bits)" 32
+            (String.length auth_tag);
           let decrypted =
             Jose.Jwe.decrypt ~jwk:rsa_priv_jwk encrypted |> CCResult.get_exn
           in
@@ -102,9 +115,7 @@ let jwa_tests =
         `Quick (fun () ->
           let header_json =
             `Assoc
-              [
-                ("alg", `String "RSA-OAEP"); ("enc", `String "A256CBC-HS512");
-              ]
+              [ ("alg", `String "RSA-OAEP"); ("enc", `String "A256CBC-HS512") ]
           in
           let header = Jose.Header.of_json header_json |> CCResult.get_exn in
           let jwe =
@@ -114,7 +125,7 @@ let jwa_tests =
             |> CCResult.get_exn
           in
           let segs = String.split_on_char '.' jwe in
-          let tampered_jwe =
+          let tampered_ciphertext_jwe =
             String.concat "."
               [
                 List.nth segs 0;
@@ -124,10 +135,26 @@ let jwa_tests =
                 List.nth segs 4;
               ]
           in
-          let res = Jose.Jwe.decrypt ~jwk:rsa_priv_jwk tampered_jwe in
+          let res1 =
+            Jose.Jwe.decrypt ~jwk:rsa_priv_jwk tampered_ciphertext_jwe
+          in
           Alcotest.(check bool)
             "decryption fails on tampered ciphertext" true
-            (CCResult.is_error res));
+            (CCResult.is_error res1);
+          let tampered_tag_jwe =
+            String.concat "."
+              [
+                List.nth segs 0;
+                List.nth segs 1;
+                List.nth segs 2;
+                List.nth segs 3;
+                url_encode_string "corrupted_auth_tag_bytes_here_32";
+              ]
+          in
+          let res2 = Jose.Jwe.decrypt ~jwk:rsa_priv_jwk tampered_tag_jwe in
+          Alcotest.(check bool)
+            "decryption fails on tampered auth tag" true
+            (CCResult.is_error res2));
     ] )
 
 let suite, _ =
