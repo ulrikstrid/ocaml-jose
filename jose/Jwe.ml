@@ -74,6 +74,30 @@ let encrypt_payload ?enc ~cek ~iv ~aad payload =
         String.sub full 0 16
       in
       Ok (data, computed_auth_tag)
+  | Some `A256CBC_HS512 ->
+      (* RFC 7518 section 5.2.5 / 5.2.2.1: first 256 bit hmac, last 256 bit aes *)
+      let hmac_key, aes_key = U_String.split cek 32 in
+      let key = Mirage_crypto.AES.CBC.of_secret aes_key in
+      (* RFC 7518 section 5.2.2.1 step 3: encryption in CBC mode *)
+      Mirage_crypto.AES.CBC.encrypt ~key ~iv
+        (Pkcs7.pad payload Mirage_crypto.AES.CBC.block_size)
+      |> fun data ->
+      (* RFC 7518 section 5.2.2.1 step 5 / RFC 7516 appendix B.5: input to HMAC computation *)
+      let hmac_input =
+        (* RFC 7518 section 5.2.2.1 step 4: 64 bit big-endian AAD length (in bits!) *)
+        let aal = Bytes.create 8 in
+        Bytes.set_int64_be aal 0 Int64.(mul 8L (of_int (String.length aad)));
+        String.concat "" [ aad; iv; data; Bytes.unsafe_to_string aal ]
+      in
+      let computed_auth_tag =
+        let full =
+          Digestif.SHA512.hmac_string ~key:hmac_key hmac_input
+          |> Digestif.SHA512.to_raw_string
+        in
+        (* RFC 7518 section 5.2.5: truncate to 256 bit (32 octets) *)
+        String.sub full 0 32
+      in
+      Ok (data, computed_auth_tag)
   | Some `A256GCM ->
       let module GCM = Mirage_crypto.AES.GCM in
       let key = GCM.of_secret cek in
@@ -84,7 +108,7 @@ let encrypt_payload ?enc ~cek ~iv ~aad payload =
       in
       Ok (cipher, tag_data)
   | None -> Error `Missing_enc
-  | _ -> Error `Unsupported_enc
+(* | _ -> Error `Unsupported_enc *)
 
 let encrypt_cek (type a) alg (cek : string) ~(jwk : a Jwk.t) =
   let key =
@@ -179,6 +203,28 @@ let decrypt_ciphertext enc ~cek ~iv ~auth_tag ~aad ciphertext =
             Error (`Msg "invalid auth tag")
           else
             (* B.2 encryption in CBC mode *)
+            Mirage_crypto.AES.CBC.decrypt ~key ~iv encrypted |> Pkcs7.unpad
+      | Some `A256CBC_HS512 ->
+          (* RFC 7518 section 5.2.5 / 5.2.2.1: first 256 bit hmac, last 256 bit aes *)
+          let hmac_key, aes_key = U_String.split cek 32 in
+          let key = Mirage_crypto.AES.CBC.of_secret aes_key in
+
+          (* RFC 7518 section 5.2.2.1 step 5 / RFC 7516 appendix B.5: input to HMAC computation *)
+          let hmac_input =
+            (* RFC 7518 section 5.2.2.1 step 4: 64 bit big-endian AAD length (in bits!) *)
+            let aal = Bytes.create 8 in
+            Bytes.set_int64_be aal 0 Int64.(mul 8L (of_int (String.length aad)));
+            String.concat "" [ aad; iv; encrypted; Bytes.unsafe_to_string aal ]
+          in
+          let computed_auth_tag =
+            let full = Digestif.SHA512.hmac_string ~key:hmac_key hmac_input in
+            (* RFC 7518 section 5.2.5: truncate to 256 bit (32 octets) *)
+            String.sub (Digestif.SHA512.to_raw_string full) 0 32
+          in
+          if not (Eqaf.equal computed_auth_tag auth_tag) then
+            Error (`Msg "invalid auth tag")
+          else
+            (* RFC 7518 section 5.2.2.2 step 3: decryption in CBC mode *)
             Mirage_crypto.AES.CBC.decrypt ~key ~iv encrypted |> Pkcs7.unpad
       | Some `A256GCM ->
           let module GCM = Mirage_crypto.AES.GCM in
