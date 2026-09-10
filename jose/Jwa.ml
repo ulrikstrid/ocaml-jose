@@ -68,6 +68,7 @@ type enc =
   | `A256CBC_HS512
     (** AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm,
         https://tools.ietf.org/html/rfc7518#section-5.2.5 *)
+  | `A128GCM  (** AES GCM using 128-bit key *)
   | `A256GCM  (** AES GCM using 256-bit key *) ]
 (** https://tools.ietf.org/html/rfc7518#section-5 *)
 
@@ -75,22 +76,26 @@ let enc_to_string enc =
   match enc with
   | `A128CBC_HS256 -> "A128CBC-HS256"
   | `A256CBC_HS512 -> "A256CBC-HS512"
+  | `A128GCM -> "A128GCM"
   | `A256GCM -> "A256GCM"
 
 let enc_of_string enc =
   match enc with
   | "A128CBC-HS256" -> `A128CBC_HS256
   | "A256CBC-HS512" -> `A256CBC_HS512
+  | "A128GCM" -> `A128GCM
   | "A256GCM" -> `A256GCM
   | _ -> raise Not_found
 
 let enc_to_length = function
   | `A128CBC_HS256 -> 256
   | `A256CBC_HS512 -> 512
+  | `A128GCM -> 128
   | `A256GCM -> 256
 
 let enc_to_iv_length = function
   | `A128CBC_HS256 -> Mirage_crypto.AES.CBC.block_size
   | `A256CBC_HS512 -> Mirage_crypto.AES.CBC.block_size
   (* https://www.rfc-editor.org/info/rfc7518/#section-5.3 12*8 = 96 bits*)
+  | `A128GCM -> 12
   | `A256GCM -> 12

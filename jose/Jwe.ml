@@ -98,7 +98,7 @@ let encrypt_payload ?enc ~cek ~iv ~aad payload =
         String.sub full 0 32
       in
       Ok (data, computed_auth_tag)
-  | Some `A256GCM ->
+  | Some (`A128GCM | `A256GCM) ->
       let module GCM = Mirage_crypto.AES.GCM in
       let key = GCM.of_secret cek in
       let adata = aad in
@@ -226,7 +226,7 @@ let decrypt_ciphertext enc ~cek ~iv ~auth_tag ~aad ciphertext =
           else
             (* RFC 7518 section 5.2.2.2 step 3: decryption in CBC mode *)
             Mirage_crypto.AES.CBC.decrypt ~key ~iv encrypted |> Pkcs7.unpad
-      | Some `A256GCM ->
+      | Some (`A256GCM | `A128GCM) ->
           let module GCM = Mirage_crypto.AES.GCM in
           let key = GCM.of_secret cek in
           let adata = aad in
