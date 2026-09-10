@@ -50,6 +50,7 @@ module Jwa : sig
     | `A256CBC_HS512
       (** AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm,
           https://tools.ietf.org/html/rfc7518#section-5.2.5 *)
+    | `A128GCM  (** AES GCM using 128-bit key *)
     | `A256GCM  (** AES GCM using 256-bit key *) ]
   (** https://tools.ietf.org/html/rfc7518#section-5 *)
 
