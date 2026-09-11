@@ -39,7 +39,9 @@ let make_iv (header : Header.t) =
   | None -> Error `Missing_enc
 
 let make ~header payload =
-  let cek = make_cek header in
+  let cek =
+    match header.Header.alg with `Dir -> Ok "" | _ -> make_cek header
+  in
   Result.bind cek (fun cek ->
       let iv = make_iv header in
       Result.bind iv (fun iv ->
@@ -49,64 +51,73 @@ let make ~header payload =
 let encrypt_payload ?enc ~cek ~iv ~aad payload =
   match enc with
   | Some `A128CBC_HS256 ->
-      (* RFC 7516 appendix B.1: first 128 bit hmac, last 128 bit aes *)
-      let hmac_key, aes_key =
-        U_String.split cek Mirage_crypto.AES.CBC.block_size
-      in
-      let key = Mirage_crypto.AES.CBC.of_secret aes_key in
-      (* B.2 encryption in CBC mode *)
-      Mirage_crypto.AES.CBC.encrypt ~key ~iv
-        (Pkcs7.pad payload Mirage_crypto.AES.CBC.block_size)
-      |> fun data ->
-      (* B.5 input to HMAC computation *)
-      let hmac_input =
-        (* B.3 64 bit big-endian AAD length (in bits!) *)
-        let aal = Bytes.create 8 in
-        Bytes.set_int64_be aal 0 Int64.(mul 8L (of_int (String.length aad)));
-        String.concat "" [ aad; iv; data; Bytes.unsafe_to_string aal ]
-      in
-      let computed_auth_tag =
-        let full =
-          Digestif.SHA256.hmac_string ~key:hmac_key hmac_input
-          |> Digestif.SHA256.to_raw_string
+      if Jwa.enc_to_length `A128CBC_HS256 <> String.length cek * 8 then
+        Error `Invalid_JWK
+      else
+        (* RFC 7516 appendix B.1: first 128 bit hmac, last 128 bit aes *)
+        let hmac_key, aes_key =
+          U_String.split cek Mirage_crypto.AES.CBC.block_size
         in
-        (* B.7 truncate to 128 bit *)
-        String.sub full 0 16
-      in
-      Ok (data, computed_auth_tag)
+        let key = Mirage_crypto.AES.CBC.of_secret aes_key in
+        (* B.2 encryption in CBC mode *)
+        Mirage_crypto.AES.CBC.encrypt ~key ~iv
+          (Pkcs7.pad payload Mirage_crypto.AES.CBC.block_size)
+        |> fun data ->
+        (* B.5 input to HMAC computation *)
+        let hmac_input =
+          (* B.3 64 bit big-endian AAD length (in bits!) *)
+          let aal = Bytes.create 8 in
+          Bytes.set_int64_be aal 0 Int64.(mul 8L (of_int (String.length aad)));
+          String.concat "" [ aad; iv; data; Bytes.unsafe_to_string aal ]
+        in
+        let computed_auth_tag =
+          let full =
+            Digestif.SHA256.hmac_string ~key:hmac_key hmac_input
+            |> Digestif.SHA256.to_raw_string
+          in
+          (* B.7 truncate to 128 bit *)
+          String.sub full 0 16
+        in
+        Ok (data, computed_auth_tag)
   | Some `A256CBC_HS512 ->
-      (* RFC 7518 section 5.2.5 / 5.2.2.1: first 256 bit hmac, last 256 bit aes *)
-      let hmac_key, aes_key = U_String.split cek 32 in
-      let key = Mirage_crypto.AES.CBC.of_secret aes_key in
-      (* RFC 7518 section 5.2.2.1 step 3: encryption in CBC mode *)
-      Mirage_crypto.AES.CBC.encrypt ~key ~iv
-        (Pkcs7.pad payload Mirage_crypto.AES.CBC.block_size)
-      |> fun data ->
-      (* RFC 7518 section 5.2.2.1 step 5 / RFC 7516 appendix B.5: input to HMAC computation *)
-      let hmac_input =
-        (* RFC 7518 section 5.2.2.1 step 4: 64 bit big-endian AAD length (in bits!) *)
-        let aal = Bytes.create 8 in
-        Bytes.set_int64_be aal 0 Int64.(mul 8L (of_int (String.length aad)));
-        String.concat "" [ aad; iv; data; Bytes.unsafe_to_string aal ]
-      in
-      let computed_auth_tag =
-        let full =
-          Digestif.SHA512.hmac_string ~key:hmac_key hmac_input
-          |> Digestif.SHA512.to_raw_string
+      if Jwa.enc_to_length `A256CBC_HS512 <> String.length cek * 8 then
+        Error `Invalid_JWK
+      else
+        (* RFC 7518 section 5.2.5 / 5.2.2.1: first 256 bit hmac, last 256 bit aes *)
+        let hmac_key, aes_key = U_String.split cek 32 in
+        let key = Mirage_crypto.AES.CBC.of_secret aes_key in
+        (* RFC 7518 section 5.2.2.1 step 3: encryption in CBC mode *)
+        Mirage_crypto.AES.CBC.encrypt ~key ~iv
+          (Pkcs7.pad payload Mirage_crypto.AES.CBC.block_size)
+        |> fun data ->
+        (* RFC 7518 section 5.2.2.1 step 5 / RFC 7516 appendix B.5: input to HMAC computation *)
+        let hmac_input =
+          (* RFC 7518 section 5.2.2.1 step 4: 64 bit big-endian AAD length (in bits!) *)
+          let aal = Bytes.create 8 in
+          Bytes.set_int64_be aal 0 Int64.(mul 8L (of_int (String.length aad)));
+          String.concat "" [ aad; iv; data; Bytes.unsafe_to_string aal ]
         in
-        (* RFC 7518 section 5.2.5: truncate to 256 bit (32 octets) *)
-        String.sub full 0 32
-      in
-      Ok (data, computed_auth_tag)
+        let computed_auth_tag =
+          let full =
+            Digestif.SHA512.hmac_string ~key:hmac_key hmac_input
+            |> Digestif.SHA512.to_raw_string
+          in
+          (* RFC 7518 section 5.2.5: truncate to 256 bit (32 octets) *)
+          String.sub full 0 32
+        in
+        Ok (data, computed_auth_tag)
   | Some (`A128GCM | `A256GCM) ->
-      let module GCM = Mirage_crypto.AES.GCM in
-      let key = GCM.of_secret cek in
-      let adata = aad in
-      GCM.authenticate_encrypt ~key ~nonce:iv ~adata payload |> fun cdata ->
-      let cipher, tag_data =
-        U_String.split cdata (String.length cdata - GCM.tag_size)
-      in
-      Ok (cipher, tag_data)
+      if Jwa.enc_to_length (Option.get enc) <> String.length cek * 8 then
+        Error `Invalid_JWK
+      else
+        let module GCM = Mirage_crypto.AES.GCM in
+        let key = GCM.of_secret cek in
+        let adata = aad in
+        GCM.authenticate_encrypt ~key ~nonce:iv ~adata payload |> fun cdata ->
+        let cipher, tag_data =
+          U_String.split cdata (String.length cdata - GCM.tag_size)
+        in
+        Ok (cipher, tag_data)
   | None -> Error `Missing_enc
 (* | _ -> Error `Unsupported_enc *)
 
@@ -137,25 +148,54 @@ let encrypt_cek (type a) alg (cek : string) ~(jwk : a Jwk.t) =
 
 let encrypt (type a) ~(jwk : a Jwk.t) t =
   let header_string = Header.to_string t.header in
-  let ecek =
-    encrypt_cek t.header.alg t.cek ~jwk |> Result.map U_Base64.url_encode_string
-  in
-  Result.bind ecek (fun ecek ->
-      let eiv = U_Base64.url_encode_string t.iv in
-      let ciphertext =
-        encrypt_payload ?enc:t.header.enc ~cek:t.cek ~iv:t.iv ~aad:header_string
-          t.payload
+  match t.header.alg with
+  | `RSA_OAEP | `RSA1_5 ->
+      let ecek =
+        encrypt_cek t.header.alg t.cek ~jwk
+        |> Result.map U_Base64.url_encode_string
       in
-      Result.bind ciphertext (fun (ciphertext, auth_tag) ->
-          Ok
-            (String.concat "."
-               [
-                 header_string;
-                 ecek;
-                 eiv;
-                 U_Base64.url_encode_string ciphertext;
-                 U_Base64.url_encode_string auth_tag;
-               ])))
+      Result.bind ecek (fun ecek ->
+          let eiv = U_Base64.url_encode_string t.iv in
+          let ciphertext =
+            encrypt_payload ?enc:t.header.enc ~cek:t.cek ~iv:t.iv
+              ~aad:header_string t.payload
+          in
+          Result.bind ciphertext (fun (ciphertext, auth_tag) ->
+              Ok
+                (String.concat "."
+                   [
+                     header_string;
+                     ecek;
+                     eiv;
+                     U_Base64.url_encode_string ciphertext;
+                     U_Base64.url_encode_string auth_tag;
+                   ])))
+  | `Dir -> (
+      match jwk with
+      | Jwk.Oct jwk when jwk.Jwk.use = Some `Enc || jwk.use = None ->
+          let ecek = "" in
+          let eiv = U_Base64.url_encode_string t.iv in
+          let cekr =
+            U_Base64.url_decode jwk.key
+            |> Result.map_error (fun _ -> `Invalid_JWK)
+          in
+          let ciphertext =
+            Result.bind cekr (fun cek ->
+                encrypt_payload ?enc:t.header.enc ~cek ~iv:t.iv
+                  ~aad:header_string t.payload)
+          in
+          Result.bind ciphertext (fun (ciphertext, auth_tag) ->
+              Ok
+                (String.concat "."
+                   [
+                     header_string;
+                     ecek;
+                     eiv;
+                     U_Base64.url_encode_string ciphertext;
+                     U_Base64.url_encode_string auth_tag;
+                   ]))
+      | _ -> Error `Invalid_JWK)
+  | _ -> Error `Invalid_alg
 
 let decrypt_cek alg str ~(jwk : Jwk.priv Jwk.t) =
   let of_opt_string = function
@@ -183,60 +223,73 @@ let decrypt_ciphertext enc ~cek ~iv ~auth_tag ~aad ciphertext =
   Result.bind encrypted (fun encrypted ->
       match enc with
       | Some `A128CBC_HS256 ->
-          (* RFC 7516 appendix B.1: first 128 bit hmac, last 128 bit aes *)
-          let hmac_key, aes_key = U_String.split cek 16 in
-          let key = Mirage_crypto.AES.CBC.of_secret aes_key in
-
-          (* B.5 input to HMAC computation *)
-          let hmac_input =
-            (* B.3 64 bit big-endian AAD length (in bits!) *)
-            let aal = Bytes.create 8 in
-            Bytes.set_int64_be aal 0 Int64.(mul 8L (of_int (String.length aad)));
-            String.concat "" [ aad; iv; encrypted; Bytes.unsafe_to_string aal ]
-          in
-          let computed_auth_tag =
-            let full = Digestif.SHA256.hmac_string ~key:hmac_key hmac_input in
-            (* B.7 truncate to 128 bit *)
-            String.sub (Digestif.SHA256.to_raw_string full) 0 16
-          in
-          if not (Eqaf.equal computed_auth_tag auth_tag) then
-            Error (`Msg "invalid auth tag")
+          if Jwa.enc_to_length `A128CBC_HS256 <> String.length cek * 8 then
+            Error `Invalid_JWK
           else
-            (* B.2 encryption in CBC mode *)
-            Mirage_crypto.AES.CBC.decrypt ~key ~iv encrypted |> Pkcs7.unpad
+            (* RFC 7516 appendix B.1: first 128 bit hmac, last 128 bit aes *)
+            let hmac_key, aes_key = U_String.split cek 16 in
+            let key = Mirage_crypto.AES.CBC.of_secret aes_key in
+
+            (* B.5 input to HMAC computation *)
+            let hmac_input =
+              (* B.3 64 bit big-endian AAD length (in bits!) *)
+              let aal = Bytes.create 8 in
+              Bytes.set_int64_be aal 0
+                Int64.(mul 8L (of_int (String.length aad)));
+              String.concat ""
+                [ aad; iv; encrypted; Bytes.unsafe_to_string aal ]
+            in
+            let computed_auth_tag =
+              let full = Digestif.SHA256.hmac_string ~key:hmac_key hmac_input in
+              (* B.7 truncate to 128 bit *)
+              String.sub (Digestif.SHA256.to_raw_string full) 0 16
+            in
+            if not (Eqaf.equal computed_auth_tag auth_tag) then
+              Error (`Msg "invalid auth tag")
+            else
+              (* B.2 encryption in CBC mode *)
+              Mirage_crypto.AES.CBC.decrypt ~key ~iv encrypted |> Pkcs7.unpad
       | Some `A256CBC_HS512 ->
-          (* RFC 7518 section 5.2.5 / 5.2.2.1: first 256 bit hmac, last 256 bit aes *)
-          let hmac_key, aes_key = U_String.split cek 32 in
-          let key = Mirage_crypto.AES.CBC.of_secret aes_key in
-
-          (* RFC 7518 section 5.2.2.1 step 5 / RFC 7516 appendix B.5: input to HMAC computation *)
-          let hmac_input =
-            (* RFC 7518 section 5.2.2.1 step 4: 64 bit big-endian AAD length (in bits!) *)
-            let aal = Bytes.create 8 in
-            Bytes.set_int64_be aal 0 Int64.(mul 8L (of_int (String.length aad)));
-            String.concat "" [ aad; iv; encrypted; Bytes.unsafe_to_string aal ]
-          in
-          let computed_auth_tag =
-            let full = Digestif.SHA512.hmac_string ~key:hmac_key hmac_input in
-            (* RFC 7518 section 5.2.5: truncate to 256 bit (32 octets) *)
-            String.sub (Digestif.SHA512.to_raw_string full) 0 32
-          in
-          if not (Eqaf.equal computed_auth_tag auth_tag) then
-            Error (`Msg "invalid auth tag")
+          if Jwa.enc_to_length `A256CBC_HS512 <> String.length cek * 8 then
+            Error `Invalid_JWK
           else
-            (* RFC 7518 section 5.2.2.2 step 3: decryption in CBC mode *)
-            Mirage_crypto.AES.CBC.decrypt ~key ~iv encrypted |> Pkcs7.unpad
+            (* RFC 7518 section 5.2.5 / 5.2.2.1: first 256 bit hmac, last 256 bit aes *)
+            let hmac_key, aes_key = U_String.split cek 32 in
+            let key = Mirage_crypto.AES.CBC.of_secret aes_key in
+
+            (* RFC 7518 section 5.2.2.1 step 5 / RFC 7516 appendix B.5: input to HMAC computation *)
+            let hmac_input =
+              (* RFC 7518 section 5.2.2.1 step 4: 64 bit big-endian AAD length (in bits!) *)
+              let aal = Bytes.create 8 in
+              Bytes.set_int64_be aal 0
+                Int64.(mul 8L (of_int (String.length aad)));
+              String.concat ""
+                [ aad; iv; encrypted; Bytes.unsafe_to_string aal ]
+            in
+            let computed_auth_tag =
+              let full = Digestif.SHA512.hmac_string ~key:hmac_key hmac_input in
+              (* RFC 7518 section 5.2.5: truncate to 256 bit (32 octets) *)
+              String.sub (Digestif.SHA512.to_raw_string full) 0 32
+            in
+            if not (Eqaf.equal computed_auth_tag auth_tag) then
+              Error (`Msg "invalid auth tag")
+            else
+              (* RFC 7518 section 5.2.2.2 step 3: decryption in CBC mode *)
+              Mirage_crypto.AES.CBC.decrypt ~key ~iv encrypted |> Pkcs7.unpad
       | Some (`A256GCM | `A128GCM) ->
-          let module GCM = Mirage_crypto.AES.GCM in
-          let key = GCM.of_secret cek in
-          let adata = aad in
-          let encrypted = encrypted ^ auth_tag in
-          Mirage_crypto.AES.GCM.authenticate_decrypt ~key ~nonce:iv ~adata
-            encrypted
-          |> fun message ->
-          message
-          |> Option.map (fun x -> Ok x)
-          |> Option.value ~default:(Error (`Msg "invalid auth tag"))
+          if Jwa.enc_to_length (Option.get enc) <> String.length cek * 8 then
+            Error `Invalid_JWK
+          else
+            let module GCM = Mirage_crypto.AES.GCM in
+            let key = GCM.of_secret cek in
+            let adata = aad in
+            let encrypted = encrypted ^ auth_tag in
+            Mirage_crypto.AES.GCM.authenticate_decrypt ~key ~nonce:iv ~adata
+              encrypted
+            |> fun message ->
+            message
+            |> Option.map (fun x -> Ok x)
+            |> Option.value ~default:(Error (`Msg "invalid auth tag"))
       | _ -> Error (`Msg "unsupported encryption"))
 
 let decrypt ~(jwk : Jwk.priv Jwk.t) jwe =
@@ -244,16 +297,39 @@ let decrypt ~(jwk : Jwk.priv Jwk.t) jwe =
   | [ enc_header; enc_cek; enc_iv; ciphertext; auth_tag ] ->
       let header = Header.of_string enc_header in
       Result.bind header (fun header ->
-          let cek = decrypt_cek header.Header.alg ~jwk enc_cek in
-          Result.bind cek (fun cek ->
-              let iv = U_Base64.url_decode enc_iv in
-              Result.bind iv (fun iv ->
-                  let auth_tag = U_Base64.url_decode auth_tag in
-                  Result.bind auth_tag (fun auth_tag ->
-                      let payload =
-                        decrypt_ciphertext header.Header.enc ~cek ~iv ~auth_tag
-                          ~aad:enc_header ciphertext
-                      in
-                      Result.bind payload (fun payload ->
-                          Ok { header; cek; iv; payload; aad = None })))))
+          match header.Header.alg with
+          | `RSA_OAEP | `RSA1_5 ->
+              let cek = decrypt_cek header.Header.alg ~jwk enc_cek in
+              Result.bind cek (fun cek ->
+                  let iv = U_Base64.url_decode enc_iv in
+                  Result.bind iv (fun iv ->
+                      let auth_tag = U_Base64.url_decode auth_tag in
+                      Result.bind auth_tag (fun auth_tag ->
+                          let payload =
+                            decrypt_ciphertext header.Header.enc ~cek ~iv
+                              ~auth_tag ~aad:enc_header ciphertext
+                          in
+                          Result.bind payload (fun payload ->
+                              Ok { header; cek; iv; payload; aad = None }))))
+          | `Dir when enc_cek <> "" -> Error `Invalid_JWE
+          | `Dir -> (
+              match jwk with
+              | Jwk.Oct jwk when jwk.Jwk.use = Some `Enc || jwk.use = None ->
+                  let cekr =
+                    U_Base64.url_decode jwk.key
+                    |> Result.map_error (fun _ -> `Invalid_JWK)
+                  in
+                  Result.bind cekr (fun cek ->
+                      let iv = U_Base64.url_decode enc_iv in
+                      Result.bind iv (fun iv ->
+                          let auth_tag = U_Base64.url_decode auth_tag in
+                          Result.bind auth_tag (fun auth_tag ->
+                              let payload =
+                                decrypt_ciphertext header.Header.enc ~cek ~iv
+                                  ~auth_tag ~aad:enc_header ciphertext
+                              in
+                              Result.bind payload (fun payload ->
+                                  Ok { header; cek; iv; payload; aad = None }))))
+              | _ -> Error `Invalid_JWK)
+          | _ -> Error `Unsupported_alg)
   | _ -> Error `Invalid_JWE
