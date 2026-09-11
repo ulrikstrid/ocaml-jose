@@ -9,13 +9,14 @@ module Jwa : sig
     | `ES384  (** ECDSA using P-384 and SHA-384 *)
     | `ES512  (** ECDSA using P-521 and SHA-512 *)
     | `EdDSA
-        (** EdDSA signature algorithm
-            {{:https://www.rfc-editor.org/rfc/rfc8037.html} Link to RFC} *)
+      (** EdDSA signature algorithm
+          {{:https://www.rfc-editor.org/rfc/rfc8037.html} Link to RFC} *)
     | `Ed25519
-        (** EdDSA signature algorithm with Ed25519
-            {{:https://www.rfc-editor.org/rfc/rfc9864.html} Link to RFC} *)
+      (** EdDSA signature algorithm with Ed25519
+          {{:https://www.rfc-editor.org/rfc/rfc9864.html} Link to RFC} *)
     | `RSA_OAEP  (** RSAES OAEP using default parameters *)
     | `RSA1_5  (** RSA PKCS 1 *)
+    | `Dir  (** Direct use of a shared symmetric key *)
     | `None
     | `Unsupported of string ]
 
@@ -47,6 +48,10 @@ module Jwa : sig
     [ `A128CBC_HS256
       (** AES_128_CBC_HMAC_SHA_256 authenticated encryption algorithm,
           https://tools.ietf.org/html/rfc7518#section-5.2.3 *)
+    | `A256CBC_HS512
+      (** AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm,
+          https://tools.ietf.org/html/rfc7518#section-5.2.5 *)
+    | `A128GCM  (** AES GCM using 128-bit key *)
     | `A256GCM  (** AES GCM using 256-bit key *) ]
   (** https://tools.ietf.org/html/rfc7518#section-5 *)
 
@@ -453,7 +458,7 @@ module Jwe : sig
     jwk:'a Jwk.t ->
     t ->
     ( string,
-      [> `Invalid_alg | `Missing_enc | `Unsupported_enc | `Unsupported_kty ] )
+      [> `Invalid_alg | `Invalid_JWK | `Missing_enc | `Unsupported_enc | `Unsupported_kty ] )
     result
   (** [encrypt jwk t] encrypts a {! t } into the compact string format *)
 
@@ -461,7 +466,7 @@ module Jwe : sig
     jwk:Jwk.priv Jwk.t ->
     string ->
     ( t,
-      [> `Invalid_JWE | `Invalid_JWK | `Decrypt_cek_failed | `Msg of string ]
+      [> `Invalid_JWE | `Invalid_JWK | `Decrypt_cek_failed | `Unsupported_alg | `Msg of string ]
     )
     result
   (** [decrypt jwk string] decrypts a compact string formated JWE into a {! t }
