@@ -16,6 +16,7 @@ module Jwa : sig
           {{:https://www.rfc-editor.org/rfc/rfc9864.html} Link to RFC} *)
     | `RSA_OAEP  (** RSAES OAEP using default parameters *)
     | `RSA1_5  (** RSA PKCS 1 *)
+    | `Dir  (** Direct use of a shared symmetric key *)
     | `None
     | `Unsupported of string ]
 
@@ -457,7 +458,7 @@ module Jwe : sig
     jwk:'a Jwk.t ->
     t ->
     ( string,
-      [> `Invalid_alg | `Missing_enc | `Unsupported_enc | `Unsupported_kty ] )
+      [> `Invalid_alg | `Invalid_JWK | `Missing_enc | `Unsupported_enc | `Unsupported_kty ] )
     result
   (** [encrypt jwk t] encrypts a {! t } into the compact string format *)
 
@@ -465,7 +466,7 @@ module Jwe : sig
     jwk:Jwk.priv Jwk.t ->
     string ->
     ( t,
-      [> `Invalid_JWE | `Invalid_JWK | `Decrypt_cek_failed | `Msg of string ]
+      [> `Invalid_JWE | `Invalid_JWK | `Decrypt_cek_failed | `Unsupported_alg | `Msg of string ]
     )
     result
   (** [decrypt jwk string] decrypts a compact string formated JWE into a {! t }
