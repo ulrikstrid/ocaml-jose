@@ -24,7 +24,7 @@ let rfc7520_oct_128gcm_key =
      "k":"XctOhJAkA-pD9Lh7ZgW_2A"}|}
 
 let rfc7520_5_6_jwe =
-  "eyJhbGciOiJkaXIiLCJraWQiOiI3N2M3ZTJiOC02ZTEzLTQ1Y2YtODY3Mi02MWRiNWI0NTI0M2EiLCJlbmMiOiJBMTI4R0NNIn0."
+  "eyJhbGciOiJkaXIiLCJraWQiOiI3N2M3ZTJiOC02ZTEzLTQ1Y2YtODY3Mi02MTdiNWI0NTI0M2EiLCJlbmMiOiJBMTI4R0NNIn0."
   ^ "." ^ "refa467QzzKx6QAB."
   ^ "JW_i_f52hww_ELQPGaYyeAB6HYGcR559l9TYnSovc23XJoBcW29rHP8yZOZG7YhLpT1bjFuvZPjQS-m0IFtVcXkZXdH_lr_FrdYt9HRUYkshtrMmIUAyGmUnd9zMDB2n0cRDIHAzFVeJUDxkUwVAE7_YGRPdcqMyiBoCO-FBdE-Nceb4h3-FtBP-c_BIwCPTjb9o0SbdcdREEMJMyZBH8ySWMVi1gPD9yxi-aQpGbSv_F9N4IZAxscj5g-NJsUPbjk29-s7LJAGb15wEBtXphVCgyy53CoIKLHHeJHXex45Uz9aKZSRSInZI-wjsY0yu3cT4_aQ3i1o-tiE-F8Ios61EKgyIQ4CWao8PFMj8TTnp."
   ^ "vbb32Xvllea2OtmHAdccRQ"
@@ -266,14 +266,12 @@ let jwa_tests =
             Jose.Jwk.of_priv_json_string rfc7520_oct_128gcm_key
             |> CCResult.get_exn
           in
-          let decrypted =
-            Jose.Jwe.decrypt ~jwk rfc7520_5_6_jwe |> CCResult.get_exn
-          in
-          check_string "decrypted payload matches RFC 7520 5.6" frodo_payload
-            decrypted.payload;
-          Alcotest.(check bool)
-            "header alg is dir" true
-            (decrypted.header.alg = `Unsupported "dir");
+          let decrypted = Jose.Jwe.decrypt ~jwk rfc7520_5_6_jwe in
+          check_result_string "decrypted payload matches RFC 7520 5.6"
+            (Ok frodo_payload)
+            (Result.map (fun d -> d.Jose.Jwe.payload) decrypted);
+          check_result_bool "header alg is dir" (Ok true)
+            (Result.map (fun d -> d.Jose.Jwe.header.alg = `Dir) decrypted);
           (* Test roundtrip direct encryption *)
           let header_json =
             `Assoc [ ("alg", `String "dir"); ("enc", `String "A128GCM") ]
