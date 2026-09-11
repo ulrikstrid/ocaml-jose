@@ -29,6 +29,7 @@ type alg =
   | `Ed25519  (** Ed25519 signature algorithm (RFC 9864) *)
   | `RSA_OAEP  (** RSAES OAEP using default parameters *)
   | `RSA1_5  (** RSA PKCS 1 *)
+  | `Dir  (** Direct use of a shared symmetric key *)
   | `None
   | `Unsupported of string ]
 
@@ -42,6 +43,7 @@ let alg_to_string = function
   | `Ed25519 -> "Ed25519"
   | `RSA_OAEP -> "RSA-OAEP"
   | `RSA1_5 -> "RSA1_5"
+  | `Dir -> "dir"
   | `None -> "none"
   | `Unsupported string -> string
 
@@ -55,6 +57,7 @@ let alg_of_string = function
   | "Ed25519" -> `Ed25519
   | "RSA-OAEP" -> `RSA_OAEP
   | "RSA1_5" -> `RSA1_5
+  | "dir" -> `Dir
   | "none" -> `None
   | str -> `Unsupported str
 

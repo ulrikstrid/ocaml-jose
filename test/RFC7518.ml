@@ -266,14 +266,12 @@ let jwa_tests =
             Jose.Jwk.of_priv_json_string rfc7520_oct_128gcm_key
             |> CCResult.get_exn
           in
-          let decrypted =
-            Jose.Jwe.decrypt ~jwk rfc7520_5_6_jwe |> CCResult.get_exn
-          in
-          check_string "decrypted payload matches RFC 7520 5.6" frodo_payload
-            decrypted.payload;
-          Alcotest.(check bool)
-            "header alg is dir" true
-            (decrypted.header.alg = `Unsupported "dir");
+          let decrypted = Jose.Jwe.decrypt ~jwk rfc7520_5_6_jwe in
+          check_result_string "decrypted payload matches RFC 7520 5.6"
+            (Ok frodo_payload)
+            (Result.map (fun d -> d.Jose.Jwe.payload) decrypted);
+          check_result_bool "header alg is dir" (Ok true)
+            (Result.map (fun d -> d.Jose.Jwe.header.alg = `Dir) decrypted);
           (* Test roundtrip direct encryption *)
           let header_json =
             `Assoc [ ("alg", `String "dir"); ("enc", `String "A128GCM") ]
