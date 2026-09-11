@@ -368,8 +368,13 @@ let jwe_rsa_tests =
           let jwe =
             Jose.Jwe.decrypt jwe_aes_hmac_sha2_5_1 ~jwk |> CCResult.get_exn
           in
-          let str = Jose.Jwe.encrypt ~jwk jwe |> CCResult.get_exn in
-          let jwe2 = Jose.Jwe.decrypt ~jwk str in
+          let str =
+            Jose.Jwe.encrypt ~jwk jwe
+            |> CCResult.map_err (fun e -> `Msg (Helpers.error_to_string e))
+          in
+          let jwe2 =
+            CCResult.flat_map (fun str -> Jose.Jwe.decrypt ~jwk str) str
+          in
           check_result_string "Has the same payload after roundtrip"
             (Ok jwe.payload)
             (CCResult.map (fun (j : Jose.Jwe.t) -> j.payload) jwe2);
