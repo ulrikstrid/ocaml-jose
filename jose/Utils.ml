@@ -73,7 +73,103 @@ module Pkcs7 = struct
 end
 
 module Aes_kw = struct
+  (** Advanced Encryption Standard (AES) Key Wrap Algorithm (RFC 3394) *)
+
+  (** RFC 3394 Section 2.2.3.1: Default Initial Value (IV = 0xA6A6A6A6A6A6A6A6) *)
   let default_iv = "\xA6\xA6\xA6\xA6\xA6\xA6\xA6\xA6"
-  let wrap ~kek:_ _ = Error (`Msg "not implemented")
-  let unwrap ~kek:_ _ = Error (`Msg "not implemented")
+
+  (** RFC 3394 Section 2.2.1: Key Wrap *)
+  let wrap ~kek (plaintext : string) : (string, [> `Msg of string ]) result =
+    let len = String.length plaintext in
+    let kek_len = String.length kek in
+    if kek_len <> 16 && kek_len <> 24 && kek_len <> 32 then
+      Error (`Msg "Bad KEK length, must be 16, 24, or 32 bytes")
+    else if len >= 16 && len mod 8 = 0 then (
+      (* 1) Initialize variables: A = IV, R[i] = P[i] *)
+      let key = Mirage_crypto.AES.ECB.of_secret kek in
+      let n = len / 8 in
+
+      (* 1) Initialize variables: C[0] = IV, C[1..n] = P[1..n] *)
+      let out = Bytes.create (len + 8) in
+      Bytes.blit_string default_iv 0 out 0 8;
+      Bytes.blit_string plaintext 0 out 8 len;
+      let b_in = Bytes.create 16 in
+      let b_out = Bytes.create 16 in
+
+      (* 2) Calculate intermediate values: 6 rounds (j = 0..5, i = 0..n-1) *)
+      for j = 0 to 5 do
+        for i = 1 to n do
+          (* t = (n * j) + i, 1-indexed step counter *)
+          let t = (n * j) + i in
+          (* B = AES(K, A | R[i]) *)
+          Bytes.blit out 0 b_in 0 8;
+          Bytes.blit out (8 * i) b_in 8 8;
+          Mirage_crypto.AES.ECB.encrypt_into ~key
+            (Bytes.unsafe_to_string b_in)
+            ~src_off:0 b_out ~dst_off:0 16;
+
+          (* A = MSB(64, B) ^ t *)
+          Int64.logxor (Bytes.get_int64_be b_out 0) (Int64.of_int t)
+          |> Bytes.set_int64_be out 0;
+
+          (* R[i] = LSB(64, B) *)
+          Bytes.blit b_out 8 out (8 * i) 8
+        done
+      done;
+      (* 3) Output results: C[0] = A, C[i] = R[i] *)
+      String.of_bytes out |> Result.ok)
+    else
+      Error
+        (`Msg
+           "Bad plaintext length, must be multiple of 8 and at least 16 bytes \
+            long")
+
+  (** RFC 3394 Section 2.2.2: Key Unwrap *)
+  let unwrap ~kek ciphertext =
+    let kek_len = String.length kek in
+    let len = String.length ciphertext in
+    if kek_len <> 16 && kek_len <> 24 && kek_len <> 32 then
+      Error (`Msg "Bad KEK length, must be 16, 24, or 32 bytes")
+    else if len >= 24 && len mod 8 = 0 then (
+      (* 1) Initialize variables: A = C[0], R[i] = C[i] *)
+      let key = Mirage_crypto.AES.ECB.of_secret kek in
+      let n = (len / 8) - 1 in
+
+      let out = Bytes.of_string ciphertext in
+      let b_in = Bytes.create 16 in
+      let b_out = Bytes.create 16 in
+
+      (* 2) Calculate intermediate values in reverse (j = 5..0, i = n-1..0) *)
+      for j = 5 downto 0 do
+        for i = n downto 1 do
+          let t = (n * j) + i in
+
+          (* A' = A ^ t *)
+          Int64.logxor (Bytes.get_int64_be out 0) (Int64.of_int t)
+          |> Bytes.set_int64_be b_in 0;
+
+          (* Copy R[i] into second half of AES block *)
+          Bytes.blit out (8 * i) b_in 8 8;
+
+          (* B = AES-1(K, (A ^ t) | R[i]) *)
+          Mirage_crypto.AES.ECB.decrypt_into ~key
+            (Bytes.unsafe_to_string b_in)
+            ~src_off:0 b_out ~dst_off:0 16;
+
+          (* A = MSB(64, B) *)
+          Bytes.blit b_out 0 out 0 8;
+
+          (* R[i] = LSB(64, B) *)
+          Bytes.blit b_out 8 out (8 * i) 8
+        done
+      done;
+      (* 3) Output results: check if A == IV, then output P[i] = R[i] *)
+      if Eqaf.equal (Bytes.sub_string out 0 8) default_iv then
+        Bytes.sub_string out 8 (n * 8) |> Result.ok
+      else Error (`Msg "Integrity check failed"))
+    else
+      Error
+        (`Msg
+           "Bad ciphertext length, must be multiple of 8 and at least 24 bytes \
+            long")
 end
