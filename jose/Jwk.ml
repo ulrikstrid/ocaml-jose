@@ -95,6 +95,7 @@ let use_of_alg (alg : Jwa.alg) =
   | `RSA_OAEP -> `Enc
   | `RSA1_5 -> `Enc
   | `Dir -> `Enc
+  | `A128KW | `A256KW -> `Enc
   | `None -> `Unsupported "none"
   | `Unsupported str -> `Unsupported str
 
