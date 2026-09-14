@@ -17,6 +17,8 @@ module Jwa : sig
     | `RSA_OAEP  (** RSAES OAEP using default parameters *)
     | `RSA1_5  (** RSA PKCS 1 *)
     | `Dir  (** Direct use of a shared symmetric key *)
+    | `A128KW  (** AES Key Wrap using 128-bit key *)
+    | `A256KW  (** AES Key Wrap using 256-bit key *)
     | `None
     | `Unsupported of string ]
 
@@ -458,7 +460,12 @@ module Jwe : sig
     jwk:'a Jwk.t ->
     t ->
     ( string,
-      [> `Invalid_alg | `Invalid_JWK | `Missing_enc | `Unsupported_enc | `Unsupported_kty ] )
+      [> `Invalid_alg
+      | `Invalid_JWK
+      | `Missing_enc
+      | `Unsupported_enc
+      | `Unsupported_kty
+      | `Msg of string ] )
     result
   (** [encrypt jwk t] encrypts a {! t } into the compact string format *)
 
@@ -466,8 +473,11 @@ module Jwe : sig
     jwk:Jwk.priv Jwk.t ->
     string ->
     ( t,
-      [> `Invalid_JWE | `Invalid_JWK | `Decrypt_cek_failed | `Unsupported_alg | `Msg of string ]
-    )
+      [> `Invalid_JWE
+      | `Invalid_JWK
+      | `Decrypt_cek_failed
+      | `Unsupported_alg
+      | `Msg of string ] )
     result
   (** [decrypt jwk string] decrypts a compact string formated JWE into a {! t }
   *)

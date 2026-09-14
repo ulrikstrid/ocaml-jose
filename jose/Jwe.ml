@@ -121,12 +121,15 @@ let encrypt_payload ?enc ~cek ~iv ~aad payload =
   | None -> Error `Missing_enc
 (* | _ -> Error `Unsupported_enc *)
 
+type encrypt_key = Rsa of Mirage_crypto_pk.Rsa.pub | Oct of string
+
 let encrypt_cek (type a) alg (cek : string) ~(jwk : a Jwk.t) =
   let key =
     match jwk with
-    | Rsa_priv rsa -> Ok (Mirage_crypto_pk.Rsa.pub_of_priv rsa.key)
-    | Rsa_pub rsa -> Ok rsa.key
-    | Oct _ -> Error `Unsupported_kty
+    | Rsa_priv rsa -> Ok (Rsa (Mirage_crypto_pk.Rsa.pub_of_priv rsa.key))
+    | Rsa_pub rsa -> Ok (Rsa rsa.key)
+    | Oct oct when oct.use = None || oct.use = Some `Enc -> Ok (Oct oct.key)
+    | Oct _ -> Error `Invalid_JWK
     | Es256_priv _ -> Error `Unsupported_kty
     | Es256_pub _ -> Error `Unsupported_kty
     | Es384_priv _ -> Error `Unsupported_kty
@@ -137,19 +140,27 @@ let encrypt_cek (type a) alg (cek : string) ~(jwk : a Jwk.t) =
     | Ed25519_pub _ -> Error `Unsupported_kty
   in
   Result.bind key (fun key ->
-      match alg with
-      | `RSA1_5 ->
+      match (key, alg) with
+      | Rsa key, `RSA1_5 ->
           let ecek = Mirage_crypto_pk.Rsa.PKCS1.encrypt ~key cek in
           Ok ecek
-      | `RSA_OAEP ->
+      | Rsa key, `RSA_OAEP ->
           let jek = RSA_OAEP.encrypt ~key cek in
           Ok jek
+      | Oct key, (`A128KW | `A256KW) ->
+          let kek =
+            U_Base64.url_decode key |> Result.map_error (fun _ -> `Invalid_JWK)
+          in
+          Result.bind kek (fun kek ->
+              let expected_len = if alg = `A128KW then 16 else 32 in
+              if String.length kek <> expected_len then Error `Invalid_JWK
+              else Aes_kw.wrap ~kek cek)
       | _ -> Error `Invalid_alg)
 
 let encrypt (type a) ~(jwk : a Jwk.t) t =
   let header_string = Header.to_string t.header in
   match t.header.alg with
-  | `RSA_OAEP | `RSA1_5 ->
+  | `RSA_OAEP | `RSA1_5 | `A128KW | `A256KW ->
       let ecek =
         encrypt_cek t.header.alg t.cek ~jwk
         |> Result.map U_Base64.url_encode_string
@@ -215,6 +226,15 @@ let decrypt_cek alg str ~(jwk : Jwk.priv Jwk.t) =
         |> Result.map (RSA_OAEP.decrypt ~key:rsa.key)
       in
       Result.bind decoded of_opt_string
+  | (`A128KW | `A256KW), Jwk.Oct oct when oct.use = None || oct.use = Some `Enc
+    ->
+      let kek =
+        U_Base64.url_decode oct.key |> Result.map_error (fun _ -> `Invalid_JWK)
+      in
+      Result.bind kek (fun kek ->
+          let expected_len = if alg = `A128KW then 16 else 32 in
+          if String.length kek <> expected_len then Error `Invalid_JWK
+          else Result.bind (Utils.U_Base64.url_decode str) (Aes_kw.unwrap ~kek))
   | _ -> Error `Invalid_JWK
 
 (* Move to Jwa? *)
@@ -298,7 +318,7 @@ let decrypt ~(jwk : Jwk.priv Jwk.t) jwe =
       let header = Header.of_string enc_header in
       Result.bind header (fun header ->
           match header.Header.alg with
-          | `RSA_OAEP | `RSA1_5 ->
+          | `RSA_OAEP | `RSA1_5 | `A128KW | `A256KW ->
               let cek = decrypt_cek header.Header.alg ~jwk enc_cek in
               Result.bind cek (fun cek ->
                   let iv = U_Base64.url_decode enc_iv in
