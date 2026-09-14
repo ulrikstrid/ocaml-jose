@@ -522,5 +522,11 @@ module Private : sig
       val pad : string -> int -> string
       val unpad : string -> (string, [> `Msg of string ]) result
     end
+
+    module Aes_kw : sig
+      val default_iv : string
+      val wrap : kek:string -> string -> (string, [> `Msg of string ]) result
+      val unwrap : kek:string -> string -> (string, [> `Msg of string ]) result
+    end
   end
 end

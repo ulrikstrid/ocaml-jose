@@ -71,3 +71,9 @@ module Pkcs7 = struct
         in
         if check 0 then Ok data else Error (`Msg "bad padding")
 end
+
+module Aes_kw = struct
+  let default_iv = "\xA6\xA6\xA6\xA6\xA6\xA6\xA6\xA6"
+  let wrap ~kek:_ _ = Error (`Msg "not implemented")
+  let unwrap ~kek:_ _ = Error (`Msg "not implemented")
+end
