@@ -30,6 +30,8 @@ type alg =
   | `RSA_OAEP  (** RSAES OAEP using default parameters *)
   | `RSA1_5  (** RSA PKCS 1 *)
   | `Dir  (** Direct use of a shared symmetric key *)
+  | `A128KW  (** AES Key Wrap using 128-bit key *)
+  | `A256KW  (** AES Key Wrap using 256-bit key *)
   | `None
   | `Unsupported of string ]
 
@@ -44,6 +46,8 @@ let alg_to_string = function
   | `RSA_OAEP -> "RSA-OAEP"
   | `RSA1_5 -> "RSA1_5"
   | `Dir -> "dir"
+  | `A128KW -> "A128KW"
+  | `A256KW -> "A256KW"
   | `None -> "none"
   | `Unsupported string -> string
 
@@ -58,6 +62,8 @@ let alg_of_string = function
   | "RSA-OAEP" -> `RSA_OAEP
   | "RSA1_5" -> `RSA1_5
   | "dir" -> `Dir
+  | "A128KW" -> `A128KW
+  | "A256KW" -> `A256KW
   | "none" -> `None
   | str -> `Unsupported str
 

@@ -116,7 +116,9 @@ let aes_kw_tests =
           let wrapped = Utils.Aes_kw.wrap ~kek key_data |> CCResult.get_exn in
           Alcotest.(check string)
             "RFC 3394 4.1 ciphertext matches" expected_ciphertext wrapped;
-          let unwrapped = Utils.Aes_kw.unwrap ~kek wrapped |> CCResult.get_exn in
+          let unwrapped =
+            Utils.Aes_kw.unwrap ~kek wrapped |> CCResult.get_exn
+          in
           Alcotest.(check string)
             "RFC 3394 4.1 unwrap matches key data" key_data unwrapped);
       Alcotest.test_case
@@ -137,7 +139,9 @@ let aes_kw_tests =
           let wrapped = Utils.Aes_kw.wrap ~kek key_data |> CCResult.get_exn in
           Alcotest.(check string)
             "RFC 3394 4.6 ciphertext matches" expected_ciphertext wrapped;
-          let unwrapped = Utils.Aes_kw.unwrap ~kek wrapped |> CCResult.get_exn in
+          let unwrapped =
+            Utils.Aes_kw.unwrap ~kek wrapped |> CCResult.get_exn
+          in
           Alcotest.(check string)
             "RFC 3394 4.6 unwrap matches key data" key_data unwrapped);
       Alcotest.test_case
