@@ -71,3 +71,110 @@ module Pkcs7 = struct
         in
         if check 0 then Ok data else Error (`Msg "bad padding")
 end
+
+module Aes_kw = struct
+  (** Advanced Encryption Standard (AES) Key Wrap Algorithm (RFC 3394) *)
+
+  (** RFC 3394 Section 2.2.3.1: Default Initial Value (IV = 0xA6A6A6A6A6A6A6A6) *)
+  let default_iv = "\xA6\xA6\xA6\xA6\xA6\xA6\xA6\xA6"
+
+  (** RFC 3394 Section 2.2.1: Key Wrap *)
+  let wrap ~kek (plaintext : string) : (string, [> `Msg of string ]) result =
+    let bytes = Bytes.of_string plaintext in
+    let len = Bytes.length bytes in
+    let kek_len = String.length kek in
+    if kek_len <> 16 && kek_len <> 24 && kek_len <> 32 then
+      Error (`Msg "Bad KEK length, must be 16, 24, or 32 bytes")
+    else if len >= 16 && len mod 8 = 0 then
+      (* 1) Initialize variables: A = IV, R[i] = P[i] *)
+      let key = Mirage_crypto.AES.ECB.of_secret kek in
+      let a = Bytes.of_string default_iv in
+      let n = len / 8 in
+      let r = ArrayLabels.init ~f:(fun i -> Bytes.sub bytes (8 * i) 8) n in
+      let () =
+        (* 2) Calculate intermediate values: 6 rounds (j = 0..5, i = 0..n-1) *)
+        for j = 0 to 5 do
+          ArrayLabels.mapi_inplace
+            ~f:(fun i c ->
+              (* t = (n * j) + i, 1-indexed step counter *)
+              let t = (n * j) + i + 1 in
+              (* B = AES(K, A | R[i]) *)
+              let block = Bytes.cat a c in
+              let b =
+                Mirage_crypto.AES.ECB.encrypt ~key (String.of_bytes block)
+                |> Bytes.of_string
+              in
+              (* A = MSB(64, B) ^ t *)
+              let left = Bytes.sub b 0 8 in
+              Int64.logxor (Bytes.get_int64_be left 0) (Int64.of_int t)
+              |> Bytes.set_int64_be left 0;
+              Bytes.blit left 0 a 0 8;
+
+              (* R[i] = LSB(64, B) *)
+              let right = Bytes.sub b 8 8 in
+              right)
+            r
+        done
+      in
+      (* 3) Output results: C[0] = A, C[i] = R[i] *)
+      Bytes.concat Bytes.empty (a :: Array.to_list r)
+      |> String.of_bytes |> Result.ok
+    else
+      Error
+        (`Msg
+           "Bad plaintext length, must be multiple of 8 and at least 16 bytes \
+            long")
+
+  (** RFC 3394 Section 2.2.2: Key Unwrap *)
+  let unwrap ~kek ciphertext =
+    let kek_len = String.length kek in
+    let bytes = Bytes.of_string ciphertext in
+    let len = Bytes.length bytes in
+    if kek_len <> 16 && kek_len <> 24 && kek_len <> 32 then
+      Error (`Msg "Bad KEK length, must be 16, 24, or 32 bytes")
+    else if len >= 24 && len mod 8 = 0 then
+      (* 1) Initialize variables: A = C[0], R[i] = C[i] *)
+      let key = Mirage_crypto.AES.ECB.of_secret kek in
+      let n = (len / 8) - 1 in
+      let a = Bytes.sub bytes 0 8 in
+      let r =
+        ArrayLabels.init ~f:(fun i -> Bytes.sub bytes ((8 * i) + 8) 8) n
+      in
+      let () =
+        (* 2) Calculate intermediate values in reverse (j = 5..0, i = n-1..0) *)
+        for j = 5 downto 0 do
+          for i = n - 1 downto 0 do
+            let c = Array.get r i in
+            let t = (n * j) + i + 1 in
+
+            (* A' = A ^ t *)
+            Int64.logxor (Bytes.get_int64_be a 0) (Int64.of_int t)
+            |> Bytes.set_int64_be a 0;
+
+            (* B = AES-1(K, (A ^ t) | R[i]) *)
+            let block = Bytes.cat a c in
+            let b =
+              Mirage_crypto.AES.ECB.decrypt ~key (String.of_bytes block)
+              |> Bytes.of_string
+            in
+
+            (* A = MSB(64, B), R[i] = LSB(64, B) *)
+            let left = Bytes.sub b 0 8 in
+            Bytes.blit left 0 a 0 8;
+            let right = Bytes.sub b 8 8 in
+
+            Array.set r i right
+          done
+        done
+      in
+      (* 3) Output results: check if A == IV, then output P[i] = R[i] *)
+      if Eqaf.equal (String.of_bytes a) default_iv then
+        Bytes.concat Bytes.empty (Array.to_list r)
+        |> String.of_bytes |> Result.ok
+      else Error (`Msg "Integrity check failed")
+    else
+      Error
+        (`Msg
+           "Bad ciphertext length, must be multiple of 8 and at least 24 bytes \
+            long")
+end
