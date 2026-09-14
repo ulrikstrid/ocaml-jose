@@ -48,7 +48,7 @@ let rfc7520_5_8_oct_key =
      "k":"GZy6sIZ6wl9NJOKB-jnmVQ"}|}
 
 let rfc7520_5_8_jwe =
-  "eyJhbGciOiJBMTI4S1ciLCJraWQiOiI4MWIyMDk2NS04MzMyLTQzZDktYTQ2OC00MjE2MGFkOTFhYzgiLCJlbmMiOiJBMTI4R0NNIn0."
+  "eyJhbGciOiJBMTI4S1ciLCJraWQiOiI4MWIyMDk2NS04MzMyLTQzZDktYTQ2OC04MjE2MGFkOTFhYzgiLCJlbmMiOiJBMTI4R0NNIn0."
   ^ "CBI6oDw8MydIx1IBntf_lQcw2MmJKIQx." ^ "Qx0pmsDa8KnJc9Jo."
   ^ "AwliP-KmWgsZ37BvzCefNen6VTbRK3QMA4TkvRkH0tP1bTdhtFJgJxeVmJkLD61A1hnWGetdg11c9ADsnWgL56NyxwSYjU1ZEHcGkd3EkU0vjHi9gTlb90qSYFfeF0LwkcTtjbYKCsiNJQkcIp1yeM03OmuiYSoYJVSpf7ej6zaYcMv3WwdxDFl8REwOhNImk2Xld2JXq6BR53TSFkyT7PwVLuq-1GwtGHlQeg7gDT6xW0JqHDPn_H-puQsmthc9Zg0ojmJfqqFvETUxLAF-KjcBTS5dNy6egwkYtOt8EIHK-oEsKYtZRaa8Z7MOZ7UGxGIMvEmxrGCPeJa14slv2-gaqK0kEThkaSqdYw0FkQZF."
   ^ "ER7MWJZ1FBI_NKvn7Zb1Lw"
@@ -295,20 +295,18 @@ let jwa_tests =
           let jwk_a3 =
             Jose.Jwk.of_priv_json_string rfc7516_a3_oct_key |> CCResult.get_exn
           in
-          let dec_a3 =
-            Jose.Jwe.decrypt ~jwk:jwk_a3 rfc7516_a3_jwe |> CCResult.get_exn
-          in
-          check_string "RFC 7516 A.3 decrypted payload" "Live long and prosper."
-            dec_a3.payload;
+          let dec_a3 = Jose.Jwe.decrypt ~jwk:jwk_a3 rfc7516_a3_jwe in
+          check_result_string "RFC 7516 A.3 decrypted payload"
+            (Ok "Live long and prosper.")
+            (Result.map (fun dec -> dec.Jose.Jwe.payload) dec_a3);
           (* Validate RFC 7520 5.8 *)
           let jwk_5_8 =
             Jose.Jwk.of_priv_json_string rfc7520_5_8_oct_key |> CCResult.get_exn
           in
-          let dec_5_8 =
-            Jose.Jwe.decrypt ~jwk:jwk_5_8 rfc7520_5_8_jwe |> CCResult.get_exn
-          in
-          check_string "RFC 7520 5.8 decrypted payload" frodo_payload
-            dec_5_8.payload;
+          let dec_5_8 = Jose.Jwe.decrypt ~jwk:jwk_5_8 rfc7520_5_8_jwe in
+          check_result_string "RFC 7520 5.8 decrypted payload"
+            (Ok frodo_payload)
+            (Result.map (fun dec -> dec.Jose.Jwe.payload) dec_5_8);
           (* Roundtrip with A128KW *)
           let header_json =
             `Assoc

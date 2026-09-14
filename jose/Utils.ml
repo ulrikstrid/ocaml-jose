@@ -75,7 +75,8 @@ end
 module Aes_kw = struct
   (** Advanced Encryption Standard (AES) Key Wrap Algorithm (RFC 3394) *)
 
-  (** RFC 3394 Section 2.2.3.1: Default Initial Value (IV = 0xA6A6A6A6A6A6A6A6) *)
+  (** RFC 3394 Section 2.2.3.1: Default Initial Value (IV = 0xA6A6A6A6A6A6A6A6)
+  *)
   let default_iv = "\xA6\xA6\xA6\xA6\xA6\xA6\xA6\xA6"
 
   (** RFC 3394 Section 2.2.1: Key Wrap *)
