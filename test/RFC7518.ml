@@ -64,7 +64,7 @@ let rfc7520_5_5_ec_priv =
      "d":"r_kHyZ-a06rmxM3yESK84r1otSg-aQcVStkRhA-iCM8"}|}
 
 let rfc7520_5_5_jwe =
-  "eyJhbGciOiJFQ0RILUVTIiwia2lkIjoibWVyaWFkb2MuYnJhbmR5YnVja0BidWNrbGFuZC5leGFtcGxlIiwiZXBrIjp7Imt0eSI6IkVDIiwiY3J2IjoiUC0yNTYiLCJ4IjoibVBVS1RfYkFXR0hJaGcwVHBqanFWc1AxclhXUXVfdndWT0hIdE5rZGxvQSIsInkiOiI4QlFBc0ltR2VBUzQ2ZnlXdzVNaFlmR1RUMElqQnBGdzJTUzM0RHY0SXJzIn0sImVuYyI6IkExMjhDQkMtSFMyNTYifQ."
+  "eyJhbGciOiJFQ0RILUVTIiwia2lkIjoibWVyaWFkb2MuYnJhbmR5YnVja0BidWNrbGFuZC5leGFtcGxlIiwiZXBrIjp7Imt0eSI6IkVDIiwiY3J2IjoiUC0yNTYiLCJ4IjoibVBVS1RfYkFXR0hJaGcwVHBqanFWc1AxclhXUXVfdndWT0hIdE5rZFlvQSIsInkiOiI4QlFBc0ltR2VBUzQ2ZnlXdzVNaFlmR1RUMElqQnBGdzJTUzM0RHY0SXJzIn0sImVuYyI6IkExMjhDQkMtSFMyNTYifQ."
   ^ "." ^ "yc9N8v5sYyv3iGQT926IUg."
   ^ "BoDlwPnTypYq-ivjmQvAYJLb5Q6l-F3LIgQomlz87yW4OPKbWE1zSTEFjDfhU9IPIOSA9Bml4m7iDFwA-1ZXvHteLDtw4R1XRGMEsDIqAYtskTTmzmzNa-_q4F_evAPUmwlO-ZG45Mnq4uhM1fm_D9rBtWolqZSF3xGNNkpOMQKF1Cl8i8wjzRli7-IXgyirlKQsbhhqRzkv8IcY6aHl24j03C-AR2le1r7URUhArM79BY8soZU0lzwI-sD5PZ3l4NDCCei9XkoIAfsXJWmySPoeRb2Ni5UZL4mYpvKDiwmyzGd65KqVw7MsFfI_K767G9C9Azp73gKZD0DyUn1mn0WW5LmyX_yJ-3AROq8p1WZBfG-ZyJ6195_JGG2m9Csg."
   ^ "WCCkNa-x4BeB9hIDIfFuhg"
@@ -326,11 +326,10 @@ let jwa_tests =
           let jwk_recip =
             Jose.Jwk.of_priv_json_string rfc7520_5_5_ec_priv |> CCResult.get_exn
           in
-          let dec =
-            Jose.Jwe.decrypt ~jwk:jwk_recip rfc7520_5_5_jwe |> CCResult.get_exn
-          in
-          check_string "RFC 7520 5.5 decrypted payload" frodo_payload
-            dec.payload;
+          let dec = Jose.Jwe.decrypt ~jwk:jwk_recip rfc7520_5_5_jwe in
+          check_result_string "RFC 7520 5.5 decrypted payload"
+            (Ok frodo_payload)
+            (Result.map (fun dec -> dec.Jose.Jwe.payload) dec);
           (* Roundtrip ECDH-ES with EC recipient public key *)
           let pub_recip = Jose.Jwk.pub_of_priv jwk_recip in
           let header_json =

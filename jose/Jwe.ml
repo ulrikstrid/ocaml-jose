@@ -40,7 +40,9 @@ let make_iv (header : Header.t) =
 
 let make ~header payload =
   let cek =
-    match header.Header.alg with `Dir -> Ok "" | _ -> make_cek header
+    match header.Header.alg with
+    | `Dir | `ECDH_ES -> Ok ""
+    | _ -> make_cek header
   in
   Result.bind cek (fun cek ->
       let iv = make_iv header in
@@ -157,10 +159,77 @@ let encrypt_cek (type a) alg (cek : string) ~(jwk : a Jwk.t) =
               else Aes_kw.wrap ~kek cek)
       | _ -> Error `Invalid_alg)
 
+let negotiate_ke (type a) (jwk : a Jwk.t) =
+  match jwk with
+  | Jwk.Es256_pub jwk ->
+      let epk_secret, epk_pub = Mirage_crypto_ec.P256.Dh.gen_key () in
+      let epk_jwk =
+        Mirage_crypto_ec.P256.Dsa.pub_of_octets epk_pub
+        |> Result.map Jwk.make_pub_es256
+      in
+      let pub_octets = Mirage_crypto_ec.P256.Dsa.pub_to_octets jwk.key in
+      let z = Mirage_crypto_ec.P256.Dh.key_exchange epk_secret pub_octets in
+      Result.bind z (fun z -> Result.map (fun epk_jwk -> (z, epk_jwk)) epk_jwk)
+      |> Result.map_error (fun _ -> `Msg "failed to negotiate key exchange")
+  | Jwk.Es384_pub jwk ->
+      let epk_secret, epk_pub = Mirage_crypto_ec.P384.Dh.gen_key () in
+      let epk_jwk =
+        Mirage_crypto_ec.P384.Dsa.pub_of_octets epk_pub
+        |> Result.map Jwk.make_pub_es384
+      in
+      let pub_octets = Mirage_crypto_ec.P384.Dsa.pub_to_octets jwk.key in
+      let z = Mirage_crypto_ec.P384.Dh.key_exchange epk_secret pub_octets in
+      Result.bind z (fun z -> Result.map (fun epk_jwk -> (z, epk_jwk)) epk_jwk)
+      |> Result.map_error (fun _ -> `Msg "failed to negotiate key exchange")
+  | Jwk.Es512_pub jwk ->
+      let epk_secret, epk_pub = Mirage_crypto_ec.P521.Dh.gen_key () in
+      let epk_jwk =
+        Mirage_crypto_ec.P521.Dsa.pub_of_octets epk_pub
+        |> Result.map Jwk.make_pub_es512
+      in
+      let pub_octets = Mirage_crypto_ec.P521.Dsa.pub_to_octets jwk.key in
+      let z = Mirage_crypto_ec.P521.Dh.key_exchange epk_secret pub_octets in
+      Result.bind z (fun z -> Result.map (fun epk_jwk -> (z, epk_jwk)) epk_jwk)
+      |> Result.map_error (fun _ -> `Msg "failed to negotiate key exchange")
+  | Jwk.Es256_priv priv_jwk ->
+      let epk_secret, epk_pub = Mirage_crypto_ec.P256.Dh.gen_key () in
+      let epk_jwk =
+        Mirage_crypto_ec.P256.Dsa.pub_of_octets epk_pub
+        |> Result.map Jwk.make_pub_es256
+      in
+      let pub_key = Mirage_crypto_ec.P256.Dsa.pub_of_priv priv_jwk.key in
+      let pub_octets = Mirage_crypto_ec.P256.Dsa.pub_to_octets pub_key in
+      let z = Mirage_crypto_ec.P256.Dh.key_exchange epk_secret pub_octets in
+      Result.bind z (fun z -> Result.map (fun epk_jwk -> (z, epk_jwk)) epk_jwk)
+      |> Result.map_error (fun _ -> `Msg "failed to negotiate key exchange")
+  | Jwk.Es384_priv priv_jwk ->
+      let epk_secret, epk_pub = Mirage_crypto_ec.P384.Dh.gen_key () in
+      let epk_jwk =
+        Mirage_crypto_ec.P384.Dsa.pub_of_octets epk_pub
+        |> Result.map Jwk.make_pub_es384
+      in
+      let pub_key = Mirage_crypto_ec.P384.Dsa.pub_of_priv priv_jwk.key in
+      let pub_octets = Mirage_crypto_ec.P384.Dsa.pub_to_octets pub_key in
+      let z = Mirage_crypto_ec.P384.Dh.key_exchange epk_secret pub_octets in
+      Result.bind z (fun z -> Result.map (fun epk_jwk -> (z, epk_jwk)) epk_jwk)
+      |> Result.map_error (fun _ -> `Msg "failed to negotiate key exchange")
+  | Jwk.Es512_priv priv_jwk ->
+      let epk_secret, epk_pub = Mirage_crypto_ec.P521.Dh.gen_key () in
+      let epk_jwk =
+        Mirage_crypto_ec.P521.Dsa.pub_of_octets epk_pub
+        |> Result.map Jwk.make_pub_es512
+      in
+      let pub_key = Mirage_crypto_ec.P521.Dsa.pub_of_priv priv_jwk.key in
+      let pub_octets = Mirage_crypto_ec.P521.Dsa.pub_to_octets pub_key in
+      let z = Mirage_crypto_ec.P521.Dh.key_exchange epk_secret pub_octets in
+      Result.bind z (fun z -> Result.map (fun epk_jwk -> (z, epk_jwk)) epk_jwk)
+      |> Result.map_error (fun _ -> `Msg "failed to negotiate key exchange")
+  | _ -> Error `Invalid_JWK
+
 let encrypt (type a) ~(jwk : a Jwk.t) t =
-  let header_string = Header.to_string t.header in
   match t.header.alg with
   | `RSA_OAEP | `RSA1_5 | `A128KW | `A256KW ->
+      let header_string = Header.to_string t.header in
       let ecek =
         encrypt_cek t.header.alg t.cek ~jwk
         |> Result.map U_Base64.url_encode_string
@@ -184,6 +253,7 @@ let encrypt (type a) ~(jwk : a Jwk.t) t =
   | `Dir -> (
       match jwk with
       | Jwk.Oct jwk when jwk.Jwk.use = Some `Enc || jwk.use = None ->
+          let header_string = Header.to_string t.header in
           let ecek = "" in
           let eiv = U_Base64.url_encode_string t.iv in
           let cekr =
@@ -206,6 +276,65 @@ let encrypt (type a) ~(jwk : a Jwk.t) t =
                      U_Base64.url_encode_string auth_tag;
                    ]))
       | _ -> Error `Invalid_JWK)
+  | `ECDH_ES | `ECDH_ES_A128KW ->
+      let ecdh = negotiate_ke jwk in
+      Result.bind ecdh (fun (z, epk) ->
+          let header = { t.header with epk = Some epk } in
+          let header_string = Header.to_string header in
+
+          match (header.alg, header.enc) with
+          | `ECDH_ES, Some enc ->
+              let keydatalen = Jwa.enc_to_length enc in
+              let alg_id = Jwa.enc_to_string enc in
+              let cek =
+                Utils.Concat_kdf.derive ~z ~keydatalen ~alg_id ?apu:header.apu
+                  ?apv:header.apv ()
+              in
+              let ecek = "" in
+              let eiv = U_Base64.url_encode_string t.iv in
+              let ciphertext =
+                encrypt_payload ~enc ~cek ~iv:t.iv ~aad:header_string t.payload
+              in
+              Result.map
+                (fun (ciphertext, auth_tag) ->
+                  String.concat "."
+                    [
+                      header_string;
+                      ecek;
+                      eiv;
+                      U_Base64.url_encode_string ciphertext;
+                      U_Base64.url_encode_string auth_tag;
+                    ])
+                ciphertext
+          | `ECDH_ES_A128KW, Some enc ->
+              let keydatalen = 128 in
+              let alg_id = Jwa.alg_to_string `ECDH_ES_A128KW in
+              let kek =
+                Utils.Concat_kdf.derive ~z ~keydatalen ~alg_id ?apu:header.apu
+                  ?apv:header.apv ()
+              in
+              let ecek =
+                Aes_kw.wrap ~kek t.cek |> Result.map U_Base64.url_encode_string
+              in
+              Result.bind ecek (fun ecek ->
+                  let eiv = U_Base64.url_encode_string t.iv in
+                  let ciphertext =
+                    encrypt_payload ~enc ~cek:t.cek ~iv:t.iv ~aad:header_string
+                      t.payload
+                  in
+                  Result.map
+                    (fun (ciphertext, auth_tag) ->
+                      String.concat "."
+                        [
+                          header_string;
+                          ecek;
+                          eiv;
+                          U_Base64.url_encode_string ciphertext;
+                          U_Base64.url_encode_string auth_tag;
+                        ])
+                    ciphertext)
+          | _, None -> Error `Missing_enc
+          | _, Some _ -> Error `Invalid_alg)
   | _ -> Error `Invalid_alg
 
 let decrypt_cek alg str ~(jwk : Jwk.priv Jwk.t) =
@@ -265,7 +394,7 @@ let decrypt_ciphertext enc ~cek ~iv ~auth_tag ~aad ciphertext =
               String.sub (Digestif.SHA256.to_raw_string full) 0 16
             in
             if not (Eqaf.equal computed_auth_tag auth_tag) then
-              Error (`Msg "invalid auth tag")
+              Error `Invalid_auth_tag
             else
               (* B.2 encryption in CBC mode *)
               Mirage_crypto.AES.CBC.decrypt ~key ~iv encrypted |> Pkcs7.unpad
@@ -292,7 +421,7 @@ let decrypt_ciphertext enc ~cek ~iv ~auth_tag ~aad ciphertext =
               String.sub (Digestif.SHA512.to_raw_string full) 0 32
             in
             if not (Eqaf.equal computed_auth_tag auth_tag) then
-              Error (`Msg "invalid auth tag")
+              Error `Invalid_auth_tag
             else
               (* RFC 7518 section 5.2.2.2 step 3: decryption in CBC mode *)
               Mirage_crypto.AES.CBC.decrypt ~key ~iv encrypted |> Pkcs7.unpad
@@ -309,8 +438,33 @@ let decrypt_ciphertext enc ~cek ~iv ~auth_tag ~aad ciphertext =
             |> fun message ->
             message
             |> Option.map (fun x -> Ok x)
-            |> Option.value ~default:(Error (`Msg "invalid auth tag"))
-      | _ -> Error (`Msg "unsupported encryption"))
+            |> Option.value ~default:(Error `Invalid_auth_tag)
+      | _ -> Error `Unsupported_enc)
+
+let compute_shared_secret ~jwk ~epk =
+  match (jwk, epk) with
+  | Jwk.Es256_priv jwk, Jwk.Es256_pub epk ->
+      let priv_octets = Mirage_crypto_ec.P256.Dsa.priv_to_octets jwk.key in
+      let secret = Mirage_crypto_ec.P256.Dh.secret_of_octets priv_octets in
+      let epk_pub_octets = Mirage_crypto_ec.P256.Dsa.pub_to_octets epk.key in
+      Result.bind secret (fun (secret, _) ->
+          Mirage_crypto_ec.P256.Dh.key_exchange secret epk_pub_octets)
+      |> Result.map_error (fun _ -> `Msg "failed to compute shared secret")
+  | Jwk.Es384_priv jwk, Jwk.Es384_pub epk ->
+      let priv_octets = Mirage_crypto_ec.P384.Dsa.priv_to_octets jwk.key in
+      let secret = Mirage_crypto_ec.P384.Dh.secret_of_octets priv_octets in
+      let epk_pub_octets = Mirage_crypto_ec.P384.Dsa.pub_to_octets epk.key in
+      Result.bind secret (fun (secret, _) ->
+          Mirage_crypto_ec.P384.Dh.key_exchange secret epk_pub_octets)
+      |> Result.map_error (fun _ -> `Msg "failed to compute shared secret")
+  | Jwk.Es512_priv jwk, Jwk.Es512_pub epk ->
+      let priv_octets = Mirage_crypto_ec.P521.Dsa.priv_to_octets jwk.key in
+      let secret = Mirage_crypto_ec.P521.Dh.secret_of_octets priv_octets in
+      let epk_pub_octets = Mirage_crypto_ec.P521.Dsa.pub_to_octets epk.key in
+      Result.bind secret (fun (secret, _) ->
+          Mirage_crypto_ec.P521.Dh.key_exchange secret epk_pub_octets)
+      |> Result.map_error (fun _ -> `Msg "failed to compute shared secret")
+  | _ -> Error `Invalid_JWK
 
 let decrypt ~(jwk : Jwk.priv Jwk.t) jwe =
   String.split_on_char '.' jwe |> function
@@ -351,5 +505,60 @@ let decrypt ~(jwk : Jwk.priv Jwk.t) jwe =
                               Result.bind payload (fun payload ->
                                   Ok { header; cek; iv; payload; aad = None }))))
               | _ -> Error `Invalid_JWK)
+          | `ECDH_ES -> (
+              if enc_cek <> "" then Error `Invalid_JWE
+              else
+                match (header.epk, header.enc) with
+                | None, _ -> Error `Missing_epk
+                | _, None -> Error `Missing_enc
+                | Some epk, Some enc ->
+                    let z = compute_shared_secret ~jwk ~epk in
+                    Result.bind z (fun z ->
+                        let keydatalen = Jwa.enc_to_length enc in
+                        let alg_id = Jwa.enc_to_string enc in
+                        let cek =
+                          Utils.Concat_kdf.derive ~z ~keydatalen ~alg_id
+                            ?apu:header.apu ?apv:header.apv ()
+                        in
+                        let iv = U_Base64.url_decode enc_iv in
+                        Result.bind iv (fun iv ->
+                            let auth_tag = U_Base64.url_decode auth_tag in
+                            Result.bind auth_tag (fun auth_tag ->
+                                decrypt_ciphertext header.enc ~cek ~iv ~auth_tag
+                                  ~aad:enc_header ciphertext
+                                |> Result.map (fun payload ->
+                                    { header; cek; iv; payload; aad = None }))))
+              )
+          | `ECDH_ES_A128KW -> (
+              match (header.epk, header.enc) with
+              | None, _ -> Error `Missing_epk
+              | _, None -> Error `Missing_enc
+              | Some epk, Some _enc ->
+                  let z = compute_shared_secret ~jwk ~epk in
+                  Result.bind z (fun z ->
+                      let keydatalen = 128 in
+                      let alg_id = Jwa.alg_to_string `ECDH_ES_A128KW in
+                      let kek =
+                        Utils.Concat_kdf.derive ~z ~keydatalen ~alg_id
+                          ?apu:header.apu ?apv:header.apv ()
+                      in
+                      Result.bind (U_Base64.url_decode enc_cek)
+                        (fun enc_cek_raw ->
+                          let cek = Aes_kw.unwrap ~kek enc_cek_raw in
+                          Result.bind cek (fun cek ->
+                              let iv = U_Base64.url_decode enc_iv in
+                              Result.bind iv (fun iv ->
+                                  let auth_tag = U_Base64.url_decode auth_tag in
+                                  Result.bind auth_tag (fun auth_tag ->
+                                      decrypt_ciphertext header.enc ~cek ~iv
+                                        ~auth_tag ~aad:enc_header ciphertext
+                                      |> Result.map (fun payload ->
+                                          {
+                                            header;
+                                            cek;
+                                            iv;
+                                            payload;
+                                            aad = None;
+                                          })))))))
           | _ -> Error `Unsupported_alg)
   | _ -> Error `Invalid_JWE

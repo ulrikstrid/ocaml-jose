@@ -75,7 +75,8 @@ end
 module Aes_kw = struct
   (** Advanced Encryption Standard (AES) Key Wrap Algorithm (RFC 3394) *)
 
-  (** RFC 3394 Section 2.2.3.1: Default Initial Value (IV = 0xA6A6A6A6A6A6A6A6) *)
+  (** RFC 3394 Section 2.2.3.1: Default Initial Value (IV = 0xA6A6A6A6A6A6A6A6)
+  *)
   let default_iv = "\xA6\xA6\xA6\xA6\xA6\xA6\xA6\xA6"
 
   (** RFC 3394 Section 2.2.1: Key Wrap *)
@@ -172,4 +173,55 @@ module Aes_kw = struct
         (`Msg
            "Bad ciphertext length, must be multiple of 8 and at least 24 bytes \
             long")
+end
+
+module Concat_kdf = struct
+  let int32_to_be n =
+    let b = Bytes.create 4 in
+    Bytes.set_int32_be b 0 (Int32.of_int n);
+    Bytes.unsafe_to_string b
+
+  let make_other_info ~alg_id ?apu ?apv keydatalen =
+    let alg_info = int32_to_be (String.length alg_id) ^ alg_id in
+    let u_info =
+      match apu with
+      | Some u -> (
+          match U_Base64.url_decode u with
+          | Ok raw -> int32_to_be (String.length raw) ^ raw
+          | Error _ -> int32_to_be 0)
+      | None -> int32_to_be 0
+    in
+    let v_info =
+      match apv with
+      | Some v -> (
+          match U_Base64.url_decode v with
+          | Ok raw -> int32_to_be (String.length raw) ^ raw
+          | Error _ -> int32_to_be 0)
+      | None -> int32_to_be 0
+    in
+    let supp_pub = int32_to_be keydatalen in
+    String.concat "" [ alg_info; u_info; v_info; supp_pub ]
+
+  let derive ~z ~keydatalen ~alg_id ?apu ?apv () =
+    let reps = (keydatalen + 255) / 256 in
+    let other_info = make_other_info ~alg_id ?apu ?apv keydatalen in
+    if reps = 1 then
+      let d =
+        Digestif.SHA256.digest_string (int32_to_be 1 ^ z ^ other_info)
+        |> Digestif.SHA256.to_raw_string
+      in
+      if keydatalen = 256 then d else String.sub d 0 (keydatalen / 8)
+    else
+      let rec loop i acc =
+        if i > reps then String.concat "" (List.rev acc)
+        else
+          let counter = int32_to_be i in
+          let d =
+            Digestif.SHA256.digest_string (counter ^ z ^ other_info)
+            |> Digestif.SHA256.to_raw_string
+          in
+          loop (i + 1) (d :: acc)
+      in
+      let full = loop 1 [] in
+      String.sub full 0 (keydatalen / 8)
 end

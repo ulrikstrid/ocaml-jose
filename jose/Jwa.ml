@@ -32,6 +32,11 @@ type alg =
   | `Dir  (** Direct use of a shared symmetric key *)
   | `A128KW  (** AES Key Wrap using 128-bit key *)
   | `A256KW  (** AES Key Wrap using 256-bit key *)
+  | `ECDH_ES
+    (** Elliptic Curve Diffie-Hellman Ephemeral Static key agreement using
+        Concat KDF *)
+  | `ECDH_ES_A128KW
+    (** ECDH-ES using Concat KDF and CEK wrapped with "A128KW" *)
   | `None
   | `Unsupported of string ]
 
@@ -48,6 +53,8 @@ let alg_to_string = function
   | `Dir -> "dir"
   | `A128KW -> "A128KW"
   | `A256KW -> "A256KW"
+  | `ECDH_ES -> "ECDH-ES"
+  | `ECDH_ES_A128KW -> "ECDH-ES+A128KW"
   | `None -> "none"
   | `Unsupported string -> string
 
@@ -64,6 +71,8 @@ let alg_of_string = function
   | "dir" -> `Dir
   | "A128KW" -> `A128KW
   | "A256KW" -> `A256KW
+  | "ECDH-ES" -> `ECDH_ES
+  | "ECDH-ES+A128KW" -> `ECDH_ES_A128KW
   | "none" -> `None
   | str -> `Unsupported str
 
