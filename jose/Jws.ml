@@ -223,7 +223,8 @@ let validate (type a) ~(jwk : a Jwk.t) t =
     | `ES512 -> Ok header.alg
     | `EdDSA -> Ok header.alg
     | `Ed25519 -> Ok header.alg
-    | `Unsupported _ | `RSA_OAEP | `RSA1_5 | `None ->
+    | `Unsupported _ | `RSA_OAEP | `RSA1_5 | `Dir | `A128KW | `A256KW | `ECDH_ES
+    | `ECDH_ES_A128KW | `None ->
         Error (`Msg "alg not supported for signing")
   in
   Result.bind alg (fun _alg ->

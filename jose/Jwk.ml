@@ -36,7 +36,7 @@ module Util = struct
           Bytes.unsafe_to_string cs
         in
         let point = String.concat "" [ four; x; y ] in
-        pub_of_string point |> Result.get_ok |> Result.ok
+        pub_of_string point |> Result.map_error (fun _ -> `Msg "Invalid pub")
     | Error e, _ | _, Error e -> Error e
 
   let get_ES256_x_y =
@@ -76,7 +76,7 @@ let alg_of_use_and_kty ?(use : use = `Sig) (kty : Jwa.kty) : Jwa.alg =
   | `Sig, `EC -> `ES512
   | `Sig, `OKP -> `Ed25519
   | `Enc, `RSA -> `RSA_OAEP
-  | `Enc, `oct -> `Unsupported "encryption with oct is not supported yet"
+  | `Enc, `oct -> `Dir
   | `Enc, `EC ->
       `Unsupported "encryption with eliptic curves are not supported yet"
   | `Enc, `OKP ->
@@ -94,6 +94,10 @@ let use_of_alg (alg : Jwa.alg) =
   | `EdDSA | `Ed25519 -> `Sig
   | `RSA_OAEP -> `Enc
   | `RSA1_5 -> `Enc
+  | `Dir -> `Enc
+  | `A128KW | `A256KW -> `Enc
+  | `ECDH_ES -> `Enc
+  | `ECDH_ES_A128KW -> `Enc
   | `None -> `Unsupported "none"
   | `Unsupported str -> `Unsupported str
 

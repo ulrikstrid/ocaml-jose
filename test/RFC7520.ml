@@ -1,7 +1,11 @@
-(* These tests are based on rfc7520, https://tools.ietf.org/html/rfc7520 *)
+(* These tests are based on RFC 7520: Examples of Protecting Content Using JSON Object Signing and Encryption (JOSE) *)
 open Helpers
 
-(* https://tools.ietf.org/html/rfc7520#section-3.1 *)
+(* ========================================================================= *)
+(* Section 3: JSON Web Key Examples                                          *)
+(* ========================================================================= *)
+
+(* Section 3.1: EC Public Key (P-521) *)
 let ec_pub_json =
   {|{"kty": "EC",
 "kid": "bilbo.baggins@hobbiton.example",
@@ -10,7 +14,7 @@ let ec_pub_json =
 "x": "AHKZLLOsCOzz5cY97ewNUajB957y-C-U88c3v13nmGZx6sYl_oJXu9A5RkTKqjqvjyekWF-7ytDyRXYgCF5cj0Kt",
 "y": "AdymlHvOiLxXkEhayXQnNCvDX4h9htZaCJN34kfmC6pV5OhQHiraVySsUdaQkAgDPrwQrJmbnX9cwlGfP-HqHZR1"}|}
 
-(* https://tools.ietf.org/html/rfc7520#section-3.1 *)
+(* Section 3.2: EC Private Key (P-521) *)
 let ec_priv_sig_json =
   {|{"kty": "EC",
 "kid": "bilbo.baggins@hobbiton.example",
@@ -20,7 +24,7 @@ let ec_priv_sig_json =
 "y": "AdymlHvOiLxXkEhayXQnNCvDX4h9htZaCJN34kfmC6pV5OhQHiraVySsUdaQkAgDPrwQrJmbnX9cwlGfP-HqHZR1",
 "d": "AAhRON2r9cqXX1hg-RoI6R1tX5p2rUAYdmpHZoC1XNM56KtscrX6zbKipQrCW9CGZH3T4ubpnoTKLDYJ_fF3_rJt"}|}
 
-(* https://tools.ietf.org/html/rfc7520#section-3.3 *)
+(* Section 3.3: RSA Public Key (2048) *)
 let rsa_pub_json =
   {|{"kty": "RSA",
 "kid": "bilbo.baggins@hobbiton.example",
@@ -28,7 +32,7 @@ let rsa_pub_json =
 "n": "n4EPtAOCc9AlkeQHPzHStgAbgs7bTZLwUBZdR8_KuKPEHLd4rHVTeT-O-XV2jRojdNhxJWTDvNd7nqQ0VEiZQHz_AJmSCpMaJMRBSFKrKb2wqVwGU_NsYOYL-QtiWN2lbzcEe6XC0dApr5ydQLrHqkHHig3RBordaZ6Aj-oBHqFEHYpPe7Tpe-OfVfHd1E6cS6M1FZcD1NNLYD5lFHpPI9bTwJlsde3uhGqC0ZCuEHg8lhzwOHrtIQbS0FVbb9k3-tVTU4fg_3L_vniUFAKwuCLqKnS2BYwdq_mzSnbLY7h_qixoR7jig3__kRhuaxwUkRz5iaiQkqgc5gHdrNP5zw",
 "e": "AQAB"}|}
 
-(* https://tools.ietf.org/html/rfc7520#section-3.4 *)
+(* Section 3.4: RSA Private Key (4096) *)
 let rsa_priv_sig_json =
   {|{"kty": "RSA",
 "kid": "bilbo.baggins@hobbiton.example",
@@ -42,7 +46,7 @@ let rsa_priv_sig_json =
 "dq": "CLDmDGduhylc9o7r84rEUVn7pzQ6PF83Y-iBZx5NT-TpnOZKF1pErAMVeKzFEl41DlHHqqBLSM0W1sOFbwTxYWZDm6sI6og5iTbwQGIC3gnJKbi_7k_vJgGHwHxgPaX2PnvP-zyEkDERuf-ry4c_Z11Cq9AqC2yeL6kdKT1cYF8",
 "qi": "3PiqvXQN0zwMeE-sBvZgi289XP9XCQF3VWqPzMKnIgQp7_Tugo6-NZBKCQsMf3HaEGBjTVJs_jcK8-TRXvaKe-7ZMaQj8VfBdYkssbu0NKDDhjJ-GtiseaDVWt7dcH0cfwxgFUHpQh7FoCrjFJ6h6ZEpMF6xmujs4qMpPz8aaI4"}|}
 
-(* https://tools.ietf.org/html/rfc7520#section-3.5 *)
+(* Section 3.5: Symmetric Key (MAC) *)
 let oct_sig_json =
   {|{"kty": "oct",
 "kid": "018c0ae5-4d9b-471b-bfd6-eef314bc7037",
@@ -50,7 +54,7 @@ let oct_sig_json =
 "alg": "HS256",
 "k": "hJtXIZ2uSN5kbQfbtTNWbpdmhkV8FJG-Onbc6mxCcYg"}|}
 
-(* https://tools.ietf.org/html/rfc7520#section-3.6 *)
+(* Section 3.6: Symmetric Key (Encryption) *)
 let oct_enc_json =
   {|{"kty": "oct",
 "kid": "1e571774-2e08-40da-8308-e8d68773842d",
@@ -58,17 +62,58 @@ let oct_enc_json =
 "alg": "A256GCM",
 "k": "AAPapAv4LbFbiVawEjagUBluYqN5rhna-8nuldDvOx8"}|}
 
+let jwk_suite_tests =
+  ( "RFC7520 Section 3: JWK",
+    [
+      Alcotest.test_case "3.1: Parse P-521 EC Public Key" `Quick (fun () ->
+          let jwk = Jose.Jwk.of_pub_json_string ec_pub_json in
+          Alcotest.(check bool) "parses successfully" true (CCResult.is_ok jwk);
+          let key = CCResult.get_exn jwk in
+          Alcotest.(check bool)
+            "kid is correct" true
+            (Jose.Jwk.get_kid key = Some "bilbo.baggins@hobbiton.example");
+          Alcotest.(check bool) "kty is EC" true (Jose.Jwk.get_kty key = `EC));
+      Alcotest.test_case "3.2: Parse P-521 EC Private Key" `Quick (fun () ->
+          let jwk = Jose.Jwk.of_priv_json_string ec_priv_sig_json in
+          Alcotest.(check bool) "parses successfully" true (CCResult.is_ok jwk);
+          let key = CCResult.get_exn jwk in
+          let pub = Jose.Jwk.pub_of_priv key in
+          Alcotest.(check bool)
+            "pub_of_priv produces EC key" true
+            (Jose.Jwk.get_kty pub = `EC));
+      Alcotest.test_case "3.3: Parse RSA Public Key" `Quick (fun () ->
+          let jwk = Jose.Jwk.of_pub_json_string rsa_pub_json in
+          Alcotest.(check bool) "parses successfully" true (CCResult.is_ok jwk);
+          let key = CCResult.get_exn jwk in
+          Alcotest.(check bool) "kty is RSA" true (Jose.Jwk.get_kty key = `RSA));
+      Alcotest.test_case "3.4: Parse RSA Private Key" `Quick (fun () ->
+          let jwk = Jose.Jwk.of_priv_json_string rsa_priv_sig_json in
+          Alcotest.(check bool) "parses successfully" true (CCResult.is_ok jwk);
+          let key = CCResult.get_exn jwk in
+          let pub = Jose.Jwk.pub_of_priv key in
+          Alcotest.(check bool)
+            "pub_of_priv produces RSA key" true
+            (Jose.Jwk.get_kty pub = `RSA));
+      Alcotest.test_case "3.5: Parse Symmetric MAC Key" `Quick (fun () ->
+          let jwk = Jose.Jwk.of_priv_json_string oct_sig_json in
+          Alcotest.(check bool) "parses successfully" true (CCResult.is_ok jwk);
+          let key = CCResult.get_exn jwk in
+          Alcotest.(check bool) "kty is oct" true (Jose.Jwk.get_kty key = `oct));
+      Alcotest.test_case "3.6: Parse Symmetric Encryption Key" `Quick (fun () ->
+          let jwk = Jose.Jwk.of_priv_json_string oct_enc_json in
+          Alcotest.(check bool) "parses successfully" true (CCResult.is_ok jwk);
+          let key = CCResult.get_exn jwk in
+          Alcotest.(check bool) "kty is oct" true (Jose.Jwk.get_kty key = `oct));
+    ] )
+
+(* ========================================================================= *)
+(* Section 4: JSON Web Signature Examples                                    *)
+(* ========================================================================= *)
+
 let jws_payload =
   "It\xe2\x80\x99s a dangerous business, Frodo, going out your door. You step \
    onto the road, and if you don't keep your feet, there\xe2\x80\x99s no \
    knowing where you might be swept off to."
-
-let jwe_payload =
-  "You can trust us to stick with you through thick and thin\xe2\x80\x93to the \
-   bitter end. And you can trust us to keep any secret of \
-   yours\xe2\x80\x93closer than you keep it yourself. But you cannot trust us \
-   to let you face trouble alone, and go off without a word. We are your \
-   friends, Frodo."
 
 (* https://tools.ietf.org/html/rfc7520#section-4.1 *)
 let rsa_jws =
@@ -78,6 +123,21 @@ let rsa_jws_header = {|{"alg":"RS256","kid":"bilbo.baggins@hobbiton.example"}|}
 
 let rsa_jws_signature =
   "MRjdkly7_-oTPTS3AXP41iQIGKa80A0ZmTuV5MEaHoxnW2e5CZ5NlKtainoFmKZopdHM1O2U4mwzJdQx996ivp83xuglII7PNDi84wnB-BDkoBwA78185hX-Es4JIwmDLJK3lfWRa-XtL0RnltuYv746iYTh_qHRD68BNt1uSNCrUCTJDt5aAE6x8wW1Kt9eRo4QPocSadnHXFxnt8Is9UzpERV0ePPQdLuW3IS_de3xyIrDaLGdjluPxUAhb6L2aXic1U12podGU0KLUQSE_oI-ZnmKJ3F4uOZDnd6QZWJushZ41Axf_fcIe8u9ipH84ogoree7vjbU5y18kDquDg"
+
+let rsa_jws_flattened_json =
+  `Assoc
+    [
+      ( "payload",
+        `String
+          "SXTigJlzIGEgZGFuZ2Vyb3VzIGJ1c2luZXNzLCBGcm9kbywgZ29pbmcgb3V0IHlvdXIgZG9vci4gWW91IHN0ZXAgb250byB0aGUgcm9hZCwgYW5kIGlmIHlvdSBkb24ndCBrZWVwIHlvdXIgZmVldCwgdGhlcmXigJlzIG5vIGtub3dpbmcgd2hlcmUgeW91IG1pZ2h0IGJlIHN3ZXB0IG9mZiB0by4"
+      );
+      ( "protected",
+        `String
+          "eyJhbGciOiJSUzI1NiIsImtpZCI6ImJpbGJvLmJhZ2dpbnNAaG9iYml0b24uZXhhbXBsZSJ9"
+      );
+      ("signature", `String rsa_jws_signature);
+    ]
+  |> Yojson.Safe.to_string
 
 let jws_rsa_tests =
   ( "JWS RSA",
@@ -111,6 +171,15 @@ let jws_rsa_tests =
           in
           check_result_string "correct jws string" (Ok rsa_jws)
             (CCResult.map Jose.Jws.to_string jws));
+      Alcotest.test_case "Flattened JSON representation" `Quick (fun () ->
+          let jwk =
+            Jose.Jwk.of_pub_json_string rsa_pub_json |> CCResult.get_exn
+          in
+          let jws = Jose.Jws.of_string rsa_jws_flattened_json in
+          let validated_jws = CCResult.flat_map (Jose.Jws.validate ~jwk) jws in
+          check_result_string "correct payload from flattened json"
+            (Ok jws_payload)
+            (CCResult.map (fun jws -> Jose.Jws.(jws.payload)) validated_jws));
     ] )
 
 (* https://tools.ietf.org/html/rfc7520#section-4.3 *)
@@ -131,25 +200,21 @@ let ecdsa_jws =
   Printf.sprintf "%s.%s.%s" ecdsa_jws_header_base64 ecdsa_jws_payload_base64
     ecdsa_jws_signature_base64
 
+let ecdsa_jws_flattened_json =
+  `Assoc
+    [
+      ("payload", `String ecdsa_jws_payload_base64);
+      ("protected", `String ecdsa_jws_header_base64);
+      ("signature", `String ecdsa_jws_signature_base64);
+    ]
+  |> Yojson.Safe.to_string
+
 let jws_ecdsa_tests =
   ( "JWS ECDSA",
     [
       Alcotest.test_case "Can verify jws" `Quick (fun () ->
-          let () = print_endline ecdsa_jws in
           let jwk =
-            Jose.Jwk.of_pub_json_string ec_pub_json
-            |> CCResult.map_err (function
-              | `Msg m ->
-                  print_endline m;
-                  `Msg m
-              | `Json_parse_failed m ->
-                  print_endline m;
-                  `Json_parse_failed m
-              | `Unsupported_kty ->
-                  print_endline "Unsupported_kty";
-                  `Unsupported_kty
-              | x -> x)
-            |> CCResult.get_exn
+            Jose.Jwk.of_pub_json_string ec_pub_json |> CCResult.get_exn
           in
           let jws = Jose.Jws.of_string ecdsa_jws in
           let validated_jws = CCResult.flat_map (Jose.Jws.validate ~jwk) jws in
@@ -163,23 +228,33 @@ let jws_ecdsa_tests =
                (fun jws ->
                  Jose.Jws.(jws.header)
                  |> Jose.Header.to_json |> Yojson.Safe.to_string)
-               validated_jws))
-      (*
-       * Disabled until https://github.com/mirage/mirage-crypto/issues/105 is solved
-      Alcotest.test_case "Generates the same JWS" `Quick (fun () ->
-          let jwk = Jose.Jwk.of_priv_json_string ec_priv_sig_json in
+               validated_jws));
+      Alcotest.test_case "Can verify flattened JSON JWS" `Quick (fun () ->
+          let jwk =
+            Jose.Jwk.of_pub_json_string ec_pub_json |> CCResult.get_exn
+          in
+          let jws = Jose.Jws.of_string ecdsa_jws_flattened_json in
+          let validated_jws = CCResult.flat_map (Jose.Jws.validate ~jwk) jws in
+          check_result_string "correct payload" (Ok jws_payload)
+            (CCResult.map (fun jws -> Jose.Jws.(jws.payload)) validated_jws));
+      Alcotest.test_case "Signing generates verifiable JWS" `Quick (fun () ->
+          let priv_jwk =
+            Jose.Jwk.of_priv_json_string ec_priv_sig_json |> CCResult.get_exn
+          in
+          let pub_jwk = Jose.Jwk.pub_of_priv priv_jwk in
           let header =
             Jose.Header.of_json @@ Yojson.Safe.from_string ecdsa_jws_header
-            |> CCResult.map_err (fun (`Msg e) -> `Msg ("header: " ^ e))
+            |> CCResult.get_exn
           in
-          let jws =
-            CCResult.both jwk header
-            |> CCResult.flat_map (fun (jwk, header) ->
-                   Jose.Jws.sign ~header ~payload:jws_payload jwk)
+          let signed_jws =
+            Jose.Jws.sign ~header ~payload:jws_payload priv_jwk
+            |> CCResult.get_exn
           in
-          check_result_string "correct jws string" (Ok ecdsa_jws)
-            (CCResult.map Jose.Jws.to_string jws));
-       *);
+          let validated = Jose.Jws.validate ~jwk:pub_jwk signed_jws in
+          Alcotest.(check bool)
+            "freshly signed ES512 JWS validates" true (CCResult.is_ok validated);
+          check_string "payload matches" jws_payload
+            (CCResult.get_exn validated).payload);
     ] )
 
 (* https://tools.ietf.org/html/rfc7520#section-4.4 *)
@@ -236,6 +311,17 @@ let jws_oct_tests =
             (CCResult.map (fun jws -> Jose.Jws.(jws.signature)) validated_jws));
     ] )
 
+(* ========================================================================= *)
+(* Section 5: JSON Web Encryption Examples                                    *)
+(* ========================================================================= *)
+
+let jwe_payload =
+  "You can trust us to stick with you through thick and thin\xe2\x80\x93to the \
+   bitter end. And you can trust us to keep any secret of \
+   yours\xe2\x80\x93closer than you keep it yourself. But you cannot trust us \
+   to let you face trouble alone, and go off without a word. We are your \
+   friends, Frodo."
+
 let rsa_priv_enc_json_5_1 =
   {|{"kty": "RSA",
 "kid": "frodo.baggins@hobbiton.example",
@@ -282,8 +368,13 @@ let jwe_rsa_tests =
           let jwe =
             Jose.Jwe.decrypt jwe_aes_hmac_sha2_5_1 ~jwk |> CCResult.get_exn
           in
-          let str = Jose.Jwe.encrypt ~jwk jwe |> CCResult.get_exn in
-          let jwe2 = Jose.Jwe.decrypt ~jwk str in
+          let str =
+            Jose.Jwe.encrypt ~jwk jwe
+            |> CCResult.map_err (fun e -> `Msg (Helpers.error_to_string e))
+          in
+          let jwe2 =
+            CCResult.flat_map (fun str -> Jose.Jwe.decrypt ~jwk str) str
+          in
           check_result_string "Has the same payload after roundtrip"
             (Ok jwe.payload)
             (CCResult.map (fun (j : Jose.Jwe.t) -> j.payload) jwe2);
@@ -398,6 +489,12 @@ let jwe_rsa_tests =
 (* Begin tests *)
 let rfc_suite, _ =
   Junit_alcotest.run_and_report ~package:"jose" "RFC7520"
-    [ jws_rsa_tests; jws_ecdsa_tests; jws_oct_tests; jwe_rsa_tests ]
+    [
+      jwk_suite_tests;
+      jws_rsa_tests;
+      jws_ecdsa_tests;
+      jws_oct_tests;
+      jwe_rsa_tests;
+    ]
 
 let suite = rfc_suite
