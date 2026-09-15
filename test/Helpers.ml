@@ -6,7 +6,9 @@ type 'a error_t =
   | `Unsupported_alg
   | `Unsupported_enc
   | `Missing_enc
+  | `Missing_epk
   | `Invalid_alg
+  | `Invalid_auth_tag
   | `Invalid_signature
   | `Invalid_JWE
   | `Invalid_JWK
@@ -26,7 +28,9 @@ let error_pp ppf (error : 'a error_t) =
   | `Unsupported_alg -> Fmt.string ppf "Unsupported alg"
   | `Unsupported_enc -> Fmt.string ppf "Unsupported enc"
   | `Missing_enc -> Fmt.string ppf "Missing enc"
+  | `Missing_epk -> Fmt.string ppf "Missing epk"
   | `Invalid_alg -> Fmt.string ppf "Invalid alg"
+  | `Invalid_auth_tag -> Fmt.string ppf "Invalid auth tag"
   | `Invalid_signature -> Fmt.string ppf "Invalid signature"
   | `Invalid_JWE -> Fmt.string ppf "Invalid JWE"
   | `Invalid_JWK -> Fmt.string ppf "Invalid JWK"

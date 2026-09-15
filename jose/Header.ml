@@ -4,6 +4,9 @@ type t = {
   alg : Jwa.alg;
   jwk : Jwk.public Jwk.t option;
   kid : string option;
+  epk : Jwk.public Jwk.t option;
+  apu : string option;
+  apv : string option;
   x5t : string option;
   x5t256 : string option;
   typ : string option;
@@ -12,16 +15,18 @@ type t = {
   extra : (string * Yojson.Safe.t) list;
 }
 
-(* TODO: This is probably very slow *)
 let remove_supported (l : (string * Yojson.Safe.t) list) =
-  l |> List.remove_assoc "alg" |> List.remove_assoc "jwk"
-  |> List.remove_assoc "kid" |> List.remove_assoc "x5t"
-  |> List.remove_assoc "x5t#256"
-  |> List.remove_assoc "typ" |> List.remove_assoc "cty"
-  |> List.remove_assoc "enc"
+  List.filter
+    (fun (key, _) ->
+      match key with
+      | "alg" | "jwk" | "kid" | "epk" | "apu" | "apv" | "x5t" | "x5t#S256"
+      | "typ" | "cty" | "enc" ->
+          false
+      | _ -> true)
+    l
 
-let make_header ?typ ?alg ?enc ?(extra = []) ?(jwk_header = false)
-    (jwk : Jwk.priv Jwk.t) =
+let make_header ?typ ?alg ?enc ?(extra = []) ?(jwk_header = false) ?epk ?apu
+    ?apv (jwk : Jwk.priv Jwk.t) =
   let alg =
     match alg with
     | Some alg -> alg
@@ -44,6 +49,9 @@ let make_header ?typ ?alg ?enc ?(extra = []) ?(jwk_header = false)
     alg;
     jwk = (if jwk_header then Some (Jwk.pub_of_priv jwk) else None);
     kid;
+    epk;
+    apu;
+    apv;
     x5t = None;
     x5t256 = None;
     typ;
@@ -72,6 +80,13 @@ let of_json json =
               Jwk.of_pub_json jwk_json |> Result.to_option)
           |> Option.join;
         kid = json |> Json.member "kid" |> Json.to_string_option;
+        epk =
+          json |> Json.member "epk"
+          |> Json.to_option (fun jwk_json ->
+              Jwk.of_pub_json jwk_json |> Result.to_option)
+          |> Option.join;
+        apu = json |> Json.member "apu" |> Json.to_string_option;
+        apv = json |> Json.member "apv" |> Json.to_string_option;
         x5t = json |> Json.member "x5t" |> Json.to_string_option;
         x5t256 = json |> Json.member "x5t#256" |> Json.to_string_option;
         typ = json |> Json.member "typ" |> Json.to_string_option;
@@ -90,6 +105,9 @@ let to_json t =
       Some ("alg", Jwa.alg_to_json t.alg);
       RJson.to_json_string_opt "kid" t.kid;
       Option.map Jwk.to_pub_json t.jwk |> Option.map (fun jwk -> ("jwk", jwk));
+      Option.map Jwk.to_pub_json t.epk |> Option.map (fun epk -> ("epk", epk));
+      RJson.to_json_string_opt "apu" t.apu;
+      RJson.to_json_string_opt "apv" t.apv;
       RJson.to_json_string_opt "x5t" t.x5t;
       RJson.to_json_string_opt "x5t#256" t.x5t256;
       RJson.to_json_string_opt "cty" t.cty;
