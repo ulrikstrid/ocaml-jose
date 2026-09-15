@@ -19,6 +19,9 @@ module Jwa : sig
     | `Dir  (** Direct use of a shared symmetric key *)
     | `A128KW  (** AES Key Wrap using 128-bit key *)
     | `A256KW  (** AES Key Wrap using 256-bit key *)
+    | `ECDH_ES (** Elliptic Curve Diffie-Hellman Ephemeral Static key agreement using
+        Concat KDF *)
+    | `ECDH_ES_A128KW (** ECDH-ES using Concat KDF and CEK wrapped with "A128KW" *)
     | `None
     | `Unsupported of string ]
 
@@ -290,6 +293,9 @@ module Header : sig
     alg : Jwa.alg;
     jwk : Jwk.public Jwk.t option;
     kid : string option;
+    epk : Jwk.public Jwk.t option;
+    apu : string option;
+    apv : string option;
     x5t : string option;
     x5t256 : string option;
     typ : string option;
@@ -319,6 +325,9 @@ module Header : sig
     ?enc:Jwa.enc ->
     ?extra:(string * Yojson.Safe.t) list ->
     ?jwk_header:bool ->
+    ?epk:Jwk.public Jwk.t ->
+    ?apu:string ->
+    ?apv:string ->
     Jwk.priv Jwk.t ->
     t
   (** [make_header typ alg enc jwk] if [alg] is not provided it will be derived
@@ -462,7 +471,9 @@ module Jwe : sig
     ( string,
       [> `Invalid_alg
       | `Invalid_JWK
+      | `Invalid_auth_tag
       | `Missing_enc
+      | `Missing_epk
       | `Unsupported_enc
       | `Unsupported_kty
       | `Msg of string ] )
@@ -475,8 +486,12 @@ module Jwe : sig
     ( t,
       [> `Invalid_JWE
       | `Invalid_JWK
+      | `Invalid_auth_tag
+      | `Missing_enc
+      | `Missing_epk
       | `Decrypt_cek_failed
       | `Unsupported_alg
+      | `Unsupported_enc
       | `Msg of string ] )
     result
   (** [decrypt jwk string] decrypts a compact string formated JWE into a {! t }
@@ -537,6 +552,10 @@ module Private : sig
       val default_iv : string
       val wrap : kek:string -> string -> (string, [> `Msg of string ]) result
       val unwrap : kek:string -> string -> (string, [> `Msg of string ]) result
+    end
+
+    module Concat_kdf : sig
+      val derive : z:string -> keydatalen:int -> alg_id:string -> ?apu:string -> ?apv:string -> unit -> string
     end
   end
 end

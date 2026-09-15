@@ -190,6 +190,76 @@ let aes_kw_tests =
             (CCResult.is_error (Utils.Aes_kw.unwrap ~kek "1234567812345678")));
     ] )
 
+let concat_kdf_tests =
+  ( "Concat_kdf",
+    [
+      Alcotest.test_case
+        "RFC 7518 Appendix C: Concat KDF with A128GCM (128-bit key)" `Quick
+        (fun () ->
+          let z =
+            "\x9e\x56\xd9\x1d\x81\x71\x35\xd3\x72\x83\x42\x83\xbf\x84\x26\x9c\xfb\x31\x6e\xa3\xda\x80\x6a\x48\xf6\xda\xa7\x79\x8c\xfe\x90\xc4"
+          in
+          let derived =
+            Utils.Concat_kdf.derive ~z ~keydatalen:128 ~alg_id:"A128GCM"
+              ~apu:"QWxpY2U" ~apv:"Qm9i" ()
+          in
+          let expected_raw =
+            "\x56\xaa\x8d\xea\xf8\x23\x6d\x20\x5c\x22\x28\xcd\x71\xa7\x10\x1a"
+          in
+          Alcotest.(check string)
+            "Derived key raw octets match RFC 7518 Appendix C" expected_raw
+            derived;
+          let b64 = Utils.U_Base64.url_encode_string derived in
+          Alcotest.(check string)
+            "Derived key base64url matches RFC 7518 Appendix C"
+            "VqqN6vgjbSBcIijNcacQGg" b64);
+      Alcotest.test_case "Concat KDF without apu and apv" `Quick (fun () ->
+          let z =
+            "\x9e\x56\xd9\x1d\x81\x71\x35\xd3\x72\x83\x42\x83\xbf\x84\x26\x9c\xfb\x31\x6e\xa3\xda\x80\x6a\x48\xf6\xda\xa7\x79\x8c\xfe\x90\xc4"
+          in
+          let key =
+            Utils.Concat_kdf.derive ~z ~keydatalen:256 ~alg_id:"A256GCM" ()
+          in
+          Alcotest.(check int)
+            "Key length is 32 bytes (256 bits)" 32 (String.length key);
+          let key2 =
+            Utils.Concat_kdf.derive ~z ~keydatalen:256 ~alg_id:"A256GCM" ()
+          in
+          Alcotest.(check string) "Derivation is deterministic" key key2);
+      Alcotest.test_case "Concat KDF multi-round derivation (reps = 2)" `Quick
+        (fun () ->
+          let z =
+            "\x9e\x56\xd9\x1d\x81\x71\x35\xd3\x72\x83\x42\x83\xbf\x84\x26\x9c\xfb\x31\x6e\xa3\xda\x80\x6a\x48\xf6\xda\xa7\x79\x8c\xfe\x90\xc4"
+          in
+          let key =
+            Utils.Concat_kdf.derive ~z ~keydatalen:512 ~alg_id:"A256CBC-HS512"
+              ~apu:"QWxpY2U" ~apv:"Qm9i" ()
+          in
+          Alcotest.(check int)
+            "Key length is 64 bytes (512 bits)" 64 (String.length key);
+          let key_first_half = String.sub key 0 32 in
+          let key_second_half = String.sub key 32 32 in
+          Alcotest.(check bool)
+            "Two rounds produce different output" false
+            (key_first_half = key_second_half));
+      Alcotest.test_case "Concat KDF truncation with 192-bit key" `Quick
+        (fun () ->
+          let z =
+            "\x9e\x56\xd9\x1d\x81\x71\x35\xd3\x72\x83\x42\x83\xbf\x84\x26\x9c\xfb\x31\x6e\xa3\xda\x80\x6a\x48\xf6\xda\xa7\x79\x8c\xfe\x90\xc4"
+          in
+          let key =
+            Utils.Concat_kdf.derive ~z ~keydatalen:192 ~alg_id:"A192KW" ()
+          in
+          Alcotest.(check int)
+            "Key length is 24 bytes (192 bits)" 24 (String.length key));
+    ] )
+
 let utils_suite, _ =
   Junit_alcotest.run_and_report ~package:"jose" "Utils"
-    [ pkcs7_tests; u_string_tests; u_base64_tests; aes_kw_tests ]
+    [
+      pkcs7_tests;
+      u_string_tests;
+      u_base64_tests;
+      aes_kw_tests;
+      concat_kdf_tests;
+    ]

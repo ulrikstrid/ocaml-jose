@@ -36,7 +36,7 @@ module Util = struct
           Bytes.unsafe_to_string cs
         in
         let point = String.concat "" [ four; x; y ] in
-        pub_of_string point |> Result.get_ok |> Result.ok
+        pub_of_string point |> Result.map_error (fun _ -> `Msg "Invalid pub")
     | Error e, _ | _, Error e -> Error e
 
   let get_ES256_x_y =
@@ -96,6 +96,8 @@ let use_of_alg (alg : Jwa.alg) =
   | `RSA1_5 -> `Enc
   | `Dir -> `Enc
   | `A128KW | `A256KW -> `Enc
+  | `ECDH_ES -> `Enc
+  | `ECDH_ES_A128KW -> `Enc
   | `None -> `Unsupported "none"
   | `Unsupported str -> `Unsupported str
 
