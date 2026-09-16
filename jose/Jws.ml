@@ -109,6 +109,7 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
   | Jwk.Rsa_priv jwk -> (
       let pub_jwk = Jwk.pub_of_priv_rsa jwk in
       try
+        (* RFC 7518 §3.3: RSASSA-PKCS1-v1_5 signature verification *)
         Mirage_crypto_pk.Rsa.PKCS1.verify
           ~hashp:(rsa_validate_hash ?alg:jwk.alg)
           ~key:pub_jwk.key ~signature (`Message input_str)
@@ -121,6 +122,7 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
       | Invalid_argument m -> Error (`Msg m))
   | Jwk.Rsa_pub jwk -> (
       try
+        (* RFC 7518 §3.3: RSASSA-PKCS1-v1_5 signature verification *)
         Mirage_crypto_pk.Rsa.PKCS1.verify
           ~hashp:(rsa_validate_hash ?alg:jwk.alg)
           ~key:jwk.key ~signature (`Message input_str)
@@ -145,6 +147,7 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
           if Eqaf.equal signature computed_signature then Ok computed_signature
           else Error `Invalid_signature)
   | Jwk.Es256_pub pub_jwk ->
+      (* RFC 7518 §3.4: ECDSA P-256 signature is R || S (32 octets each) *)
       let r, s = U_String.split signature 32 in
       let message =
         Digestif.SHA256.digest_string input_str |> Digestif.SHA256.to_raw_string
@@ -153,6 +156,7 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
         Ok signature
       else Error `Invalid_signature
   | Jwk.Es256_priv jwk ->
+      (* RFC 7518 §3.4: ECDSA P-256 signature is R || S (32 octets each) *)
       let r, s = U_String.split signature 32 in
       let message =
         Digestif.SHA256.digest_string input_str |> Digestif.SHA256.to_raw_string
@@ -162,6 +166,7 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
         Ok signature
       else Error `Invalid_signature
   | Jwk.Es384_pub pub_jwk ->
+      (* RFC 7518 §3.4: ECDSA P-384 signature is R || S (48 octets each) *)
       let r, s = U_String.split signature 48 in
       let message =
         Digestif.SHA384.digest_string input_str |> Digestif.SHA384.to_raw_string
@@ -170,6 +175,7 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
         Ok signature
       else Error `Invalid_signature
   | Jwk.Es384_priv jwk ->
+      (* RFC 7518 §3.4: ECDSA P-384 signature is R || S (48 octets each) *)
       let r, s = U_String.split signature 48 in
       let message =
         Digestif.SHA384.digest_string input_str |> Digestif.SHA384.to_raw_string
@@ -179,6 +185,7 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
         Ok signature
       else Error `Invalid_signature
   | Jwk.Es512_pub pub_jwk ->
+      (* RFC 7518 §3.4: ECDSA P-521 signature is R || S (66 octets each) *)
       let r, s = U_String.split signature 66 in
       let message =
         Digestif.SHA512.digest_string input_str |> Digestif.SHA512.to_raw_string
@@ -187,6 +194,7 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
         Ok signature
       else Error `Invalid_signature
   | Jwk.Es512_priv jwk ->
+      (* RFC 7518 §3.4: ECDSA P-521 signature is R || S (66 octets each) *)
       let r, s = U_String.split signature 66 in
       let message =
         Digestif.SHA512.digest_string input_str |> Digestif.SHA512.to_raw_string
@@ -196,11 +204,13 @@ let verify_jwk (type a) ~(jwk : a Jwk.t) ~input_str signature =
         Ok signature
       else Error `Invalid_signature
   | Jwk.Ed25519_priv jwk ->
+      (* RFC 8037 §3.1 / RFC 9864 §3.1: Ed25519 verification *)
       let key = Mirage_crypto_ec.Ed25519.pub_of_priv jwk.key in
       let msg = input_str in
       if Mirage_crypto_ec.Ed25519.verify ~key signature ~msg then Ok signature
       else Error `Invalid_signature
   | Jwk.Ed25519_pub jwk ->
+      (* RFC 8037 §3.1 / RFC 9864 §3.1: Ed25519 verification *)
       let msg = input_str in
       if Mirage_crypto_ec.Ed25519.verify ~key:jwk.key signature ~msg then
         Ok signature
@@ -240,8 +250,10 @@ let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
   let sign_f =
     match jwk with
     | Jwk.Rsa_priv { key; _ } ->
+        (* RFC 7518 §3.3: RSASSA-PKCS1-v1_5 signature generation *)
         Ok (fun x -> Mirage_crypto_pk.Rsa.PKCS1.sign ~hash:`SHA256 ~key x)
     | Jwk.Es256_priv { key; _ } ->
+        (* RFC 7518 §3.4: ECDSA P-256 signature is R || S (32 octets each) *)
         Ok
           (function
           | `Message x ->
@@ -252,6 +264,7 @@ let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
               r ^ s
           | `Digest _ -> raise (Invalid_argument "Digest"))
     | Jwk.Es384_priv { key; _ } ->
+        (* RFC 7518 §3.4: ECDSA P-384 signature is R || S (48 octets each) *)
         Ok
           (function
           | `Message x ->
@@ -262,6 +275,7 @@ let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
               r ^ s
           | `Digest _ -> raise (Invalid_argument "Digest"))
     | Jwk.Es512_priv { key; _ } ->
+        (* RFC 7518 §3.4: ECDSA P-521 signature is R || S (66 octets each) *)
         Ok
           (function
           | `Message x ->
@@ -272,11 +286,13 @@ let sign ?header ~payload (jwk : Jwk.priv Jwk.t) =
               r ^ s
           | `Digest _ -> raise (Invalid_argument "Digest"))
     | Jwk.Ed25519_priv jwk ->
+        (* RFC 8037 §3.1 / RFC 9864 §3.1: Ed25519 signature generation *)
         Ok
           (function
           | `Message x -> Mirage_crypto_ec.Ed25519.sign ~key:jwk.key x
           | `Digest _ -> raise (Invalid_argument "Digest"))
     | Jwk.Oct oct ->
+        (* RFC 7518 §3.2: HMAC SHA-256 generation *)
         Jwk.oct_to_sign_key oct
         |> Result.map (fun key msg ->
             match msg with

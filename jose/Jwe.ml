@@ -112,6 +112,7 @@ let encrypt_payload ?enc ~cek ~iv ~aad payload =
       if Jwa.enc_to_length (Option.get enc) <> String.length cek * 8 then
         Error `Invalid_JWK
       else
+        (* RFC 7518 §5.3: AES GCM authenticated encryption with 96-bit IV and 128-bit tag *)
         let module GCM = Mirage_crypto.AES.GCM in
         let key = GCM.of_secret cek in
         let adata = aad in
@@ -144,12 +145,15 @@ let encrypt_cek (type a) alg (cek : string) ~(jwk : a Jwk.t) =
   Result.bind key (fun key ->
       match (key, alg) with
       | Rsa key, `RSA1_5 ->
+          (* RFC 7518 §4.2: Key Encryption with RSAES-PKCS1-v1_5 *)
           let ecek = Mirage_crypto_pk.Rsa.PKCS1.encrypt ~key cek in
           Ok ecek
       | Rsa key, `RSA_OAEP ->
+          (* RFC 7518 §4.3: Key Encryption with RSAES OAEP *)
           let jek = RSA_OAEP.encrypt ~key cek in
           Ok jek
       | Oct key, (`A128KW | `A256KW) ->
+          (* RFC 7518 §4.4 & RFC 3394: Key Encryption with AES Key Wrap *)
           let kek =
             U_Base64.url_decode key |> Result.map_error (fun _ -> `Invalid_JWK)
           in

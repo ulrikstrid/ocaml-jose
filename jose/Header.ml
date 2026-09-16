@@ -2,17 +2,63 @@ open Utils
 
 type t = {
   alg : Jwa.alg;
+      (** Algorithm Header Parameter
+          ({{:https://www.rfc-editor.org/info/rfc7515/#section-4.1.1} RFC 7515
+            §4.1.1},
+          {{:https://www.rfc-editor.org/info/rfc7516/#section-4.1.1} RFC 7516
+           §4.1.1}) *)
   jwk : Jwk.public Jwk.t option;
+      (** JSON Web Key Header Parameter
+          ({{:https://www.rfc-editor.org/info/rfc7515/#section-4.1.3} RFC 7515
+            §4.1.3}, {{:https://www.rfc-editor.org/info/rfc7517} RFC 7517}) *)
   kid : string option;
+      (** Key ID Header Parameter
+          ({{:https://www.rfc-editor.org/info/rfc7515/#section-4.1.4} RFC 7515
+            §4.1.4},
+          {{:https://www.rfc-editor.org/info/rfc7517/#section-4.5} RFC 7517
+           §4.5}) *)
   epk : Jwk.public Jwk.t option;
+      (** Ephemeral Public Key Header Parameter
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-4.6.1.1} RFC 7518
+            §4.6.1.1}) *)
   apu : string option;
+      (** Agreement PartyUInfo Header Parameter
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-4.6.1.2} RFC 7518
+            §4.6.1.2}) *)
   apv : string option;
+      (** Agreement PartyVInfo Header Parameter
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-4.6.1.3} RFC 7518
+            §4.6.1.3}) *)
   x5t : string option;
+      (** X.509 Certificate SHA-1 Thumbprint
+          ({{:https://www.rfc-editor.org/info/rfc7515/#section-4.1.7} RFC 7515
+            §4.1.7},
+          {{:https://www.rfc-editor.org/info/rfc7517/#section-4.8} RFC 7517
+           §4.8}) *)
   x5t256 : string option;
+      (** X.509 Certificate SHA-256 Thumbprint
+          ({{:https://www.rfc-editor.org/info/rfc7515/#section-4.1.8} RFC 7515
+            §4.1.8},
+          {{:https://www.rfc-editor.org/info/rfc7517/#section-4.9} RFC 7517
+           §4.9}) *)
   typ : string option;
+      (** Type Header Parameter
+          ({{:https://www.rfc-editor.org/info/rfc7515/#section-4.1.9} RFC 7515
+            §4.1.9},
+          {{:https://www.rfc-editor.org/info/rfc7519/#section-5.1} RFC 7519
+           §5.1}) *)
   cty : string option;
+      (** Content Type Header Parameter
+          ({{:https://www.rfc-editor.org/info/rfc7515/#section-4.1.10} RFC 7515
+            §4.1.10}) *)
   enc : Jwa.enc option;
+      (** Encryption Algorithm Header Parameter
+          ({{:https://www.rfc-editor.org/info/rfc7516/#section-4.1.2} RFC 7516
+            §4.1.2},
+          {{:https://www.rfc-editor.org/info/rfc7518/#section-5.1} RFC 7518
+           §5.1}) *)
   extra : (string * Yojson.Safe.t) list;
+      (** Additional custom/unregistered header parameters *)
 }
 
 let remove_supported (l : (string * Yojson.Safe.t) list) =
