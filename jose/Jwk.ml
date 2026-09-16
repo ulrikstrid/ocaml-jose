@@ -16,6 +16,9 @@ module Util = struct
 
   let get_JWK_x5t fingerprint = U_Base64.url_encode ~len:20 fingerprint
 
+  (* Extract x and y coordinates from SEC1 uncompressed elliptic curve point.
+     Per SEC1 §2.3.3 and RFC 7518 §6.2.1, uncompressed points have a leading
+     0x04 byte followed by the x and y coordinates of equal byte length. *)
   let get_ESXXX_x_y ~split_at ~pub_to_string key =
     let point = pub_to_string key in
     let x_cs, y_cs =
@@ -25,6 +28,8 @@ module Util = struct
     let y = y_cs |> U_Base64.url_encode_string in
     (x, y)
 
+  (* Reconstruct uncompressed elliptic curve point (0x04 || x || y) from
+     the x and y coordinates per SEC1 §2.3.3 and RFC 7518 §6.2.1.2/§6.2.1.3. *)
   let make_ESXXX_of_x_y ~pub_of_string (x, y) =
     let x = U_Base64.url_decode x in
     let y = U_Base64.url_decode y in
@@ -901,6 +906,8 @@ let hash_values hash values =
   `Assoc (List.filter_map Fun.id values)
   |> Yojson.to_string |> Hash.digest_string |> Hash.to_raw_string
 
+(* RFC 7638 §3.2: Required members for RSA public key thumbprint ordered
+   lexicographically: "e", "kty", "n" *)
 let pub_rsa_to_thumbprint hash (pub_rsa : Mirage_crypto_pk.Rsa.pub jwk) =
   let e = Util.get_JWK_component pub_rsa.key.e in
   let n = Util.get_JWK_component pub_rsa.key.n in
@@ -910,11 +917,17 @@ let pub_rsa_to_thumbprint hash (pub_rsa : Mirage_crypto_pk.Rsa.pub jwk) =
   in
   hash_values hash values
 
+(* RFC 7638 §3.2.1: The JWK Thumbprint of a private key is computed as the
+   JWK Thumbprint of the corresponding public key. *)
 let priv_rsa_to_thumbprint hash (priv_rsa : Mirage_crypto_pk.Rsa.priv jwk) =
   pub_rsa_to_thumbprint hash (pub_of_priv_rsa priv_rsa)
 
+(* RFC 7638 §8.1: Computing thumbprints for symmetric keys risks leaking key
+   material and is rejected as `Unsafe. *)
 let oct_to_thumbprint _hash (_oct : oct) = Error `Unsafe
 
+(* RFC 7638 §3.2: Required members for EC public key thumbprint ordered
+   lexicographically: "crv", "kty", "x", "y" *)
 let pub_es256_to_thumbprint hash (pub_es256 : pub_es256) =
   let crv = "P-256" in
   let kty = Jwa.kty_to_string pub_es256.kty in
@@ -966,6 +979,8 @@ let pub_es512_to_thumbprint hash (pub_es512 : pub_es512) =
 let priv_es512_to_thumbprint hash (priv_es512 : priv_es512) =
   pub_of_priv_es512 priv_es512 |> pub_es512_to_thumbprint hash
 
+(* RFC 8037 §3.1: Required members for OKP thumbprint ordered
+   lexicographically: "crv", "kty", "x" *)
 let pub_ed25519_to_thumbprint hash (pub_ed25519 : pub_ed25519) =
   let kty = Jwa.kty_to_string pub_ed25519.kty in
   let x =

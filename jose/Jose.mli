@@ -3,33 +3,77 @@
     {{:https://www.tools.ietf.org/rfc/rfc7518.html} Link to RFC} *)
 module Jwa : sig
   type alg =
-    [ `RS256  (** RSASSA-PKCS1-v1_5 using SHA-256 *)
-    | `HS256  (** HMAC using SHA-256 *)
-    | `ES256  (** ECDSA using P-256 and SHA-256 *)
-    | `ES384  (** ECDSA using P-384 and SHA-384 *)
-    | `ES512  (** ECDSA using P-521 and SHA-512 *)
+    [ `RS256
+      (** RSASSA-PKCS1-v1_5 using SHA-256 - Recommended
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-3.1} RFC 7518
+            §3.1}) *)
+    | `HS256
+      (** HMAC using SHA-256 - Required
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-3.1} RFC 7518
+            §3.1}) *)
+    | `ES256
+      (** ECDSA using P-256 and SHA-256 - Recommended+
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-3.1} RFC 7518
+            §3.1}) *)
+    | `ES384
+      (** ECDSA using P-384 and SHA-384 - Optional
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-3.1} RFC 7518
+            §3.1}) *)
+    | `ES512
+      (** ECDSA using P-521 and SHA-512 - Optional
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-3.1} RFC 7518
+            §3.1}) *)
     | `EdDSA
-      (** EdDSA signature algorithm
-          {{:https://www.rfc-editor.org/rfc/rfc8037.html} Link to RFC} *)
+      (** EdDSA signature algorithm - Optional
+          {{:https://www.rfc-editor.org/rfc/rfc8037.html} Link to RFC 8037 §3.1}
+      *)
     | `Ed25519
-      (** EdDSA signature algorithm with Ed25519
-          {{:https://www.rfc-editor.org/rfc/rfc9864.html} Link to RFC} *)
-    | `RSA_OAEP  (** RSAES OAEP using default parameters *)
-    | `RSA1_5  (** RSA PKCS 1 *)
-    | `Dir  (** Direct use of a shared symmetric key *)
-    | `A128KW  (** AES Key Wrap using 128-bit key *)
-    | `A256KW  (** AES Key Wrap using 256-bit key *)
-    | `ECDH_ES (** Elliptic Curve Diffie-Hellman Ephemeral Static key agreement using
-        Concat KDF *)
-    | `ECDH_ES_A128KW (** ECDH-ES using Concat KDF and CEK wrapped with "A128KW" *)
+      (** Ed25519 signature algorithm - Fully-specified replacement for EdDSA
+          {{:https://www.rfc-editor.org/rfc/rfc9864.html} Link to RFC 9864 §3.1}
+      *)
+    | `RSA_OAEP
+      (** RSAES OAEP using default parameters - Recommended+
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-4.1} RFC 7518
+            §4.1}) *)
+    | `RSA1_5
+      (** RSA PKCS 1 v1.5 - Recommended-
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-4.1} RFC 7518
+            §4.1}) *)
+    | `Dir
+      (** Direct use of a shared symmetric key - Recommended
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-4.1} RFC 7518
+            §4.1}) *)
+    | `A128KW
+      (** AES Key Wrap using 128-bit key - Recommended
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-4.1} RFC 7518
+            §4.1}, {{:https://www.rfc-editor.org/info/rfc3394} RFC 3394}) *)
+    | `A256KW
+      (** AES Key Wrap using 256-bit key - Recommended
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-4.1} RFC 7518
+            §4.1}, {{:https://www.rfc-editor.org/info/rfc3394} RFC 3394}) *)
+    | `ECDH_ES
+      (** Elliptic Curve Diffie-Hellman Ephemeral Static key agreement using
+          Concat KDF - Recommended+
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-4.1} RFC 7518
+            §4.1},
+          {{:https://www.rfc-editor.org/info/rfc7518/#section-4.6} §4.6}) *)
+    | `ECDH_ES_A128KW
+      (** ECDH-ES using Concat KDF and CEK wrapped with "A128KW" - Recommended
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-4.1} RFC 7518
+            §4.1},
+          {{:https://www.rfc-editor.org/info/rfc7518/#section-4.6} §4.6}) *)
     | `None
+      (** No digital signature or MAC performed - Optional
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-3.1} RFC 7518
+            §3.1}) *)
     | `Unsupported of string ]
 
-  (** {{:https://tools.ietf.org/html/rfc7518#section-3.1} Link to RFC}
+  (** {{:https://tools.ietf.org/html/rfc7518#section-3.1} Link to RFC 7518 §3.1}
 
-      - [RS256] and [HS256] and none is currently the only supported algs for
-        signature - [RSA_OAEP] is currently the only supported alg for
-        encryption *)
+      - Signature algorithms supported: [HS256], [RS256], [ES256], [ES384],
+        [ES512], [EdDSA], [Ed25519].
+      - Key management algorithms supported: [RSA1_5], [RSA_OAEP], [Dir],
+        [A128KW], [A256KW], [ECDH_ES], [ECDH_ES_A128KW]. *)
 
   val alg_to_string : alg -> string
   val alg_of_string : string -> alg
@@ -37,12 +81,22 @@ module Jwa : sig
   val alg_of_json : Yojson.Safe.t -> alg
 
   type kty =
-    [ `oct  (** Octet sequence (used to represent symmetric keys) *)
-    | `RSA  (** RSA {{:https://tools.ietf.org/html/rfc3447} Link to RFC} *)
-    | `EC  (** Elliptic Curve *)
+    [ `oct
+      (** Octet sequence (used to represent symmetric keys) - Required
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-6.1} RFC 7518
+            §6.1}) *)
+    | `RSA
+      (** RSA - Required
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-6.1} RFC 7518
+            §6.1}, {{:https://www.rfc-editor.org/info/rfc3447} RFC 3447}) *)
+    | `EC
+      (** Elliptic Curve - Recommended+
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-6.1} RFC 7518
+            §6.1}) *)
     | `OKP
-      (** Octet Key Pair
-          {{:https://www.rfc-editor.org/rfc/rfc8037.html} Link to RFC} *)
+      (** Octet Key Pair - Optional
+          {{:https://www.rfc-editor.org/rfc/rfc8037.html} Link to RFC 8037 §2}
+      *)
     | `Unsupported of string ]
   (** {{:https://tools.ietf.org/html/rfc7518#section-6.1} Link to RFC} *)
 
@@ -51,14 +105,30 @@ module Jwa : sig
 
   type enc =
     [ `A128CBC_HS256
-      (** AES_128_CBC_HMAC_SHA_256 authenticated encryption algorithm,
+      (** AES_128_CBC_HMAC_SHA_256 authenticated encryption algorithm - Required
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-5.1} RFC 7518
+            §5.1},
+          {{:https://www.rfc-editor.org/info/rfc7518/#section-5.2.3} §5.2.3})
           https://tools.ietf.org/html/rfc7518#section-5.2.3 *)
     | `A256CBC_HS512
-      (** AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm,
+      (** AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm - Required
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-5.1} RFC 7518
+            §5.1},
+          {{:https://www.rfc-editor.org/info/rfc7518/#section-5.2.5} §5.2.5})
           https://tools.ietf.org/html/rfc7518#section-5.2.5 *)
-    | `A128GCM  (** AES GCM using 128-bit key *)
-    | `A256GCM  (** AES GCM using 256-bit key *) ]
-  (** https://tools.ietf.org/html/rfc7518#section-5 *)
+    | `A128GCM
+      (** AES GCM using 128-bit key - Recommended
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-5.1} RFC 7518
+            §5.1},
+          {{:https://www.rfc-editor.org/info/rfc7518/#section-5.3} §5.3}) *)
+    | `A256GCM
+      (** AES GCM using 256-bit key - Recommended
+          ({{:https://www.rfc-editor.org/info/rfc7518/#section-5.1} RFC 7518
+            §5.1},
+          {{:https://www.rfc-editor.org/info/rfc7518/#section-5.3} §5.3}) *) ]
+  (** Content Encryption Algorithms for JWE
+      ({{:https://www.rfc-editor.org/info/rfc7518/#section-5.1} RFC 7518 §5.1})
+  *)
 
   val enc_to_string : enc -> string
   val enc_of_string : string -> enc
@@ -291,17 +361,63 @@ end
 module Header : sig
   type t = {
     alg : Jwa.alg;
+        (** Algorithm Header Parameter
+            ({{:https://www.rfc-editor.org/info/rfc7515/#section-4.1.1} RFC 7515
+              §4.1.1},
+            {{:https://www.rfc-editor.org/info/rfc7516/#section-4.1.1} RFC 7516
+             §4.1.1}) *)
     jwk : Jwk.public Jwk.t option;
+        (** JSON Web Key Header Parameter
+            ({{:https://www.rfc-editor.org/info/rfc7515/#section-4.1.3} RFC 7515
+              §4.1.3}, {{:https://www.rfc-editor.org/info/rfc7517} RFC 7517}) *)
     kid : string option;
+        (** Key ID Header Parameter
+            ({{:https://www.rfc-editor.org/info/rfc7515/#section-4.1.4} RFC 7515
+              §4.1.4},
+            {{:https://www.rfc-editor.org/info/rfc7517/#section-4.5} RFC 7517
+             §4.5}) *)
     epk : Jwk.public Jwk.t option;
+        (** Ephemeral Public Key Header Parameter
+            ({{:https://www.rfc-editor.org/info/rfc7518/#section-4.6.1.1} RFC
+              7518 §4.6.1.1}) *)
     apu : string option;
+        (** Agreement PartyUInfo Header Parameter
+            ({{:https://www.rfc-editor.org/info/rfc7518/#section-4.6.1.2} RFC
+              7518 §4.6.1.2}) *)
     apv : string option;
+        (** Agreement PartyVInfo Header Parameter
+            ({{:https://www.rfc-editor.org/info/rfc7518/#section-4.6.1.3} RFC
+              7518 §4.6.1.3}) *)
     x5t : string option;
+        (** X.509 Certificate SHA-1 Thumbprint
+            ({{:https://www.rfc-editor.org/info/rfc7515/#section-4.1.7} RFC 7515
+              §4.1.7},
+            {{:https://www.rfc-editor.org/info/rfc7517/#section-4.8} RFC 7517
+             §4.8}) *)
     x5t256 : string option;
+        (** X.509 Certificate SHA-256 Thumbprint
+            ({{:https://www.rfc-editor.org/info/rfc7515/#section-4.1.8} RFC 7515
+              §4.1.8},
+            {{:https://www.rfc-editor.org/info/rfc7517/#section-4.9} RFC 7517
+             §4.9}) *)
     typ : string option;
+        (** Type Header Parameter
+            ({{:https://www.rfc-editor.org/info/rfc7515/#section-4.1.9} RFC 7515
+              §4.1.9},
+            {{:https://www.rfc-editor.org/info/rfc7519/#section-5.1} RFC 7519
+             §5.1}) *)
     cty : string option;
+        (** Content Type Header Parameter
+            ({{:https://www.rfc-editor.org/info/rfc7515/#section-4.1.10} RFC
+              7515 §4.1.10}) *)
     enc : Jwa.enc option;
+        (** Encryption Algorithm Header Parameter
+            ({{:https://www.rfc-editor.org/info/rfc7516/#section-4.1.2} RFC 7516
+              §4.1.2},
+            {{:https://www.rfc-editor.org/info/rfc7518/#section-5.1} RFC 7518
+             §5.1}) *)
     extra : (string * Yojson.Safe.t) list;
+        (** Additional custom/unregistered header parameters *)
   }
   (** The [header] has the following properties:
 
@@ -555,7 +671,14 @@ module Private : sig
     end
 
     module Concat_kdf : sig
-      val derive : z:string -> keydatalen:int -> alg_id:string -> ?apu:string -> ?apv:string -> unit -> string
+      val derive :
+        z:string ->
+        keydatalen:int ->
+        alg_id:string ->
+        ?apu:string ->
+        ?apv:string ->
+        unit ->
+        string
     end
   end
 end
