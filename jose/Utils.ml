@@ -81,45 +81,44 @@ module Aes_kw = struct
 
   (** RFC 3394 Section 2.2.1: Key Wrap *)
   let wrap ~kek (plaintext : string) : (string, [> `Msg of string ]) result =
-    let bytes = Bytes.of_string plaintext in
-    let len = Bytes.length bytes in
+    let len = String.length plaintext in
     let kek_len = String.length kek in
     if kek_len <> 16 && kek_len <> 24 && kek_len <> 32 then
       Error (`Msg "Bad KEK length, must be 16, 24, or 32 bytes")
-    else if len >= 16 && len mod 8 = 0 then
+    else if len >= 16 && len mod 8 = 0 then (
       (* 1) Initialize variables: A = IV, R[i] = P[i] *)
       let key = Mirage_crypto.AES.ECB.of_secret kek in
-      let a = Bytes.of_string default_iv in
       let n = len / 8 in
-      let r = ArrayLabels.init ~f:(fun i -> Bytes.sub bytes (8 * i) 8) n in
-      let () =
-        (* 2) Calculate intermediate values: 6 rounds (j = 0..5, i = 0..n-1) *)
-        for j = 0 to 5 do
-          ArrayLabels.mapi_inplace
-            ~f:(fun i c ->
-              (* t = (n * j) + i, 1-indexed step counter *)
-              let t = (n * j) + i + 1 in
-              (* B = AES(K, A | R[i]) *)
-              let block = Bytes.cat a c in
-              let b =
-                Mirage_crypto.AES.ECB.encrypt ~key (String.of_bytes block)
-                |> Bytes.of_string
-              in
-              (* A = MSB(64, B) ^ t *)
-              let left = Bytes.sub b 0 8 in
-              Int64.logxor (Bytes.get_int64_be left 0) (Int64.of_int t)
-              |> Bytes.set_int64_be left 0;
-              Bytes.blit left 0 a 0 8;
 
-              (* R[i] = LSB(64, B) *)
-              let right = Bytes.sub b 8 8 in
-              right)
-            r
+      (* 1) Initialize variables: C[0] = IV, C[1..n] = P[1..n] *)
+      let out = Bytes.create (len + 8) in
+      Bytes.blit_string default_iv 0 out 0 8;
+      Bytes.blit_string plaintext 0 out 8 len;
+      let b_in = Bytes.create 16 in
+      let b_out = Bytes.create 16 in
+
+      (* 2) Calculate intermediate values: 6 rounds (j = 0..5, i = 0..n-1) *)
+      for j = 0 to 5 do
+        for i = 1 to n do
+          (* t = (n * j) + i, 1-indexed step counter *)
+          let t = (n * j) + i in
+          (* B = AES(K, A | R[i]) *)
+          Bytes.blit out 0 b_in 0 8;
+          Bytes.blit out (8 * i) b_in 8 8;
+          Mirage_crypto.AES.ECB.encrypt_into ~key
+            (Bytes.unsafe_to_string b_in)
+            ~src_off:0 b_out ~dst_off:0 16;
+
+          (* A = MSB(64, B) ^ t *)
+          Int64.logxor (Bytes.get_int64_be b_out 0) (Int64.of_int t)
+          |> Bytes.set_int64_be out 0;
+
+          (* R[i] = LSB(64, B) *)
+          Bytes.blit b_out 8 out (8 * i) 8
         done
-      in
+      done;
       (* 3) Output results: C[0] = A, C[i] = R[i] *)
-      Bytes.concat Bytes.empty (a :: Array.to_list r)
-      |> String.of_bytes |> Result.ok
+      String.of_bytes out |> Result.ok)
     else
       Error
         (`Msg
@@ -129,50 +128,46 @@ module Aes_kw = struct
   (** RFC 3394 Section 2.2.2: Key Unwrap *)
   let unwrap ~kek ciphertext =
     let kek_len = String.length kek in
-    let bytes = Bytes.of_string ciphertext in
-    let len = Bytes.length bytes in
+    let len = String.length ciphertext in
     if kek_len <> 16 && kek_len <> 24 && kek_len <> 32 then
       Error (`Msg "Bad KEK length, must be 16, 24, or 32 bytes")
-    else if len >= 24 && len mod 8 = 0 then
+    else if len >= 24 && len mod 8 = 0 then (
       (* 1) Initialize variables: A = C[0], R[i] = C[i] *)
       let key = Mirage_crypto.AES.ECB.of_secret kek in
       let n = (len / 8) - 1 in
-      let a = Bytes.sub bytes 0 8 in
-      let r =
-        ArrayLabels.init ~f:(fun i -> Bytes.sub bytes ((8 * i) + 8) 8) n
-      in
-      let () =
-        (* 2) Calculate intermediate values in reverse (j = 5..0, i = n-1..0) *)
-        for j = 5 downto 0 do
-          for i = n - 1 downto 0 do
-            let c = Array.get r i in
-            let t = (n * j) + i + 1 in
 
-            (* A' = A ^ t *)
-            Int64.logxor (Bytes.get_int64_be a 0) (Int64.of_int t)
-            |> Bytes.set_int64_be a 0;
+      let out = Bytes.of_string ciphertext in
+      let b_in = Bytes.create 16 in
+      let b_out = Bytes.create 16 in
 
-            (* B = AES-1(K, (A ^ t) | R[i]) *)
-            let block = Bytes.cat a c in
-            let b =
-              Mirage_crypto.AES.ECB.decrypt ~key (String.of_bytes block)
-              |> Bytes.of_string
-            in
+      (* 2) Calculate intermediate values in reverse (j = 5..0, i = n-1..0) *)
+      for j = 5 downto 0 do
+        for i = n downto 1 do
+          let t = (n * j) + i in
 
-            (* A = MSB(64, B), R[i] = LSB(64, B) *)
-            let left = Bytes.sub b 0 8 in
-            Bytes.blit left 0 a 0 8;
-            let right = Bytes.sub b 8 8 in
+          (* A' = A ^ t *)
+          Int64.logxor (Bytes.get_int64_be out 0) (Int64.of_int t)
+          |> Bytes.set_int64_be b_in 0;
 
-            Array.set r i right
-          done
+          (* Copy R[i] into second half of AES block *)
+          Bytes.blit out (8 * i) b_in 8 8;
+
+          (* B = AES-1(K, (A ^ t) | R[i]) *)
+          Mirage_crypto.AES.ECB.decrypt_into ~key
+            (Bytes.unsafe_to_string b_in)
+            ~src_off:0 b_out ~dst_off:0 16;
+
+          (* A = MSB(64, B) *)
+          Bytes.blit b_out 0 out 0 8;
+
+          (* R[i] = LSB(64, B) *)
+          Bytes.blit b_out 8 out (8 * i) 8
         done
-      in
+      done;
       (* 3) Output results: check if A == IV, then output P[i] = R[i] *)
-      if Eqaf.equal (String.of_bytes a) default_iv then
-        Bytes.concat Bytes.empty (Array.to_list r)
-        |> String.of_bytes |> Result.ok
-      else Error (`Msg "Integrity check failed")
+      if Eqaf.equal (Bytes.sub_string out 0 8) default_iv then
+        Bytes.sub_string out 8 (n * 8) |> Result.ok
+      else Error (`Msg "Integrity check failed"))
     else
       Error
         (`Msg
