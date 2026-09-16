@@ -379,6 +379,185 @@ let jwa_tests =
           in
           check_string "ECDH-ES+A128KW roundtrip payload matches"
             "ECDH-ES+A128KW roundtrip test" roundtrip.payload);
+      Alcotest.test_case "Appendix B.1: AES_128_CBC_HMAC_SHA_256 test vectors"
+        `Quick (fun () ->
+          let of_hex s =
+            let clean =
+              CCString.replace ~sub:" " ~by:"" s
+              |> CCString.replace ~sub:"\n" ~by:""
+            in
+            let len = String.length clean in
+            let b = Bytes.create (len / 2) in
+            for i = 0 to (len / 2) - 1 do
+              let byte = int_of_string ("0x" ^ String.sub clean (i * 2) 2) in
+              Bytes.set_uint8 b i byte
+            done;
+            Bytes.to_string b
+          in
+          let mac_key =
+            of_hex "00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f"
+          in
+          let enc_key =
+            of_hex "10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f"
+          in
+          let p =
+            "A cipher system must not be required to be secret, and it must be \
+             able to fall into the hands of the enemy without inconvenience"
+          in
+          let iv = of_hex "1a f3 8c 2d c2 b9 6f fd d8 66 94 09 23 41 bc 04" in
+          let a = "The second principle of Auguste Kerckhoffs" in
+          let expected_e =
+            of_hex
+              "c8 0e df a3 2d df 39 d5 ef 00 c0 b4 68 83 42 79 a2 e4 6a 1b 80 \
+               49 f7 92 f7 6b fe 54 b9 03 a9 c9 a9 4a c9 b4 7a d2 65 5c 5f 10 \
+               f9 ae f7 14 27 e2 fc 6f 9b 3f 39 9a 22 14 89 f1 63 62 c7 03 23 \
+               36 09 d4 5a c6 98 64 e3 32 1c f8 29 35 ac 40 96 c8 6e 13 33 14 \
+               c5 40 19 e8 ca 79 80 df a4 b9 cf 1b 38 4c 48 6f 3a 54 c5 10 78 \
+               15 8e e5 d7 9d e5 9f bd 34 d8 48 b3 d6 95 50 a6 76 46 34 44 27 \
+               ad e5 4b 88 51 ff b5 98 f7 f8 00 74 b9 47 3c 82 e2 db"
+          in
+          let expected_t =
+            of_hex "65 2c 3f a3 6b 0a 7c 5b 32 19 fa b3 a3 0b c1 c4"
+          in
+          let padded = Jose.Private.Utils.Pkcs7.pad p 16 in
+          let key = Mirage_crypto.AES.CBC.of_secret enc_key in
+          let e = Mirage_crypto.AES.CBC.encrypt ~key ~iv padded in
+          check_string "Appendix B.1 ciphertext matches" expected_e e;
+          let al = Bytes.create 8 in
+          Bytes.set_int64_be al 0 Int64.(mul 8L (of_int (String.length a)));
+          let hmac_input = String.concat "" [ a; iv; e; Bytes.to_string al ] in
+          let full_h =
+            Digestif.SHA256.hmac_string ~key:mac_key hmac_input
+            |> Digestif.SHA256.to_raw_string
+          in
+          let t = String.sub full_h 0 16 in
+          check_string "Appendix B.1 authentication tag matches" expected_t t);
+      Alcotest.test_case "Appendix B.3: AES_256_CBC_HMAC_SHA_512 test vectors"
+        `Quick (fun () ->
+          let of_hex s =
+            let clean =
+              CCString.replace ~sub:" " ~by:"" s
+              |> CCString.replace ~sub:"\n" ~by:""
+            in
+            let len = String.length clean in
+            let b = Bytes.create (len / 2) in
+            for i = 0 to (len / 2) - 1 do
+              let byte = int_of_string ("0x" ^ String.sub clean (i * 2) 2) in
+              Bytes.set_uint8 b i byte
+            done;
+            Bytes.to_string b
+          in
+          let mac_key =
+            of_hex
+              "00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 14 \
+               15 16 17 18 19 1a 1b 1c 1d 1e 1f"
+          in
+          let enc_key =
+            of_hex
+              "20 21 22 23 24 25 26 27 28 29 2a 2b 2c 2d 2e 2f 30 31 32 33 34 \
+               35 36 37 38 39 3a 3b 3c 3d 3e 3f"
+          in
+          let p =
+            "A cipher system must not be required to be secret, and it must be \
+             able to fall into the hands of the enemy without inconvenience"
+          in
+          let iv = of_hex "1a f3 8c 2d c2 b9 6f fd d8 66 94 09 23 41 bc 04" in
+          let a = "The second principle of Auguste Kerckhoffs" in
+          let expected_e =
+            of_hex
+              "4a ff aa ad b7 8c 31 c5 da 4b 1b 59 0d 10 ff bd 3d d8 d5 d3 02 \
+               42 35 26 91 2d a0 37 ec bc c7 bd 82 2c 30 1d d6 7c 37 3b cc b5 \
+               84 ad 3e 92 79 c2 e6 d1 2a 13 74 b7 7f 07 75 53 df 82 94 10 44 \
+               6b 36 eb d9 70 66 29 6a e6 42 7e a7 5c 2e 08 46 a1 1a 09 cc f5 \
+               37 0d c8 0b fe cb ad 28 c7 3f 09 b3 a3 b7 5e 66 2a 25 94 41 0a \
+               e4 96 b2 e2 e6 60 9e 31 e6 e0 2c c8 37 f0 53 d2 1f 37 ff 4f 51 \
+               95 0b be 26 38 d0 9d d7 a4 93 09 30 80 6d 07 03 b1 f6"
+          in
+          let expected_t =
+            of_hex
+              "4d d3 b4 c0 88 a7 f4 5c 21 68 39 64 5b 20 12 bf 2e 62 69 a8 c5 \
+               6a 81 6d bc 1b 26 77 61 95 5b c5"
+          in
+          let padded = Jose.Private.Utils.Pkcs7.pad p 16 in
+          let key = Mirage_crypto.AES.CBC.of_secret enc_key in
+          let e = Mirage_crypto.AES.CBC.encrypt ~key ~iv padded in
+          check_string "Appendix B.3 ciphertext matches" expected_e e;
+          let al = Bytes.create 8 in
+          Bytes.set_int64_be al 0 Int64.(mul 8L (of_int (String.length a)));
+          let hmac_input = String.concat "" [ a; iv; e; Bytes.to_string al ] in
+          let full_h =
+            Digestif.SHA512.hmac_string ~key:mac_key hmac_input
+            |> Digestif.SHA512.to_raw_string
+          in
+          let t = String.sub full_h 0 32 in
+          check_string "Appendix B.3 authentication tag matches" expected_t t);
+      Alcotest.test_case
+        "Appendix C: Full ECDH-ES key agreement computation and JWE decryption"
+        `Quick (fun () ->
+          let bob_priv_json =
+            {|{"kty":"EC",
+               "crv":"P-256",
+               "x":"weNJy2HscCSM6AEDTDg04biOvhFhyyWvOHQfeF_PxMQ",
+               "y":"e8lnCO-AlStT-NJVX-crhB7QRYhiix03illJOVAOyck",
+               "d":"VEmDZpDXXK8p8N0Cndsxs924q6nS1RXFASRl6BfUqdw"}|}
+          in
+          let bob_priv =
+            Jose.Jwk.of_priv_json_string bob_priv_json |> CCResult.get_exn
+          in
+          let alice_epk_json =
+            {|{"kty":"EC",
+               "crv":"P-256",
+               "x":"gI0GAILBdu7T53akrFmMyGcsF3n5dO7MmwNBHKW5SV0",
+               "y":"SLW_xSffzlPWrHEVI30DHM_4egVwt3NQqeUD7nMFpps"}|}
+          in
+          let header_json =
+            `Assoc
+              [
+                ("alg", `String "ECDH-ES");
+                ("enc", `String "A128GCM");
+                ("apu", `String "QWxpY2U");
+                ("apv", `String "Qm9i");
+                ("epk", Yojson.Safe.from_string alice_epk_json);
+              ]
+          in
+          let header = Jose.Header.of_json header_json |> CCResult.get_exn in
+          let payload =
+            "Secret message from Alice to Bob per RFC 7518 Appendix C"
+          in
+          (* CEK derived per RFC 7518 Appendix C is "VqqN6vgjbSBcIijNcacQGg" *)
+          let expected_cek_b64 = "VqqN6vgjbSBcIijNcacQGg" in
+          let derived_cek =
+            url_decode_string expected_cek_b64 |> CCResult.get_exn
+          in
+          let iv = Mirage_crypto_rng.generate 12 in
+          let header_str = Jose.Header.to_string header in
+          let module GCM = Mirage_crypto.AES.GCM in
+          let gcm_key = GCM.of_secret derived_cek in
+          let cdata =
+            GCM.authenticate_encrypt ~key:gcm_key ~nonce:iv ~adata:header_str
+              payload
+          in
+          let ciphertext, tag =
+            Jose.Private.Utils.U_String.split cdata
+              (String.length cdata - GCM.tag_size)
+          in
+          let jwe_compact =
+            String.concat "."
+              [
+                header_str;
+                "";
+                url_encode_string iv;
+                url_encode_string ciphertext;
+                url_encode_string tag;
+              ]
+          in
+          let decrypted = Jose.Jwe.decrypt ~jwk:bob_priv jwe_compact in
+          Alcotest.(check bool)
+            "Bob decrypts JWE successfully" true (CCResult.is_ok decrypted);
+          let d = CCResult.get_exn decrypted in
+          check_string "decrypted payload matches" payload d.payload;
+          check_string "derived CEK matches RFC 7518 Appendix C"
+            expected_cek_b64 (url_encode_string d.cek));
     ] )
 
 let suite, _ =

@@ -50,9 +50,28 @@ let oct_hmac_json =
      "k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow",
      "kid":"HMAC key used in JWS spec Appendix A.1 example"}|}
 
+(* Section 3: Example JWK (P-256 EC Public Key) *)
+let ec_pub_section3_json =
+  {|{"kty":"EC",
+     "crv":"P-256",
+     "x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+     "y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
+     "kid":"Public key used in JWS spec Appendix A.3 example"
+    }|}
+
 let jwk_tests =
   ( "RFC7517",
     [
+      Alcotest.test_case "Section 3: Parse Example P-256 EC Public Key" `Quick
+        (fun () ->
+          let jwk = Jose.Jwk.of_pub_json_string ec_pub_section3_json in
+          Alcotest.(check bool) "parses successfully" true (CCResult.is_ok jwk);
+          let key = CCResult.get_exn jwk in
+          Alcotest.(check bool) "kty is EC" true (Jose.Jwk.get_kty key = `EC);
+          Alcotest.(check (option string))
+            "kid matches"
+            (Some "Public key used in JWS spec Appendix A.3 example")
+            (Jose.Jwk.get_kid key));
       Alcotest.test_case "A.1: Parse JWK Set with Public EC and RSA keys" `Quick
         (fun () ->
           let jwks = Jose.Jwks.of_string jwks_public_json in
