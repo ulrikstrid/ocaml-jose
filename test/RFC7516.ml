@@ -50,6 +50,19 @@ let jwe_compact_a2 =
 
 let plaintext_a2 = "Live long and prosper."
 
+(* Appendix A.3: AES Key Wrap (A128KW) and AES_128_CBC_HMAC_SHA_256 *)
+let oct_key_json_a3 = {|{"kty":"oct",
+ "k":"GawgguFyGrWKav7AX4VKUg"
+}|}
+
+let jwe_compact_a3 =
+  "eyJhbGciOiJBMTI4S1ciLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0."
+  ^ "6KB707dM9YTIgHtLvtgWQ8mKwboJW3of9locizkDTHzBC2IlrT1oOQ."
+  ^ "AxY8DCtDaGlsbGljb3RoZQ." ^ "KDlTtXchhZTGufMYmOYGS4HffxPSUrfmqCHXaI9wOGY."
+  ^ "U0m_YmjN04DJvceFICbCVQ"
+
+let plaintext_a3 = "Live long and prosper."
+
 let jwe_tests =
   ( "RFC7516",
     [
@@ -105,6 +118,32 @@ let jwe_tests =
             "A.2 roundtrip succeeds" true
             (CCResult.is_ok re_encrypted);
           check_string "A.2 roundtrip payload matches" plaintext_a2
+            (CCResult.get_exn re_encrypted).payload);
+      Alcotest.test_case "A.3: Decrypt A128KW + A128CBC-HS256" `Quick (fun () ->
+          let jwk =
+            Jose.Jwk.of_priv_json_string oct_key_json_a3 |> CCResult.get_exn
+          in
+          let decrypted = Jose.Jwe.decrypt ~jwk jwe_compact_a3 in
+          Alcotest.(check bool)
+            "A.3 JWE decrypts successfully" true (CCResult.is_ok decrypted);
+          let jwe = CCResult.get_exn decrypted in
+          check_string "Payload matches" plaintext_a3 jwe.payload;
+          Alcotest.(check bool)
+            "Header alg is A128KW" true (jwe.header.alg = `A128KW);
+          Alcotest.(check bool)
+            "Header enc is A128CBC-HS256" true
+            (jwe.header.enc = Some `A128CBC_HS256);
+          check_string "IV matches" "AxY8DCtDaGlsbGljb3RoZQ"
+            (url_encode_string jwe.iv);
+          (* Roundtrip: encrypt and decrypt freshly generated JWE *)
+          let re_encrypted =
+            Jose.Jwe.encrypt ~jwk jwe
+            |> CCResult.flat_map (Jose.Jwe.decrypt ~jwk)
+          in
+          Alcotest.(check bool)
+            "A.3 roundtrip succeeds" true
+            (CCResult.is_ok re_encrypted);
+          check_string "A.3 roundtrip payload matches" plaintext_a3
             (CCResult.get_exn re_encrypted).payload);
       Alcotest.test_case "IV length is determined by enc (CBC vs GCM)" `Quick
         (fun () ->

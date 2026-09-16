@@ -486,6 +486,140 @@ let jwe_rsa_tests =
             (CCResult.map (fun jwe -> jwe.Jose.Jwe.payload) jwe));
     ] )
 
+(* Section 4.5: Signature with Detached Content *)
+let detached_jws =
+  "eyJhbGciOiJIUzI1NiIsImtpZCI6IjAxOGMwYWU1LTRkOWItNDcxYi1iZmQ2LWVlZjMxNGJjNzAzNyJ9..s0h6KThzkfBBBkLspW1h84VsJZFTsPPqMDA7g1Md7p0"
+
+let jws_detached_tests =
+  ( "JWS Detached",
+    [
+      Alcotest.test_case "4.5: Verify JWS with detached content" `Quick
+        (fun () ->
+          let jwk =
+            Jose.Jwk.of_pub_json_string oct_sig_json |> CCResult.get_exn
+          in
+          (* Per RFC 7515 Appendix F & RFC 7520 Section 4.5, detached content is
+             verified by reconstructing the JWS with the payload inserted *)
+          let parts = String.split_on_char '.' detached_jws in
+          let header_str = List.nth parts 0 in
+          let signature = List.nth parts 2 in
+          let reconstructed_jws =
+            Printf.sprintf "%s.%s.%s" header_str
+              (url_encode_string jws_payload)
+              signature
+          in
+          let jws = Jose.Jws.of_string reconstructed_jws in
+          let validated_jws = CCResult.flat_map (Jose.Jws.validate ~jwk) jws in
+          check_result_string "correct payload after detached reconstruction"
+            (Ok jws_payload)
+            (CCResult.map (fun jws -> Jose.Jws.(jws.payload)) validated_jws);
+          check_result_string "correct signature" (Ok oct_jws_signature)
+            (CCResult.map (fun jws -> Jose.Jws.(jws.signature)) validated_jws));
+    ] )
+
+(* Section 5.4: Key Agreement with Key Wrapping Using ECDH-ES and A128KW with AES-GCM *)
+let rfc7520_5_4_ec_priv =
+  {|{"kty":"EC",
+     "kid":"peregrin.took@tuckborough.example",
+     "use":"enc",
+     "crv":"P-384",
+     "x":"YU4rRUzdmVqmRtWOs2OpDE_T5fsNIodcG8G5FWPrTPMyxpzsSOGaQLpe2FpxBmu2",
+     "y":"A8-yxCHxkfBz3hKZfI1jUYMjUhsEveZ9THuwFjH2sCNdtksRJU7D5-SkgaFL1ETP",
+     "d":"iTx2pk7wW-GqJkHcEkFQb2EFyYcO7RugmaW3mRrQVAOUiPommT0IdnYK2xDlZh-j"}|}
+
+let rfc7520_5_4_jwe =
+  "eyJhbGciOiJFQ0RILUVTK0ExMjhLVyIsImtpZCI6InBlcmVncmluLnRvb2tAdHVja2Jvcm91Z2guZXhhbXBsZSIsImVwayI6eyJrdHkiOiJFQyIsImNydiI6IlAtMzg0IiwieCI6InVCbzRrSFB3Nmtiang1bDB4b3dyZF9vWXpCbWF6LUdLRlp1NHhBRkZrYllpV2d1dEVLNml1RURzUTZ3TmROZzMiLCJ5Ijoic3AzcDVTR2haVkMyZmFYdW1JLWU5SlUyTW84S3BvWXJGRHI1eVBOVnRXNFBnRXdaT3lRVEEtSmRhWTh0YjdFMCJ9LCJlbmMiOiJBMTI4R0NNIn0."
+  ^ "0DJjBXri_kBcC46IkU5_Jk9BqaQeHdv2." ^ "mH-G2zVqgztUtnW_."
+  ^ "tkZuOO9h95OgHJmkkrfLBisku8rGf6nzVxhRM3sVOhXgz5NJ76oID7lpnAi_cPWJRCjSpAaUZ5dOR3Spy7QuEkmKx8-3RCMhSYMzsXaEwDdXta9Mn5B7cCBoJKB0IgEnj_qfo1hIi-uEkUpOZ8aLTZGHfpl05jMwbKkTe2yK3mjF6SBAsgicQDVCkcY9BLluzx1RmC3ORXaM0JaHPB93YcdSDGgpgBWMVrNU1ErkjcMqMoT_wtCex3w03XdLkjXIuEr2hWgeP-nkUZTPU9EoGSPj6fAS-bSz87RCPrxZdj_iVyC6QWcqAu07WNhjzJEPc4jVntRJ6K53NgPQ5p99l3Z408OUqj4ioYezbS6vTPlQ."
+  ^ "WuGzxmcreYjpHGJoa17EBg"
+
+(* Section 5.5: Key Agreement Using ECDH-ES with AES-CBC-HMAC-SHA2 *)
+let rfc7520_5_5_ec_priv =
+  {|{"kty":"EC",
+     "kid":"meriadoc.brandybuck@buckland.example",
+     "use":"enc",
+     "crv":"P-256",
+     "x":"Ze2loSV3wrroKUN_4zhwGhCqo3Xhu1td4QjeQ5wIVR0",
+     "y":"HlLtdXARY_f55A3fnzQbPcm6hgr34Mp8p-nuzQCE0Zw",
+     "d":"r_kHyZ-a06rmxM3yESK84r1otSg-aQcVStkRhA-iCM8"}|}
+
+let rfc7520_5_5_jwe =
+  "eyJhbGciOiJFQ0RILUVTIiwia2lkIjoibWVyaWFkb2MuYnJhbmR5YnVja0BidWNrbGFuZC5leGFtcGxlIiwiZXBrIjp7Imt0eSI6IkVDIiwiY3J2IjoiUC0yNTYiLCJ4IjoibVBVS1RfYkFXR0hJaGcwVHBqanFWc1AxclhXUXVfdndWT0hIdE5rZFlvQSIsInkiOiI4QlFBc0ltR2VBUzQ2ZnlXdzVNaFlmR1RUMElqQnBGdzJTUzM0RHY0SXJzIn0sImVuYyI6IkExMjhDQkMtSFMyNTYifQ."
+  ^ "." ^ "yc9N8v5sYyv3iGQT926IUg."
+  ^ "BoDlwPnTypYq-ivjmQvAYJLb5Q6l-F3LIgQomlz87yW4OPKbWE1zSTEFjDfhU9IPIOSA9Bml4m7iDFwA-1ZXvHteLDtw4R1XRGMEsDIqAYtskTTmzmzNa-_q4F_evAPUmwlO-ZG45Mnq4uhM1fm_D9rBtWolqZSF3xGNNkpOMQKF1Cl8i8wjzRli7-IXgyirlKQsbhhqRzkv8IcY6aHl24j03C-AR2le1r7URUhArM79BY8soZU0lzwI-sD5PZ3l4NDCCei9XkoIAfsXJWmySPoeRb2Ni5UZL4mYpvKDiwmyzGd65KqVw7MsFfI_K767G9C9Azp73gKZD0DyUn1mn0WW5LmyX_yJ-3AROq8p1WZBfG-ZyJ6195_JGG2m9Csg."
+  ^ "WCCkNa-x4BeB9hIDIfFuhg"
+
+let jwe_ecdh_tests =
+  ( "JWE ECDH",
+    [
+      Alcotest.test_case "5.4: Decrypt ECDH-ES+A128KW with AES-GCM" `Quick
+        (fun () ->
+          let jwk =
+            Jose.Jwk.of_priv_json_string rfc7520_5_4_ec_priv |> CCResult.get_exn
+          in
+          let decrypted = Jose.Jwe.decrypt ~jwk rfc7520_5_4_jwe in
+          check_result_string "5.4 decrypted payload" (Ok jwe_payload)
+            (CCResult.map (fun j -> j.Jose.Jwe.payload) decrypted));
+      Alcotest.test_case "5.5: Decrypt ECDH-ES with AES-CBC-HMAC-SHA2" `Quick
+        (fun () ->
+          let jwk =
+            Jose.Jwk.of_priv_json_string rfc7520_5_5_ec_priv |> CCResult.get_exn
+          in
+          let decrypted = Jose.Jwe.decrypt ~jwk rfc7520_5_5_jwe in
+          check_result_string "5.5 decrypted payload" (Ok jwe_payload)
+            (CCResult.map (fun j -> j.Jose.Jwe.payload) decrypted));
+    ] )
+
+(* Section 5.6: Direct Encryption Using AES-GCM *)
+let rfc7520_oct_128gcm_key =
+  {|{"kty":"oct",
+     "kid":"77c7e2b8-6e13-45cf-8672-617b5b45243a",
+     "use":"enc",
+     "alg":"A128GCM",
+     "k":"XctOhJAkA-pD9Lh7ZgW_2A"}|}
+
+let rfc7520_5_6_jwe =
+  "eyJhbGciOiJkaXIiLCJraWQiOiI3N2M3ZTJiOC02ZTEzLTQ1Y2YtODY3Mi02MTdiNWI0NTI0M2EiLCJlbmMiOiJBMTI4R0NNIn0."
+  ^ "." ^ "refa467QzzKx6QAB."
+  ^ "JW_i_f52hww_ELQPGaYyeAB6HYGcR559l9TYnSovc23XJoBcW29rHP8yZOZG7YhLpT1bjFuvZPjQS-m0IFtVcXkZXdH_lr_FrdYt9HRUYkshtrMmIUAyGmUnd9zMDB2n0cRDIHAzFVeJUDxkUwVAE7_YGRPdcqMyiBoCO-FBdE-Nceb4h3-FtBP-c_BIwCPTjb9o0SbdcdREEMJMyZBH8ySWMVi1gPD9yxi-aQpGbSv_F9N4IZAxscj5g-NJsUPbjk29-s7LJAGb15wEBtXphVCgyy53CoIKLHHeJHXex45Uz9aKZSRSInZI-wjsY0yu3cT4_aQ3i1o-tiE-F8Ios61EKgyIQ4CWao8PFMj8TTnp."
+  ^ "vbb32Xvllea2OtmHAdccRQ"
+
+(* Section 5.8: AES Key Wrap (A128KW) with AES-GCM (A128GCM) *)
+let rfc7520_5_8_oct_key =
+  {|{"kty":"oct",
+     "kid":"81b20965-8332-43d9-a468-82160ad91ac8",
+     "use":"enc",
+     "alg":"A128KW",
+     "k":"GZy6sIZ6wl9NJOKB-jnmVQ"}|}
+
+let rfc7520_5_8_jwe =
+  "eyJhbGciOiJBMTI4S1ciLCJraWQiOiI4MWIyMDk2NS04MzMyLTQzZDktYTQ2OC04MjE2MGFkOTFhYzgiLCJlbmMiOiJBMTI4R0NNIn0."
+  ^ "CBI6oDw8MydIx1IBntf_lQcw2MmJKIQx." ^ "Qx0pmsDa8KnJc9Jo."
+  ^ "AwliP-KmWgsZ37BvzCefNen6VTbRK3QMA4TkvRkH0tP1bTdhtFJgJxeVmJkLD61A1hnWGetdg11c9ADsnWgL56NyxwSYjU1ZEHcGkd3EkU0vjHi9gTlb90qSYFfeF0LwkcTtjbYKCsiNJQkcIp1yeM03OmuiYSoYJVSpf7ej6zaYcMv3WwdxDFl8REwOhNImk2Xld2JXq6BR53TSFkyT7PwVLuq-1GwtGHlQeg7gDT6xW0JqHDPn_H-puQsmthc9Zg0ojmJfqqFvETUxLAF-KjcBTS5dNy6egwkYtOt8EIHK-oEsKYtZRaa8Z7MOZ7UGxGIMvEmxrGCPeJa14slv2-gaqK0kEThkaSqdYw0FkQZF."
+  ^ "ER7MWJZ1FBI_NKvn7Zb1Lw"
+
+let jwe_symmetric_tests =
+  ( "JWE Symmetric",
+    [
+      Alcotest.test_case "5.6: Decrypt Direct Encryption with AES-GCM" `Quick
+        (fun () ->
+          let jwk =
+            Jose.Jwk.of_priv_json_string rfc7520_oct_128gcm_key
+            |> CCResult.get_exn
+          in
+          let decrypted = Jose.Jwe.decrypt ~jwk rfc7520_5_6_jwe in
+          check_result_string "5.6 decrypted payload" (Ok jwe_payload)
+            (CCResult.map (fun j -> j.Jose.Jwe.payload) decrypted));
+      Alcotest.test_case "5.8: Decrypt AES Key Wrap (A128KW) with AES-GCM"
+        `Quick (fun () ->
+          let jwk =
+            Jose.Jwk.of_priv_json_string rfc7520_5_8_oct_key |> CCResult.get_exn
+          in
+          let decrypted = Jose.Jwe.decrypt ~jwk rfc7520_5_8_jwe in
+          check_result_string "5.8 decrypted payload" (Ok jwe_payload)
+            (CCResult.map (fun j -> j.Jose.Jwe.payload) decrypted));
+    ] )
+
 (* Begin tests *)
 let rfc_suite, _ =
   Junit_alcotest.run_and_report ~package:"jose" "RFC7520"
@@ -494,7 +628,10 @@ let rfc_suite, _ =
       jws_rsa_tests;
       jws_ecdsa_tests;
       jws_oct_tests;
+      jws_detached_tests;
       jwe_rsa_tests;
+      jwe_ecdh_tests;
+      jwe_symmetric_tests;
     ]
 
 let suite = rfc_suite
