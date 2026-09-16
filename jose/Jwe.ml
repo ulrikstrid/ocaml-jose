@@ -169,7 +169,7 @@ let negotiate_ke (type a) (jwk : a Jwk.t) =
       in
       let pub_octets = Mirage_crypto_ec.P256.Dsa.pub_to_octets jwk.key in
       let z = Mirage_crypto_ec.P256.Dh.key_exchange epk_secret pub_octets in
-      Result.product z epk_jwk
+      Result.bind z (fun z -> Result.map (fun epk_jwk -> (z, epk_jwk)) epk_jwk)
       |> Result.map_error (fun _ -> `Msg "failed to negotiate key exchange")
   | Jwk.Es384_pub jwk ->
       let epk_secret, epk_pub = Mirage_crypto_ec.P384.Dh.gen_key () in
@@ -179,7 +179,7 @@ let negotiate_ke (type a) (jwk : a Jwk.t) =
       in
       let pub_octets = Mirage_crypto_ec.P384.Dsa.pub_to_octets jwk.key in
       let z = Mirage_crypto_ec.P384.Dh.key_exchange epk_secret pub_octets in
-      Result.product z epk_jwk
+      Result.bind z (fun z -> Result.map (fun epk_jwk -> (z, epk_jwk)) epk_jwk)
       |> Result.map_error (fun _ -> `Msg "failed to negotiate key exchange")
   | Jwk.Es512_pub jwk ->
       let epk_secret, epk_pub = Mirage_crypto_ec.P521.Dh.gen_key () in
@@ -189,7 +189,7 @@ let negotiate_ke (type a) (jwk : a Jwk.t) =
       in
       let pub_octets = Mirage_crypto_ec.P521.Dsa.pub_to_octets jwk.key in
       let z = Mirage_crypto_ec.P521.Dh.key_exchange epk_secret pub_octets in
-      Result.product z epk_jwk
+      Result.bind z (fun z -> Result.map (fun epk_jwk -> (z, epk_jwk)) epk_jwk)
       |> Result.map_error (fun _ -> `Msg "failed to negotiate key exchange")
   | Jwk.Es256_priv priv_jwk ->
       let epk_secret, epk_pub = Mirage_crypto_ec.P256.Dh.gen_key () in
@@ -200,7 +200,7 @@ let negotiate_ke (type a) (jwk : a Jwk.t) =
       let pub_key = Mirage_crypto_ec.P256.Dsa.pub_of_priv priv_jwk.key in
       let pub_octets = Mirage_crypto_ec.P256.Dsa.pub_to_octets pub_key in
       let z = Mirage_crypto_ec.P256.Dh.key_exchange epk_secret pub_octets in
-      Result.product z epk_jwk
+      Result.bind z (fun z -> Result.map (fun epk_jwk -> (z, epk_jwk)) epk_jwk)
       |> Result.map_error (fun _ -> `Msg "failed to negotiate key exchange")
   | Jwk.Es384_priv priv_jwk ->
       let epk_secret, epk_pub = Mirage_crypto_ec.P384.Dh.gen_key () in
@@ -211,7 +211,7 @@ let negotiate_ke (type a) (jwk : a Jwk.t) =
       let pub_key = Mirage_crypto_ec.P384.Dsa.pub_of_priv priv_jwk.key in
       let pub_octets = Mirage_crypto_ec.P384.Dsa.pub_to_octets pub_key in
       let z = Mirage_crypto_ec.P384.Dh.key_exchange epk_secret pub_octets in
-      Result.product z epk_jwk
+      Result.bind z (fun z -> Result.map (fun epk_jwk -> (z, epk_jwk)) epk_jwk)
       |> Result.map_error (fun _ -> `Msg "failed to negotiate key exchange")
   | Jwk.Es512_priv priv_jwk ->
       let epk_secret, epk_pub = Mirage_crypto_ec.P521.Dh.gen_key () in
@@ -222,7 +222,7 @@ let negotiate_ke (type a) (jwk : a Jwk.t) =
       let pub_key = Mirage_crypto_ec.P521.Dsa.pub_of_priv priv_jwk.key in
       let pub_octets = Mirage_crypto_ec.P521.Dsa.pub_to_octets pub_key in
       let z = Mirage_crypto_ec.P521.Dh.key_exchange epk_secret pub_octets in
-      Result.product z epk_jwk
+      Result.bind z (fun z -> Result.map (fun epk_jwk -> (z, epk_jwk)) epk_jwk)
       |> Result.map_error (fun _ -> `Msg "failed to negotiate key exchange")
   | _ -> Error `Invalid_JWK
 
