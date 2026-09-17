@@ -176,13 +176,22 @@ module Aes_kw = struct
 end
 
 module Concat_kdf = struct
+  (** Concatenation Key Derivation Function (Concat KDF)
+      - RFC 7518 Section 4.6.2: Key Derivation for ECDH Key Agreement
+      - NIST SP 800-56A Section 5.8.1: Concatenation Key Derivation Function
+      - RFC 7518 Appendix C: Example ECDH-ES Key Agreement Computation *)
+
+  (** 32-bit big-endian integer encoding (NIST SP 800-56A Section 5.8.1) *)
   let int32_to_be n =
     let b = Bytes.create 4 in
     Bytes.set_int32_be b 0 (Int32.of_int n);
     Bytes.unsafe_to_string b
 
+  (** RFC 7518 Section 4.6.2: Construct OtherInfo parameter *)
   let make_other_info ~alg_id ?apu ?apv keydatalen =
+    (* AlgorithmID: Datalen (32-bit BE) || Data ("enc" or "alg") *)
     let alg_info = int32_to_be (String.length alg_id) ^ alg_id in
+    (* PartyUInfo: Datalen (32-bit BE) || Data (base64url-decoded "apu", or 4 null bytes if absent) *)
     let u_info =
       match apu with
       | Some u -> (
@@ -191,6 +200,7 @@ module Concat_kdf = struct
           | Error _ -> int32_to_be 0)
       | None -> int32_to_be 0
     in
+    (* PartyVInfo: Datalen (32-bit BE) || Data (base64url-decoded "apv", or 4 null bytes if absent) *)
     let v_info =
       match apv with
       | Some v -> (
@@ -199,29 +209,41 @@ module Concat_kdf = struct
           | Error _ -> int32_to_be 0)
       | None -> int32_to_be 0
     in
+    (* SuppPubInfo: 32-bit big-endian keydatalen (in bits) *)
     let supp_pub = int32_to_be keydatalen in
+    (* OtherInfo = AlgorithmID || PartyUInfo || PartyVInfo || SuppPubInfo
+       (SuppPrivInfo is the empty octet sequence) *)
     String.concat "" [ alg_info; u_info; v_info; supp_pub ]
 
+  (** RFC 7518 Section 4.6.2 & NIST SP 800-56A Section 5.8.1: Key derivation *)
   let derive ~z ~keydatalen ~alg_id ?apu ?apv () =
+    (* reps = ceil(keydatalen / hashlen), where hashlen = 256 for SHA-256 *)
     let reps = (keydatalen + 255) / 256 in
     let other_info = make_other_info ~alg_id ?apu ?apv keydatalen in
     if reps = 1 then
+      (* Single round: K(1) = SHA-256(0x00000001 || z || OtherInfo) *)
       let d =
         Digestif.SHA256.digest_string (int32_to_be 1 ^ z ^ other_info)
         |> Digestif.SHA256.to_raw_string
       in
+      (* DerivedKey: leading keydatalen / 8 octets *)
       if keydatalen = 256 then d else String.sub d 0 (keydatalen / 8)
     else
+      (* Multi-round derivation: K(i) = SHA-256(counter(i) || z || OtherInfo) *)
       let rec loop i acc =
         if i > reps then String.concat "" (List.rev acc)
         else
+          (* 32-bit big-endian round counter i *)
           let counter = int32_to_be i in
+          (* K(i) = SHA-256(counter || z || OtherInfo) *)
           let d =
             Digestif.SHA256.digest_string (counter ^ z ^ other_info)
             |> Digestif.SHA256.to_raw_string
           in
           loop (i + 1) (d :: acc)
       in
+      (* Full derived octet stream: K(1) || ... || K(reps) *)
       let full = loop 1 [] in
+      (* DerivedKey: leading keydatalen / 8 octets *)
       String.sub full 0 (keydatalen / 8)
 end
