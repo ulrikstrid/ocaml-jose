@@ -61,3 +61,8 @@ jobs:
 
       - name: Build docs
         run: nix develop --accept-flake-config -c dune build @doc
+
+      - name: Check compatability table
+        run: |
+          nix develop -c python3 scripts/extract_compatibility.py --test
+          nix develop -c python3 scripts/extract_compatibility.py --check

@@ -23,8 +23,8 @@ depends: [
   "yojson" {>= "1.6.0"}
   "zarith"
   "ptime"
-  "mirage-crypto-rng" {with-test & >= "1.0.0"}
   "digestif"
+  "mirage-crypto-rng" {with-test & >= "1.0.0"}
   "containers" {with-test}
   "bisect_ppx" {with-test}
   "alcotest" {with-test}
