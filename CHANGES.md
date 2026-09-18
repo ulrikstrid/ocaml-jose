@@ -1,3 +1,7 @@
+0.12.0
+--------------
+- Add support for the rest of the required and recommended JWE algorithms (dir, A127KW, A256KW, ECDH-ES, ECDH-ES+A128KW)
+
 0.11.0
 --------------
 - Add `kid` to output ed25519 json representation as this was missed when implementing it. Reported by @patricoferris, fixed by @ulrikstrid.

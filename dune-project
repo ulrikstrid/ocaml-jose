@@ -41,11 +41,11 @@
    (>= 1.6.0))
   zarith
   ptime
+  digestif
   (mirage-crypto-rng
    (and
     :with-test
     (>= 1.0.0)))
-  digestif
   (containers :with-test)
   (bisect_ppx :with-test)
   (alcotest :with-test)
