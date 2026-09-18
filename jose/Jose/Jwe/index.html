@@ -6,9 +6,25 @@
   <span><span class="label">jwk</span>:<span><span class="type-var">'a</span> <a href="../Jwk/index.html#type-t">Jwk.t</a></span> <span class="arrow">&#45;&gt;</span></span>
   <span><a href="#type-t">t</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span>(string,
-    <span>[&gt; `Invalid_alg <span>| `Missing_enc</span> <span>| `Unsupported_enc</span> <span>| `Unsupported_kty</span> ]</span>)</span>
+    <span>[&gt; `Invalid_alg
+    <span>| `Invalid_JWK</span>
+    <span>| `Invalid_auth_tag</span>
+    <span>| `Missing_enc</span>
+    <span>| `Missing_epk</span>
+    <span>| `Unsupported_enc</span>
+    <span>| `Unsupported_kty</span>
+    <span><span>| `Msg</span> of string</span> ]</span>)</span>
     <span class="xref-unresolved">Stdlib</span>.result</span></span></code></div><div class="spec-doc"><p><code>encrypt jwk t</code> encrypts a <a href="#type-t"><code>t</code></a> into the compact string format</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-decrypt"><a href="#val-decrypt" class="anchor"></a><code><span><span class="keyword">val</span> decrypt : 
   <span><span class="label">jwk</span>:<span><a href="../Jwk/index.html#type-priv">Jwk.priv</a> <a href="../Jwk/index.html#type-t">Jwk.t</a></span> <span class="arrow">&#45;&gt;</span></span>
   <span>string <span class="arrow">&#45;&gt;</span></span>
-  <span><span>(<a href="#type-t">t</a>, <span>[&gt; `Invalid_JWE <span>| `Invalid_JWK</span> <span>| `Decrypt_cek_failed</span> <span><span>| `Msg</span> of string</span> ]</span>)</span>
+  <span><span>(<a href="#type-t">t</a>,
+    <span>[&gt; `Invalid_JWE
+    <span>| `Invalid_JWK</span>
+    <span>| `Invalid_auth_tag</span>
+    <span>| `Missing_enc</span>
+    <span>| `Missing_epk</span>
+    <span>| `Decrypt_cek_failed</span>
+    <span>| `Unsupported_alg</span>
+    <span>| `Unsupported_enc</span>
+    <span><span>| `Msg</span> of string</span> ]</span>)</span>
     <span class="xref-unresolved">Stdlib</span>.result</span></span></code></div><div class="spec-doc"><p><code>decrypt jwk string</code> decrypts a compact string formated JWE into a <a href="#type-t"><code>t</code></a></p></div></div></div></body></html>
