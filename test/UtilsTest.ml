@@ -166,6 +166,54 @@ let aes_kw_tests =
             "rewrapped matches expected A.3 JWE Encrypted Key" expected_wrapped
             rewound);
       Alcotest.test_case
+        "RFC 7520 Section 5.13: AES Key Wrap (A256KW) wrapping and unwrapping"
+        `Quick (fun () ->
+          let d_recip =
+            Utils.U_Base64.url_decode
+              "iTx2pk7wW-GqJkHcEkFQb2EFyYcO7RugmaW3mRrQVAOUiPommT0IdnYK2xDlZh-j"
+            |> CCResult.get_exn
+          in
+          let secret =
+            Mirage_crypto_ec.P384.Dh.secret_of_octets d_recip |> CCResult.get_exn
+          in
+          let x_epk =
+            Utils.U_Base64.url_decode
+              "Uzdvk3pi5wKCRc1izp5_r0OjeqT-I68i8g2b8mva8diRhsE2xAn2DtMRb25Ma2CX"
+            |> CCResult.get_exn
+          in
+          let y_epk =
+            Utils.U_Base64.url_decode
+              "VDrRyFJh-Kwd1EjAgmj5Eo-CTHAZ53MC7PjjpLioy3ylEjI1pOMbw91fzZ84pbfm"
+            |> CCResult.get_exn
+          in
+          let epk_pub_octets = "\x04" ^ x_epk ^ y_epk in
+          let z =
+            Mirage_crypto_ec.P384.Dh.key_exchange (fst secret) epk_pub_octets
+            |> CCResult.get_exn
+          in
+          let kek =
+            Utils.Concat_kdf.derive ~z ~keydatalen:256 ~alg_id:"ECDH-ES+A256KW" ()
+          in
+          let cek =
+            Utils.U_Base64.url_decode
+              "zXayeJ4gvm8NJr3IUInyokTUO-LbQNKEhe_zWlYbdpQ"
+            |> CCResult.get_exn
+          in
+          let expected_wrapped =
+            Utils.U_Base64.url_decode
+              "ExInT0io9BqBMYF6-maw5tZlgoZXThD1zWKsHixJuw_elY4gSSId_w"
+            |> CCResult.get_exn
+          in
+          let wrapped = Utils.Aes_kw.wrap ~kek cek |> CCResult.get_exn in
+          Alcotest.(check string)
+            "RFC 7520 5.13 wrapped CEK matches Figure 208" expected_wrapped
+            wrapped;
+          let unwrapped =
+            Utils.Aes_kw.unwrap ~kek expected_wrapped |> CCResult.get_exn
+          in
+          Alcotest.(check string)
+            "RFC 7520 5.13 unwrapped CEK matches Figure 202" cek unwrapped);
+      Alcotest.test_case
         "Integrity check: unwrap fails when ciphertext is tampered" `Quick
         (fun () ->
           let kek = of_hex "000102030405060708090A0B0C0D0E0F" in

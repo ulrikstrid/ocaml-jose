@@ -280,7 +280,7 @@ let encrypt (type a) ~(jwk : a Jwk.t) t =
                      U_Base64.url_encode_string auth_tag;
                    ]))
       | _ -> Error `Invalid_JWK)
-  | `ECDH_ES | `ECDH_ES_A128KW ->
+  | `ECDH_ES | `ECDH_ES_A128KW | `ECDH_ES_A256KW ->
       let ecdh = negotiate_ke jwk in
       Result.bind ecdh (fun (z, epk) ->
           let header = { t.header with epk = Some epk } in
@@ -313,6 +313,33 @@ let encrypt (type a) ~(jwk : a Jwk.t) t =
           | `ECDH_ES_A128KW, Some enc ->
               let keydatalen = 128 in
               let alg_id = Jwa.alg_to_string `ECDH_ES_A128KW in
+              let kek =
+                Utils.Concat_kdf.derive ~z ~keydatalen ~alg_id ?apu:header.apu
+                  ?apv:header.apv ()
+              in
+              let ecek =
+                Aes_kw.wrap ~kek t.cek |> Result.map U_Base64.url_encode_string
+              in
+              Result.bind ecek (fun ecek ->
+                  let eiv = U_Base64.url_encode_string t.iv in
+                  let ciphertext =
+                    encrypt_payload ~enc ~cek:t.cek ~iv:t.iv ~aad:header_string
+                      t.payload
+                  in
+                  Result.map
+                    (fun (ciphertext, auth_tag) ->
+                      String.concat "."
+                        [
+                          header_string;
+                          ecek;
+                          eiv;
+                          U_Base64.url_encode_string ciphertext;
+                          U_Base64.url_encode_string auth_tag;
+                        ])
+                    ciphertext)
+          | `ECDH_ES_A256KW, Some enc ->
+              let keydatalen = 256 in
+              let alg_id = Jwa.alg_to_string `ECDH_ES_A256KW in
               let kek =
                 Utils.Concat_kdf.derive ~z ~keydatalen ~alg_id ?apu:header.apu
                   ?apv:header.apv ()
@@ -542,6 +569,37 @@ let decrypt ~(jwk : Jwk.priv Jwk.t) jwe =
                   Result.bind z (fun z ->
                       let keydatalen = 128 in
                       let alg_id = Jwa.alg_to_string `ECDH_ES_A128KW in
+                      let kek =
+                        Utils.Concat_kdf.derive ~z ~keydatalen ~alg_id
+                          ?apu:header.apu ?apv:header.apv ()
+                      in
+                      Result.bind (U_Base64.url_decode enc_cek)
+                        (fun enc_cek_raw ->
+                          let cek = Aes_kw.unwrap ~kek enc_cek_raw in
+                          Result.bind cek (fun cek ->
+                              let iv = U_Base64.url_decode enc_iv in
+                              Result.bind iv (fun iv ->
+                                  let auth_tag = U_Base64.url_decode auth_tag in
+                                  Result.bind auth_tag (fun auth_tag ->
+                                      decrypt_ciphertext header.enc ~cek ~iv
+                                        ~auth_tag ~aad:enc_header ciphertext
+                                      |> Result.map (fun payload ->
+                                          {
+                                            header;
+                                            cek;
+                                            iv;
+                                            payload;
+                                            aad = None;
+                                          })))))))
+          | `ECDH_ES_A256KW -> (
+              match (header.epk, header.enc) with
+              | None, _ -> Error `Missing_epk
+              | _, None -> Error `Missing_enc
+              | Some epk, Some _enc ->
+                  let z = compute_shared_secret ~jwk ~epk in
+                  Result.bind z (fun z ->
+                      let keydatalen = 256 in
+                      let alg_id = Jwa.alg_to_string `ECDH_ES_A256KW in
                       let kek =
                         Utils.Concat_kdf.derive ~z ~keydatalen ~alg_id
                           ?apu:header.apu ?apv:header.apv ()

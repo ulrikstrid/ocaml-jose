@@ -549,6 +549,22 @@ let rfc7520_5_5_jwe =
   ^ "BoDlwPnTypYq-ivjmQvAYJLb5Q6l-F3LIgQomlz87yW4OPKbWE1zSTEFjDfhU9IPIOSA9Bml4m7iDFwA-1ZXvHteLDtw4R1XRGMEsDIqAYtskTTmzmzNa-_q4F_evAPUmwlO-ZG45Mnq4uhM1fm_D9rBtWolqZSF3xGNNkpOMQKF1Cl8i8wjzRli7-IXgyirlKQsbhhqRzkv8IcY6aHl24j03C-AR2le1r7URUhArM79BY8soZU0lzwI-sD5PZ3l4NDCCei9XkoIAfsXJWmySPoeRb2Ni5UZL4mYpvKDiwmyzGd65KqVw7MsFfI_K767G9C9Azp73gKZD0DyUn1mn0WW5LmyX_yJ-3AROq8p1WZBfG-ZyJ6195_JGG2m9Csg."
   ^ "WCCkNa-x4BeB9hIDIfFuhg"
 
+
+(* Section 5.13: Encrypting to Multiple Recipients using Different Algorithms
+   Recipient #2 uses ECDH-ES+A256KW with P-384 key (Figure 108) *)
+let rfc7520_5_13_epk_pub =
+  {|{"kty":"EC",
+     "crv":"P-384",
+     "x":"Uzdvk3pi5wKCRc1izp5_r0OjeqT-I68i8g2b8mva8diRhsE2xAn2DtMRb25Ma2CX",
+     "y":"VDrRyFJh-Kwd1EjAgmj5Eo-CTHAZ53MC7PjjpLioy3ylEjI1pOMbw91fzZ84pbfm"}|}
+
+let rfc7520_5_13_cek = "zXayeJ4gvm8NJr3IUInyokTUO-LbQNKEhe_zWlYbdpQ"
+
+let rfc7520_5_13_encrypted_key =
+  "ExInT0io9BqBMYF6-maw5tZlgoZXThD1zWKsHixJuw_elY4gSSId_w"
+
+let rfc7520_5_13_iv = "VgEIHY20EnzUtZFl2RpB1g"
+
 let jwe_ecdh_tests =
   ( "JWE ECDH",
     [
@@ -568,6 +584,88 @@ let jwe_ecdh_tests =
           let decrypted = Jose.Jwe.decrypt ~jwk rfc7520_5_5_jwe in
           check_result_string "5.5 decrypted payload" (Ok jwe_payload)
             (CCResult.map (fun j -> j.Jose.Jwe.payload) decrypted));
+      Alcotest.test_case
+        "5.13: Decrypt JWE with ECDH-ES+A256KW and verify CEK matches Figure \
+         202"
+        `Quick (fun () ->
+          let jwk_recip =
+            Jose.Jwk.of_priv_json_string rfc7520_5_4_ec_priv |> CCResult.get_exn
+          in
+          let header_json =
+            `Assoc
+              [
+                ("alg", `String "ECDH-ES+A256KW");
+                ("enc", `String "A128CBC-HS256");
+                ("kid", `String "peregrin.took@tuckborough.example");
+                ("epk", Yojson.Safe.from_string rfc7520_5_13_epk_pub);
+              ]
+          in
+          let header = Jose.Header.of_json header_json |> CCResult.get_exn in
+          let header_str = Jose.Header.to_string header in
+          let cek = url_decode_string rfc7520_5_13_cek |> CCResult.get_exn in
+          let iv = url_decode_string rfc7520_5_13_iv |> CCResult.get_exn in
+          let payload = jwe_payload in
+          let hmac_key = String.sub cek 0 16 in
+          let aes_key = String.sub cek 16 16 in
+          let key = Mirage_crypto.AES.CBC.of_secret aes_key in
+          let pad_len = 16 - (String.length payload mod 16) in
+          let padded = payload ^ String.make pad_len (Char.chr pad_len) in
+          let data = Mirage_crypto.AES.CBC.encrypt ~key ~iv padded in
+          let aal = Bytes.create 8 in
+          Bytes.set_int64_be aal 0
+            Int64.(mul 8L (of_int (String.length header_str)));
+          let hmac_input =
+            String.concat "" [ header_str; iv; data; Bytes.unsafe_to_string aal ]
+          in
+          let auth_tag =
+            let full =
+              Digestif.SHA256.hmac_string ~key:hmac_key hmac_input
+              |> Digestif.SHA256.to_raw_string
+            in
+            String.sub full 0 16
+          in
+          let jwe_compact =
+            String.concat "."
+              [
+                header_str;
+                rfc7520_5_13_encrypted_key;
+                rfc7520_5_13_iv;
+                url_encode_string data;
+                url_encode_string auth_tag;
+              ]
+          in
+          let decrypted =
+            Jose.Jwe.decrypt ~jwk:jwk_recip jwe_compact |> CCResult.get_exn
+          in
+          check_string "decrypted payload matches" payload decrypted.payload;
+          check_string "decrypted CEK matches Figure 202" rfc7520_5_13_cek
+            (url_encode_string decrypted.cek));
+      Alcotest.test_case
+        "5.13: Roundtrip ECDH-ES+A256KW encryption and decryption" `Quick
+        (fun () ->
+          let jwk_recip =
+            Jose.Jwk.of_priv_json_string rfc7520_5_4_ec_priv |> CCResult.get_exn
+          in
+          let pub_recip = Jose.Jwk.pub_of_priv jwk_recip in
+          let header_json =
+            `Assoc
+              [
+                ("alg", `String "ECDH-ES+A256KW");
+                ("enc", `String "A128CBC-HS256");
+                ("kid", `String "peregrin.took@tuckborough.example");
+              ]
+          in
+          let header = Jose.Header.of_json header_json |> CCResult.get_exn in
+          let jwe = Jose.Jwe.make ~header jwe_payload |> CCResult.get_exn in
+          let enc = Jose.Jwe.encrypt ~jwk:pub_recip jwe |> CCResult.get_exn in
+          let decrypted =
+            Jose.Jwe.decrypt ~jwk:jwk_recip enc |> CCResult.get_exn
+          in
+          check_string "payload matches after roundtrip" jwe_payload
+            decrypted.payload;
+          Alcotest.(check int)
+            "CEK length is 32 bytes (256 bits for A128CBC-HS256)" 32
+            (String.length decrypted.cek));
     ] )
 
 (* Section 5.6: Direct Encryption Using AES-GCM *)

@@ -379,6 +379,28 @@ let jwa_tests =
           in
           check_string "ECDH-ES+A128KW roundtrip payload matches"
             "ECDH-ES+A128KW roundtrip test" roundtrip.payload);
+      Alcotest.test_case
+        "4.1 / 4.6: ECDH-ES+A256KW (Recommended) Key Agreement with Key Wrap"
+        `Quick (fun () ->
+          let jwk_recip =
+            Jose.Jwk.of_priv_json_string rfc7520_5_4_ec_priv |> CCResult.get_exn
+          in
+          let pub_recip = Jose.Jwk.pub_of_priv jwk_recip in
+          let header_json =
+            `Assoc
+              [ ("alg", `String "ECDH-ES+A256KW"); ("enc", `String "A256GCM") ]
+          in
+          let header = Jose.Header.of_json header_json |> CCResult.get_exn in
+          let jwe =
+            Jose.Jwe.make ~header "ECDH-ES+A256KW roundtrip test"
+            |> CCResult.get_exn
+          in
+          let enc = Jose.Jwe.encrypt ~jwk:pub_recip jwe |> CCResult.get_exn in
+          let roundtrip =
+            Jose.Jwe.decrypt ~jwk:jwk_recip enc |> CCResult.get_exn
+          in
+          check_string "ECDH-ES+A256KW roundtrip payload matches"
+            "ECDH-ES+A256KW roundtrip test" roundtrip.payload);
       Alcotest.test_case "Appendix B.1: AES_128_CBC_HMAC_SHA_256 test vectors"
         `Quick (fun () ->
           let of_hex s =

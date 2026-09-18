@@ -88,6 +88,10 @@ type alg =
     (** ECDH-ES using Concat KDF and CEK wrapped with "A128KW" - Recommended
         ({{:https://www.rfc-editor.org/info/rfc7518/#section-4.1} RFC 7518 §4.1},
         {{:https://www.rfc-editor.org/info/rfc7518/#section-4.6} §4.6}) *)
+  | `ECDH_ES_A256KW
+    (** ECDH-ES using Concat KDF and CEK wrapped with "A256KW" - Recommended
+        ({{:https://www.rfc-editor.org/info/rfc7518/#section-4.6} RFC 7518 §4.6},
+        {{:https://www.rfc-editor.org/info/rfc7518/#section-4.6} §4.6}) *)
   | `None
     (** No digital signature or MAC performed - Optional
         ({{:https://www.rfc-editor.org/info/rfc7518/#section-3.1} RFC 7518 §3.1})
@@ -109,6 +113,7 @@ let alg_to_string = function
   | `A256KW -> "A256KW"
   | `ECDH_ES -> "ECDH-ES"
   | `ECDH_ES_A128KW -> "ECDH-ES+A128KW"
+  | `ECDH_ES_A256KW -> "ECDH-ES+A256KW"
   | `None -> "none"
   | `Unsupported string -> string
 
@@ -127,6 +132,7 @@ let alg_of_string = function
   | "A256KW" -> `A256KW
   | "ECDH-ES" -> `ECDH_ES
   | "ECDH-ES+A128KW" -> `ECDH_ES_A128KW
+  | "ECDH-ES+A256KW" -> `ECDH_ES_A256KW
   | "none" -> `None
   | str -> `Unsupported str
 
