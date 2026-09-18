@@ -103,6 +103,7 @@ let use_of_alg (alg : Jwa.alg) =
   | `A128KW | `A256KW -> `Enc
   | `ECDH_ES -> `Enc
   | `ECDH_ES_A128KW -> `Enc
+  | `ECDH_ES_A256KW -> `Enc
   | `None -> `Unsupported "none"
   | `Unsupported str -> `Unsupported str
 
@@ -325,6 +326,13 @@ let make_priv_es512 ?use (es512_priv : Mirage_crypto_ec.P521.Dsa.priv) : priv t
   let jwk = { alg; kty; use; key = es512_priv; kid = None } in
   Es512_priv { jwk with kid = make_kid (Es512_priv jwk) }
 
+let make_priv_ed25519 ?use (ed25519_priv : Mirage_crypto_ec.Ed25519.priv) :
+    priv t =
+  let kty : Jwa.kty = `OKP in
+  let alg = Some `Ed25519 in
+  let jwk = { alg; kty; use; key = ed25519_priv; kid = None } in
+  Ed25519_priv { jwk with kid = make_kid (Ed25519_priv jwk) }
+
 let make_pub_rsa ?use (rsa_pub : Mirage_crypto_pk.Rsa.pub) : public t =
   let kty : Jwa.kty = `RSA in
   let alg = Option.map (fun use -> alg_of_use_and_kty ~use kty) use in
@@ -349,13 +357,21 @@ let make_pub_es512 ?use (es512_pub : Mirage_crypto_ec.P521.Dsa.pub) : public t =
   let jwk = { alg; kty; use; key = es512_pub; kid = None } in
   Es512_pub { jwk with kid = make_kid (Es512_pub jwk) }
 
-let of_priv_x509 ?use x509 : (priv t, [> `Unsupported_kty ]) result =
+let make_pub_ed25519 ?use (ed25519_pub : Mirage_crypto_ec.Ed25519.pub) :
+    public t =
+  let kty : Jwa.kty = `OKP in
+  let alg = Some `Ed25519 in
+  let jwk = { alg; kty; use; key = ed25519_pub; kid = None } in
+  Ed25519_pub { jwk with kid = make_kid (Ed25519_pub jwk) }
+
+let of_priv_x509 ?use (x509 : X509.Private_key.t) :
+    (priv t, [> `Unsupported_kty ]) result =
   match x509 with
   | `RSA priv_key -> Ok (make_priv_rsa ?use priv_key)
   | `P256 priv_key -> Ok (make_priv_es256 ?use priv_key)
   | `P384 priv_key -> Ok (make_priv_es384 ?use priv_key)
   | `P521 priv_key -> Ok (make_priv_es512 ?use priv_key)
-  | _ -> Error `Unsupported_kty
+  | `ED25519 priv_key -> Ok (make_priv_ed25519 ?use priv_key)
 
 let of_pub_x509 ?use (x509 : X509.Public_key.t) :
     (public t, [> `Unsupported_kty ]) result =
@@ -364,7 +380,7 @@ let of_pub_x509 ?use (x509 : X509.Public_key.t) :
   | `P256 public_key -> Ok (make_pub_es256 ?use public_key)
   | `P384 public_key -> Ok (make_pub_es384 ?use public_key)
   | `P521 public_key -> Ok (make_pub_es512 ?use public_key)
-  | _ -> Error `Unsupported_kty
+  | `ED25519 public_key -> Ok (make_pub_ed25519 ?use public_key)
 
 let of_pub_pem ?use pem : (public t, [> `Unsupported_kty ]) result =
   Result.bind (X509.Public_key.decode_pem pem) (of_pub_x509 ?use)
