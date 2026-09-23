@@ -1,6 +1,10 @@
 0.12.0
 --------------
 - Add support for the rest of the required and recommended JWE algorithms (dir, A127KW, A256KW, ECDH-ES, ECDH-ES+A128KW, ECDH-ES+A256KW)
+- Expose make_* functions in Jwk module
+- Breaking: Move `use` type to Jwa where it belongs, `Jwk.use` -> `Jwa.use`
+- Breaking: Remove code that tried to guess `alg` from `use` and `kty` (if you relied on `alg` being available on a Jwk.t when creating it you need to pass it explicitly)
+- Add `alg` as optional parameters where you create JWKs.
 
 0.11.0
 --------------

@@ -201,6 +201,220 @@ let jwk_suite, _ =
                 (Ok "nBBpbUsITZuECZH0WpBqPH4HKwYV3Tx2KDVyNfwvOkU")
               @@ Result.map url_encode_string
               @@ Jose.Jwk.get_thumbprint `SHA256 pub_jwk);
+          Alcotest.test_case "make_* functions support ?alg and ?use" `Quick
+            (fun () ->
+              let oct_jwk =
+                Jose.Jwk.make_oct ~use:`Enc ~alg:`A128KW "0123456789abcdef"
+              in
+              Alcotest.(check (option string))
+                "oct alg is A128KW" (Some "A128KW")
+                (Jose.Jwk.get_alg oct_jwk |> Option.map Jose.Jwa.alg_to_string);
+
+              let priv_es256 = Mirage_crypto_ec.P256.Dsa.generate () |> fst in
+              let pub_es256 =
+                Mirage_crypto_ec.P256.Dsa.pub_of_priv priv_es256
+              in
+              let es_jwk =
+                Jose.Jwk.make_priv_es256 ~use:`Enc ~alg:`ECDH_ES priv_es256
+              in
+              Alcotest.(check (option string))
+                "es256 alg is ECDH-ES" (Some "ECDH-ES")
+                (Jose.Jwk.get_alg es_jwk |> Option.map Jose.Jwa.alg_to_string);
+              let es_pub_jwk =
+                Jose.Jwk.make_pub_es256 ~use:`Enc ~alg:`ECDH_ES pub_es256
+              in
+              Alcotest.(check (option string))
+                "es256 pub alg is ECDH-ES" (Some "ECDH-ES")
+                (Jose.Jwk.get_alg es_pub_jwk
+                |> Option.map Jose.Jwa.alg_to_string);
+
+              let priv_es384 = Mirage_crypto_ec.P384.Dsa.generate () |> fst in
+              let pub_es384 =
+                Mirage_crypto_ec.P384.Dsa.pub_of_priv priv_es384
+              in
+              let es384_jwk = Jose.Jwk.make_priv_es384 priv_es384 in
+              Alcotest.(check (option string))
+                "es384 default alg is ES384" (Some "ES384")
+                (Jose.Jwk.get_alg es384_jwk |> Option.map Jose.Jwa.alg_to_string);
+              let es384_pub_jwk = Jose.Jwk.make_pub_es384 pub_es384 in
+              Alcotest.(check (option string))
+                "es384 pub default alg is ES384" (Some "ES384")
+                (Jose.Jwk.get_alg es384_pub_jwk
+                |> Option.map Jose.Jwa.alg_to_string);
+
+              let priv_es512 = Mirage_crypto_ec.P521.Dsa.generate () |> fst in
+              let pub_es512 =
+                Mirage_crypto_ec.P521.Dsa.pub_of_priv priv_es512
+              in
+              let es512_jwk = Jose.Jwk.make_priv_es512 priv_es512 in
+              Alcotest.(check (option string))
+                "es512 default alg is ES512" (Some "ES512")
+                (Jose.Jwk.get_alg es512_jwk |> Option.map Jose.Jwa.alg_to_string);
+              let es512_pub_jwk = Jose.Jwk.make_pub_es512 pub_es512 in
+              Alcotest.(check (option string))
+                "es512 pub default alg is ES512" (Some "ES512")
+                (Jose.Jwk.get_alg es512_pub_jwk
+                |> Option.map Jose.Jwa.alg_to_string);
+
+              let priv_ed = Mirage_crypto_ec.Ed25519.generate () |> fst in
+              let pub_ed = Mirage_crypto_ec.Ed25519.pub_of_priv priv_ed in
+              let ed_jwk =
+                Jose.Jwk.make_priv_ed25519 ~use:`Sig ~alg:`EdDSA priv_ed
+              in
+              Alcotest.(check (option string))
+                "ed25519 alg is EdDSA" (Some "EdDSA")
+                (Jose.Jwk.get_alg ed_jwk |> Option.map Jose.Jwa.alg_to_string);
+              let ed_pub_jwk =
+                Jose.Jwk.make_pub_ed25519 ~use:`Sig ~alg:`Ed25519 pub_ed
+              in
+              Alcotest.(check (option string))
+                "ed25519 pub alg is Ed25519" (Some "Ed25519")
+                (Jose.Jwk.get_alg ed_pub_jwk
+                |> Option.map Jose.Jwa.alg_to_string);
+
+              let ed_pem = Jose.Jwk.to_pub_pem ed_pub_jwk |> CCResult.get_exn in
+              let ed_reimported =
+                Jose.Jwk.of_pub_pem ed_pem |> CCResult.get_exn
+              in
+              Alcotest.(check (option string))
+                "ed25519 kid roundtrip matches"
+                (Jose.Jwk.get_kid ed_pub_jwk)
+                (Jose.Jwk.get_kid ed_reimported));
+          Alcotest.test_case "use_of_alg and automatic use inference in make_*"
+            `Quick (fun () ->
+              Alcotest.(check (option string))
+                "HS256 -> sig" (Some "sig")
+                (Jose.Jwa.use_of_alg `HS256 |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "RS256 -> sig" (Some "sig")
+                (Jose.Jwa.use_of_alg `RS256 |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "ES256 -> sig" (Some "sig")
+                (Jose.Jwa.use_of_alg `ES256 |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "ES384 -> sig" (Some "sig")
+                (Jose.Jwa.use_of_alg `ES384 |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "ES512 -> sig" (Some "sig")
+                (Jose.Jwa.use_of_alg `ES512 |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "EdDSA -> sig" (Some "sig")
+                (Jose.Jwa.use_of_alg `EdDSA |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "Ed25519 -> sig" (Some "sig")
+                (Jose.Jwa.use_of_alg `Ed25519
+                |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "RSA_OAEP -> enc" (Some "enc")
+                (Jose.Jwa.use_of_alg `RSA_OAEP
+                |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "RSA1_5 -> enc" (Some "enc")
+                (Jose.Jwa.use_of_alg `RSA1_5
+                |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "Dir -> enc" (Some "enc")
+                (Jose.Jwa.use_of_alg `Dir |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "A128KW -> enc" (Some "enc")
+                (Jose.Jwa.use_of_alg `A128KW
+                |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "A256KW -> enc" (Some "enc")
+                (Jose.Jwa.use_of_alg `A256KW
+                |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "ECDH_ES -> enc" (Some "enc")
+                (Jose.Jwa.use_of_alg `ECDH_ES
+                |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "ECDH_ES_A128KW -> enc" (Some "enc")
+                (Jose.Jwa.use_of_alg `ECDH_ES_A128KW
+                |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "ECDH_ES_A256KW -> enc" (Some "enc")
+                (Jose.Jwa.use_of_alg `ECDH_ES_A256KW
+                |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "None -> none" None
+                (Jose.Jwa.use_of_alg `None |> Option.map Jose.Jwa.use_to_string);
+              Alcotest.(check (option string))
+                "Unsupported -> none" None
+                (Jose.Jwa.use_of_alg (`Unsupported "FOO")
+                |> Option.map Jose.Jwa.use_to_string);
+
+              let get_use (type a) (jwk : a Jose.Jwk.t) =
+                match jwk with
+                | Jose.Jwk.Oct oct -> oct.use
+                | Jose.Jwk.Rsa_priv rsa -> rsa.use
+                | Jose.Jwk.Rsa_pub rsa -> rsa.use
+                | Jose.Jwk.Es256_priv es -> es.use
+                | Jose.Jwk.Es256_pub es -> es.use
+                | Jose.Jwk.Es384_priv es -> es.use
+                | Jose.Jwk.Es384_pub es -> es.use
+                | Jose.Jwk.Es512_priv es -> es.use
+                | Jose.Jwk.Es512_pub es -> es.use
+                | Jose.Jwk.Ed25519_priv ed -> ed.use
+                | Jose.Jwk.Ed25519_pub ed -> ed.use
+              in
+
+              let oct_default = Jose.Jwk.make_oct "secret" in
+              Alcotest.(check (option string))
+                "make_oct default use is Sig" (Some "sig")
+                (get_use oct_default |> Option.map Jose.Jwa.use_to_string);
+
+              let oct_enc = Jose.Jwk.make_oct ~alg:`A128KW "secret" in
+              Alcotest.(check (option string))
+                "make_oct with A128KW infers Enc" (Some "enc")
+                (get_use oct_enc |> Option.map Jose.Jwa.use_to_string);
+
+              let rsa_priv = Mirage_crypto_pk.Rsa.generate ~bits:1024 () in
+              let rsa_pub = Mirage_crypto_pk.Rsa.pub_of_priv rsa_priv in
+              let rsa_priv_none = Jose.Jwk.make_priv_rsa rsa_priv in
+              Alcotest.(check (option string))
+                "make_priv_rsa without alg/use has use = None" None
+                (get_use rsa_priv_none |> Option.map Jose.Jwa.use_to_string);
+
+              let rsa_priv_sig = Jose.Jwk.make_priv_rsa ~alg:`RS256 rsa_priv in
+              Alcotest.(check (option string))
+                "make_priv_rsa ~alg:`RS256 infers Sig" (Some "sig")
+                (get_use rsa_priv_sig |> Option.map Jose.Jwa.use_to_string);
+
+              let rsa_pub_enc = Jose.Jwk.make_pub_rsa ~alg:`RSA_OAEP rsa_pub in
+              Alcotest.(check (option string))
+                "make_pub_rsa ~alg:`RSA_OAEP infers Enc" (Some "enc")
+                (get_use rsa_pub_enc |> Option.map Jose.Jwa.use_to_string);
+
+              let priv_es256 = Mirage_crypto_ec.P256.Dsa.generate () |> fst in
+              let es256_priv_default = Jose.Jwk.make_priv_es256 priv_es256 in
+              Alcotest.(check (option string))
+                "make_priv_es256 default use is Sig" (Some "sig")
+                (get_use es256_priv_default |> Option.map Jose.Jwa.use_to_string);
+
+              let es256_enc =
+                Jose.Jwk.make_priv_es256 ~alg:`ECDH_ES priv_es256
+              in
+              Alcotest.(check (option string))
+                "make_priv_es256 ~alg:`ECDH_ES infers Enc" (Some "enc")
+                (get_use es256_enc |> Option.map Jose.Jwa.use_to_string);
+
+              let es256_override =
+                Jose.Jwk.make_priv_es256 ~use:`Sig ~alg:`ECDH_ES priv_es256
+              in
+              Alcotest.(check (option string))
+                "explicit ?use takes precedence over alg" (Some "sig")
+                (get_use es256_override |> Option.map Jose.Jwa.use_to_string);
+
+              let priv_ed = Mirage_crypto_ec.Ed25519.generate () |> fst in
+              let pub_ed = Mirage_crypto_ec.Ed25519.pub_of_priv priv_ed in
+              let ed_priv_default = Jose.Jwk.make_priv_ed25519 priv_ed in
+              Alcotest.(check (option string))
+                "make_priv_ed25519 default use is Sig" (Some "sig")
+                (get_use ed_priv_default |> Option.map Jose.Jwa.use_to_string);
+              let ed_pub_default = Jose.Jwk.make_pub_ed25519 pub_ed in
+              Alcotest.(check (option string))
+                "make_pub_ed25519 default use is Sig" (Some "sig")
+                (get_use ed_pub_default |> Option.map Jose.Jwa.use_to_string));
         ] );
     ]
 

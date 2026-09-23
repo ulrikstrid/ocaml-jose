@@ -66,46 +66,8 @@ module Util = struct
     make_ESXXX_of_x_y ~pub_of_string:Mirage_crypto_ec.P521.Dsa.pub_of_octets
 end
 
-type use = [ `Sig | `Enc | `Unsupported of string ]
-
-let use_to_string use =
-  match use with `Sig -> "sig" | `Enc -> "enc" | `Unsupported str -> str
-
-let use_of_string use =
-  match use with "sig" -> `Sig | "enc" -> `Enc | str -> `Unsupported str
-
-let alg_of_use_and_kty ?(use : use = `Sig) (kty : Jwa.kty) : Jwa.alg =
-  match (use, kty) with
-  | `Sig, `oct -> `HS256
-  | `Sig, `RSA -> `RS256
-  | `Sig, `EC -> `ES512
-  | `Sig, `OKP -> `Ed25519
-  | `Enc, `RSA -> `RSA_OAEP
-  | `Enc, `oct -> `Dir
-  | `Enc, `EC ->
-      `Unsupported "encryption with eliptic curves are not supported yet"
-  | `Enc, `OKP ->
-      `Unsupported "encryption with octet key paris are not supported yet"
-  | `Unsupported u, _ -> `Unsupported ("We don't know what to do with use: " ^ u)
-  | _, `Unsupported k -> `Unsupported ("We don't know what to do with kty: " ^ k)
-
-let use_of_alg (alg : Jwa.alg) =
-  match alg with
-  | `HS256 -> `Sig
-  | `RS256 -> `Sig
-  | `ES256 -> `Sig
-  | `ES384 -> `Sig
-  | `ES512 -> `Sig
-  | `EdDSA | `Ed25519 -> `Sig
-  | `RSA_OAEP -> `Enc
-  | `RSA1_5 -> `Enc
-  | `Dir -> `Enc
-  | `A128KW | `A256KW -> `Enc
-  | `ECDH_ES -> `Enc
-  | `ECDH_ES_A128KW -> `Enc
-  | `ECDH_ES_A256KW -> `Enc
-  | `None -> `Unsupported "none"
-  | `Unsupported str -> `Unsupported str
+let resolve_use ~use ~alg =
+  match use with Some u -> Some u | None -> Option.bind alg Jwa.use_of_alg
 
 type public = Public
 type priv = Private
@@ -113,7 +75,7 @@ type priv = Private
 type 'key jwk = {
   alg : Jwa.alg option;
   kty : Jwa.kty;
-  use : use option;
+  use : Jwa.use option;
   kid : string option;
   key : 'key;
 }
@@ -291,99 +253,110 @@ let make_kid (type a) (t : a t) =
   in
   Some kid
 
-let make_oct ?use (str : string) : 'a t =
+let make_oct ?use ?alg (str : string) : 'a t =
   (* Should we make this just return a result intead? *)
   let key = U_Base64.url_encode_string str in
-  let jwk = { kty = `oct; use; alg = Some `HS256; key; kid = None } in
+  let alg = match alg with Some alg -> Some alg | None -> Some `HS256 in
+  let use = resolve_use ~use ~alg in
+  let jwk = { kty = `oct; use; alg; key; kid = None } in
   Oct { jwk with kid = make_kid (Oct jwk) }
 
-let make_priv_rsa ?use (rsa_priv : Mirage_crypto_pk.Rsa.priv) : priv t =
+let make_priv_rsa ?use ?alg (rsa_priv : Mirage_crypto_pk.Rsa.priv) : priv t =
   let kty : Jwa.kty = `RSA in
-  let alg : Jwa.alg option =
-    Option.map (fun use -> alg_of_use_and_kty ~use kty) use
-  in
+  let use = resolve_use ~use ~alg in
   let jwk = { alg; kty; use; key = rsa_priv; kid = None } in
   Rsa_priv { jwk with kid = make_kid (Rsa_priv jwk) }
 
-let make_priv_es256 ?use (es256_priv : Mirage_crypto_ec.P256.Dsa.priv) : priv t
-    =
+let make_priv_es256 ?use ?alg (es256_priv : Mirage_crypto_ec.P256.Dsa.priv) :
+    priv t =
   let kty : Jwa.kty = `EC in
-  let alg = Some `ES256 in
+  let alg = match alg with Some alg -> Some alg | None -> Some `ES256 in
+  let use = resolve_use ~use ~alg in
   let jwk = { alg; kty; use; key = es256_priv; kid = None } in
   Es256_priv { jwk with kid = make_kid (Es256_priv jwk) }
 
-let make_priv_es384 ?use (es384_priv : Mirage_crypto_ec.P384.Dsa.priv) : priv t
-    =
+let make_priv_es384 ?use ?alg (es384_priv : Mirage_crypto_ec.P384.Dsa.priv) :
+    priv t =
   let kty : Jwa.kty = `EC in
-  let alg = Some `ES384 in
+  let alg = match alg with Some alg -> Some alg | None -> Some `ES384 in
+  let use = resolve_use ~use ~alg in
   let jwk = { alg; kty; use; key = es384_priv; kid = None } in
   Es384_priv { jwk with kid = make_kid (Es384_priv jwk) }
 
-let make_priv_es512 ?use (es512_priv : Mirage_crypto_ec.P521.Dsa.priv) : priv t
-    =
+let make_priv_es512 ?use ?alg (es512_priv : Mirage_crypto_ec.P521.Dsa.priv) :
+    priv t =
   let kty : Jwa.kty = `EC in
-  let alg = Some `ES512 in
+  let alg = match alg with Some alg -> Some alg | None -> Some `ES512 in
+  let use = resolve_use ~use ~alg in
   let jwk = { alg; kty; use; key = es512_priv; kid = None } in
   Es512_priv { jwk with kid = make_kid (Es512_priv jwk) }
 
-let make_priv_ed25519 ?use (ed25519_priv : Mirage_crypto_ec.Ed25519.priv) :
+let make_priv_ed25519 ?use ?alg (ed25519_priv : Mirage_crypto_ec.Ed25519.priv) :
     priv t =
   let kty : Jwa.kty = `OKP in
-  let alg = Some `Ed25519 in
+  let alg = match alg with Some alg -> Some alg | None -> Some `Ed25519 in
+  let use = resolve_use ~use ~alg in
   let jwk = { alg; kty; use; key = ed25519_priv; kid = None } in
   Ed25519_priv { jwk with kid = make_kid (Ed25519_priv jwk) }
 
-let make_pub_rsa ?use (rsa_pub : Mirage_crypto_pk.Rsa.pub) : public t =
+let make_pub_rsa ?use ?alg (rsa_pub : Mirage_crypto_pk.Rsa.pub) : public t =
   let kty : Jwa.kty = `RSA in
-  let alg = Option.map (fun use -> alg_of_use_and_kty ~use kty) use in
+  let use = resolve_use ~use ~alg in
   let jwk = { alg; kty; use; key = rsa_pub; kid = None } in
   Rsa_pub { jwk with kid = make_kid (Rsa_pub jwk) }
 
-let make_pub_es256 ?use (es256_pub : Mirage_crypto_ec.P256.Dsa.pub) : public t =
+let make_pub_es256 ?use ?alg (es256_pub : Mirage_crypto_ec.P256.Dsa.pub) :
+    public t =
   let kty : Jwa.kty = `EC in
-  let alg = Some `ES256 in
+  let alg = match alg with Some alg -> Some alg | None -> Some `ES256 in
+  let use = resolve_use ~use ~alg in
   let jwk = { alg; kty; use; key = es256_pub; kid = None } in
   Es256_pub { jwk with kid = make_kid (Es256_pub jwk) }
 
-let make_pub_es384 ?use (es384_pub : Mirage_crypto_ec.P384.Dsa.pub) : public t =
+let make_pub_es384 ?use ?alg (es384_pub : Mirage_crypto_ec.P384.Dsa.pub) :
+    public t =
   let kty : Jwa.kty = `EC in
-  let alg = Some `ES384 in
+  let alg = match alg with Some alg -> Some alg | None -> Some `ES384 in
+  let use = resolve_use ~use ~alg in
   let jwk = { alg; kty; use; key = es384_pub; kid = None } in
   Es384_pub { jwk with kid = make_kid (Es384_pub jwk) }
 
-let make_pub_es512 ?use (es512_pub : Mirage_crypto_ec.P521.Dsa.pub) : public t =
+let make_pub_es512 ?use ?alg (es512_pub : Mirage_crypto_ec.P521.Dsa.pub) :
+    public t =
   let kty : Jwa.kty = `EC in
-  let alg = Some `ES512 in
+  let alg = match alg with Some alg -> Some alg | None -> Some `ES512 in
+  let use = resolve_use ~use ~alg in
   let jwk = { alg; kty; use; key = es512_pub; kid = None } in
   Es512_pub { jwk with kid = make_kid (Es512_pub jwk) }
 
-let make_pub_ed25519 ?use (ed25519_pub : Mirage_crypto_ec.Ed25519.pub) :
+let make_pub_ed25519 ?use ?alg (ed25519_pub : Mirage_crypto_ec.Ed25519.pub) :
     public t =
   let kty : Jwa.kty = `OKP in
-  let alg = Some `Ed25519 in
+  let alg = match alg with Some alg -> Some alg | None -> Some `Ed25519 in
+  let use = resolve_use ~use ~alg in
   let jwk = { alg; kty; use; key = ed25519_pub; kid = None } in
   Ed25519_pub { jwk with kid = make_kid (Ed25519_pub jwk) }
 
-let of_priv_x509 ?use (x509 : X509.Private_key.t) :
+let of_priv_x509 ?use ?alg (x509 : X509.Private_key.t) :
     (priv t, [> `Unsupported_kty ]) result =
   match x509 with
-  | `RSA priv_key -> Ok (make_priv_rsa ?use priv_key)
-  | `P256 priv_key -> Ok (make_priv_es256 ?use priv_key)
-  | `P384 priv_key -> Ok (make_priv_es384 ?use priv_key)
-  | `P521 priv_key -> Ok (make_priv_es512 ?use priv_key)
-  | `ED25519 priv_key -> Ok (make_priv_ed25519 ?use priv_key)
+  | `RSA priv_key -> Ok (make_priv_rsa ?use ?alg priv_key)
+  | `P256 priv_key -> Ok (make_priv_es256 ?use ?alg priv_key)
+  | `P384 priv_key -> Ok (make_priv_es384 ?use ?alg priv_key)
+  | `P521 priv_key -> Ok (make_priv_es512 ?use ?alg priv_key)
+  | `ED25519 priv_key -> Ok (make_priv_ed25519 ?use ?alg priv_key)
 
-let of_pub_x509 ?use (x509 : X509.Public_key.t) :
+let of_pub_x509 ?use ?alg (x509 : X509.Public_key.t) :
     (public t, [> `Unsupported_kty ]) result =
   match x509 with
-  | `RSA public_key -> Ok (make_pub_rsa ?use public_key)
-  | `P256 public_key -> Ok (make_pub_es256 ?use public_key)
-  | `P384 public_key -> Ok (make_pub_es384 ?use public_key)
-  | `P521 public_key -> Ok (make_pub_es512 ?use public_key)
-  | `ED25519 public_key -> Ok (make_pub_ed25519 ?use public_key)
+  | `RSA public_key -> Ok (make_pub_rsa ?use ?alg public_key)
+  | `P256 public_key -> Ok (make_pub_es256 ?use ?alg public_key)
+  | `P384 public_key -> Ok (make_pub_es384 ?use ?alg public_key)
+  | `P521 public_key -> Ok (make_pub_es512 ?use ?alg public_key)
+  | `ED25519 public_key -> Ok (make_pub_ed25519 ?use ?alg public_key)
 
-let of_pub_pem ?use pem : (public t, [> `Unsupported_kty ]) result =
-  Result.bind (X509.Public_key.decode_pem pem) (of_pub_x509 ?use)
+let of_pub_pem ?use ?alg pem : (public t, [> `Unsupported_kty ]) result =
+  Result.bind (X509.Public_key.decode_pem pem) (of_pub_x509 ?use ?alg)
 
 let to_pub_pem (type a) (jwk : a t) =
   match jwk with
@@ -407,11 +380,16 @@ let to_pub_pem (type a) (jwk : a t) =
       ec.key |> Mirage_crypto_ec.P521.Dsa.pub_of_priv
       |> (fun key -> X509.Public_key.encode_pem (`P521 key))
       |> Result.ok
+  | Ed25519_pub ed -> Ok (X509.Public_key.encode_pem (`ED25519 ed.key))
+  | Ed25519_priv ed ->
+      ed.key |> Mirage_crypto_ec.Ed25519.pub_of_priv
+      |> (fun key -> X509.Public_key.encode_pem (`ED25519 key))
+      |> Result.ok
   | _ -> Error `Unsupported_kty
 
-let of_priv_pem ?use pem : (priv t, [> `Unsupported_kty ]) result =
+let of_priv_pem ?use ?alg pem : (priv t, [> `Unsupported_kty ]) result =
   let pem = X509.Private_key.decode_pem pem in
-  Result.bind pem (of_priv_x509 ?use)
+  Result.bind pem (of_priv_x509 ?use ?alg)
 
 let to_priv_pem (jwk : priv t) =
   match jwk with
@@ -419,6 +397,7 @@ let to_priv_pem (jwk : priv t) =
   | Es256_priv ec -> Ok (X509.Private_key.encode_pem (`P256 ec.key))
   | Es384_priv ec -> Ok (X509.Private_key.encode_pem (`P384 ec.key))
   | Es512_priv ec -> Ok (X509.Private_key.encode_pem (`P521 ec.key))
+  | Ed25519_priv ed -> Ok (X509.Private_key.encode_pem (`ED25519 ed.key))
   | _ -> Error `Unsupported_kty
 
 let oct_to_json (oct : oct) =
@@ -445,7 +424,9 @@ let pub_rsa_to_json pub_rsa =
       Some ("n", `String n);
       Some ("kty", `String (Jwa.kty_to_string pub_rsa.kty));
       RJson.to_json_string_opt "kid" pub_rsa.kid;
-      Option.map (fun use -> ("use", `String (use_to_string use))) pub_rsa.use;
+      Option.map
+        (fun use -> ("use", `String (Jwa.use_to_string use)))
+        pub_rsa.use;
       RJson.to_json_string_opt "x5t"
         (Util.get_JWK_x5t (X509.Public_key.fingerprint ~hash:`SHA1 public_key)
         |> Result.to_option);
@@ -497,7 +478,9 @@ let priv_rsa_to_priv_json (priv_rsa : priv_rsa) : Yojson.Safe.t =
       Some ("dq", `String dq);
       Some ("qi", `String qi);
       Some ("kty", `String (priv_rsa.kty |> Jwa.kty_to_string));
-      Option.map (fun use -> ("use", `String (use_to_string use))) priv_rsa.use;
+      Option.map
+        (fun use -> ("use", `String (Jwa.use_to_string use)))
+        priv_rsa.use;
       RJson.to_json_string_opt "kid" priv_rsa.kid;
     ]
   in
@@ -512,7 +495,7 @@ let pub_esXXX_to_pub_json ~get_ESXXX_x_y ~crv (pub : 'a) : Yojson.Safe.t =
       Some ("x", `String x);
       Some ("y", `String y);
       Some ("kty", `String (pub.kty |> Jwa.kty_to_string));
-      Option.map (fun use -> ("use", `String (use_to_string use))) pub.use;
+      Option.map (fun use -> ("use", `String (Jwa.use_to_string use))) pub.use;
       RJson.to_json_string_opt "kid" pub.kid;
     ]
   in
@@ -530,7 +513,7 @@ let priv_esXXX_to_priv_json ~get_ESXXX_x_y ~pub_of_priv ~priv_to_string ~crv
       Some ("y", `String y);
       Some ("d", `String d);
       Some ("kty", `String (priv.kty |> Jwa.kty_to_string));
-      Option.map (fun use -> ("use", `String (use_to_string use))) priv.use;
+      Option.map (fun use -> ("use", `String (Jwa.use_to_string use))) priv.use;
       RJson.to_json_string_opt "kid" priv.kid;
     ]
   in
@@ -572,6 +555,7 @@ let priv_es512_to_priv_json =
 let pub_ed25519_to_pub_json okp =
   let values =
     [
+      Option.map (fun alg -> ("alg", Jwa.alg_to_json alg)) okp.alg;
       Some ("kty", `String "OKP");
       Some ("crv", `String "Ed25519");
       Some
@@ -579,6 +563,7 @@ let pub_ed25519_to_pub_json okp =
           `String
             (okp.key |> Mirage_crypto_ec.Ed25519.pub_to_octets
            |> U_Base64.url_encode_string) );
+      Option.map (fun use -> ("use", `String (Jwa.use_to_string use))) okp.use;
       RJson.to_json_string_opt "kid" okp.kid;
     ]
   in
@@ -591,6 +576,7 @@ let priv_ed25519_to_priv_json okp =
   let pub_key = Mirage_crypto_ec.Ed25519.pub_of_priv okp.key in
   let values =
     [
+      Option.map (fun alg -> ("alg", Jwa.alg_to_json alg)) okp.alg;
       Some ("kty", `String "OKP");
       Some ("crv", `String "Ed25519");
       Some
@@ -603,6 +589,7 @@ let priv_ed25519_to_priv_json okp =
           `String
             (pub_key |> Mirage_crypto_ec.Ed25519.pub_to_octets
            |> U_Base64.url_encode_string) );
+      Option.map (fun use -> ("use", `String (Jwa.use_to_string use))) okp.use;
       RJson.to_json_string_opt "kid" okp.kid;
     ]
   in
@@ -653,33 +640,12 @@ let pub_rsa_of_json json : (public t, 'error) result =
             in
             let use =
               json |> Json.member "use" |> Json.to_string_option
-              |> Option.map use_of_string
+              |> Option.map Jwa.use_of_string
             in
             let kid = json |> Json.member "kid" |> Json.to_string_option in
             let kty = `RSA in
-            match (alg, use) with
-            | Some _, Some _ -> Ok (Rsa_pub { alg; kty; use; key; kid })
-            | Some alg, None ->
-                Ok
-                  (Rsa_pub
-                     {
-                       alg = Some alg;
-                       kty;
-                       use = Some (use_of_alg alg);
-                       key;
-                       kid;
-                     })
-            | None, Some use ->
-                Ok
-                  (Rsa_pub
-                     {
-                       alg = Some (alg_of_use_and_kty ~use kty);
-                       kty;
-                       use = Some use;
-                       key;
-                       kid;
-                     })
-            | alg, use -> Ok (Rsa_pub { alg; kty; use; key; kid }))
+            let use = resolve_use ~use ~alg in
+            Ok (Rsa_pub { alg; kty; use; key; kid }))
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
 let priv_rsa_of_json json : (priv t, 'error) result =
@@ -705,27 +671,12 @@ let priv_rsa_of_json json : (priv t, 'error) result =
         in
         let use =
           json |> Json.member "use" |> Json.to_string_option
-          |> Option.map use_of_string
+          |> Option.map Jwa.use_of_string
         in
         let kid = json |> Json.member "kid" |> Json.to_string_option in
         let kty = `RSA in
-        match (alg, use) with
-        | Some _, Some _ -> Ok (Rsa_priv { alg; kty; use; key; kid })
-        | Some alg, None ->
-            Ok
-              (Rsa_priv
-                 { alg = Some alg; kty; use = Some (use_of_alg alg); key; kid })
-        | None, Some use ->
-            Ok
-              (Rsa_priv
-                 {
-                   alg = Some (alg_of_use_and_kty ~use kty);
-                   kty;
-                   use = Some use;
-                   key;
-                   kid;
-                 })
-        | None, None -> Ok (Rsa_priv { alg; kty; use; key; kid }))
+        let use = resolve_use ~use ~alg in
+        Ok (Rsa_priv { alg; kty; use; key; kid }))
   with Json.Type_error (s, _) -> Error (`Json_parse_failed s)
 
 let oct_of_json json =
@@ -743,7 +694,7 @@ let oct_of_json json =
            (* Shortcut since that is the only thing we handle *)
            use =
              json |> Json.member "use" |> Json.to_string_option
-             |> Option.map use_of_string;
+             |> Option.map Jwa.use_of_string;
            key = json |> Json.member "k" |> Json.to_string;
            kid = json |> Json.member "kid" |> Json.to_string_option;
          })
@@ -766,7 +717,7 @@ let pub_ec_of_json json =
         (* Shortcut since that is the only thing we handle *)
         use =
           json |> Json.member "use" |> Json.to_string_option
-          |> Option.map use_of_string;
+          |> Option.map Jwa.use_of_string;
         key;
         kid = json |> Json.member "kid" |> Json.to_string_option;
       }
@@ -800,7 +751,7 @@ let priv_ec_of_json json =
         (* Shortcut since that is the only thing we handle *)
         use =
           json |> Json.member "use" |> Json.to_string_option
-          |> Option.map use_of_string;
+          |> Option.map Jwa.use_of_string;
         key;
         kid = json |> Json.member "kid" |> Json.to_string_option;
       }
@@ -838,7 +789,7 @@ let pub_okp_of_json json =
         (* Shortcut since that is the only thing we handle *)
         use =
           json |> Json.member "use" |> Json.to_string_option
-          |> Option.map use_of_string;
+          |> Option.map Jwa.use_of_string;
         key;
         kid = json |> Json.member "kid" |> Json.to_string_option;
       }
@@ -866,7 +817,7 @@ let priv_okp_of_json json =
         (* Shortcut since that is the only thing we handle *)
         use =
           json |> Json.member "use" |> Json.to_string_option
-          |> Option.map use_of_string;
+          |> Option.map Jwa.use_of_string;
         key;
         kid = json |> Json.member "kid" |> Json.to_string_option;
       }

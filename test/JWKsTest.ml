@@ -24,7 +24,8 @@ let jwks_suite, _ =
                    {
                      keys =
                        [
-                         Jose.Jwk.of_pub_pem ~use:`Sig Fixtures.rsa_test_pub
+                         Jose.Jwk.of_pub_pem ~alg:`RS256 ~use:`Sig
+                           Fixtures.rsa_test_pub
                          |> CCResult.get_exn;
                        ];
                    }));

@@ -139,6 +139,34 @@ let alg_of_string = function
 let alg_to_json alg = `String (alg_to_string alg)
 let alg_of_json json = Yojson.Safe.Util.to_string json |> alg_of_string
 
+type use =
+  [ `Sig
+    (** Key used for digital signature or MAC
+        ({{:https://www.rfc-editor.org/info/rfc7517/#section-4.2} RFC 7517 §4.2})
+    *)
+  | `Enc
+    (** Key used for encrypting data
+        ({{:https://www.rfc-editor.org/info/rfc7517/#section-4.2} RFC 7517 §4.2})
+    *)
+  | `Unsupported of string ]
+
+let use_to_string = function
+  | `Sig -> "sig"
+  | `Enc -> "enc"
+  | `Unsupported str -> str
+
+let use_of_string = function
+  | "sig" -> `Sig
+  | "enc" -> `Enc
+  | str -> `Unsupported str
+
+let use_of_alg = function
+  | `HS256 | `RS256 | `ES256 | `ES384 | `ES512 | `EdDSA | `Ed25519 -> Some `Sig
+  | `RSA_OAEP | `RSA1_5 | `Dir | `A128KW | `A256KW | `ECDH_ES | `ECDH_ES_A128KW
+  | `ECDH_ES_A256KW ->
+      Some `Enc
+  | `None | `Unsupported _ -> None
+
 type enc =
   [ `A128CBC_HS256
     (** AES_128_CBC_HMAC_SHA_256 authenticated encryption algorithm - Required
