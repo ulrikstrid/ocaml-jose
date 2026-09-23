@@ -132,7 +132,7 @@ The compatibility tables below are automatically extracted from the codebase usi
 | `ECDH-ES` | Elliptic Curve Diffie-Hellman Ephemeral Static key agreement using Concat KDF | Recommended+ | [RFC 7518 §4.1](https://www.rfc-editor.org/info/rfc7518/#section-4.1), [§4.6](https://www.rfc-editor.org/info/rfc7518/#section-4.6) | Yes |
 | `ECDH-ES+A128KW` | ECDH-ES using Concat KDF and CEK wrapped with "A128KW" | Recommended | [RFC 7518 §4.1](https://www.rfc-editor.org/info/rfc7518/#section-4.1), [§4.6](https://www.rfc-editor.org/info/rfc7518/#section-4.6) | Yes |
 | `ECDH-ES+A192KW` | ECDH-ES using Concat KDF and CEK wrapped with "A192KW" | Optional | [RFC 7518 §4.1](https://www.rfc-editor.org/info/rfc7518/#section-4.1), [§4.6](https://www.rfc-editor.org/info/rfc7518/#section-4.6) | No |
-| `ECDH-ES+A256KW` | ECDH-ES using Concat KDF and CEK wrapped with "A256KW" | Recommended | [RFC 7518 §4.1](https://www.rfc-editor.org/info/rfc7518/#section-4.1), [§4.6](https://www.rfc-editor.org/info/rfc7518/#section-4.6) | No |
+| `ECDH-ES+A256KW` | ECDH-ES using Concat KDF and CEK wrapped with "A256KW" | Recommended | [RFC 7518 §4.1](https://www.rfc-editor.org/info/rfc7518/#section-4.1), [§4.6](https://www.rfc-editor.org/info/rfc7518/#section-4.6) | Yes |
 | `A128GCMKW` | Key wrapping with AES GCM using 128-bit key | Optional | [RFC 7518 §4.1](https://www.rfc-editor.org/info/rfc7518/#section-4.1) | No |
 | `A192GCMKW` | Key wrapping with AES GCM using 192-bit key | Optional | [RFC 7518 §4.1](https://www.rfc-editor.org/info/rfc7518/#section-4.1) | No |
 | `A256GCMKW` | Key wrapping with AES GCM using 256-bit key | Optional | [RFC 7518 §4.1](https://www.rfc-editor.org/info/rfc7518/#section-4.1) | No |
