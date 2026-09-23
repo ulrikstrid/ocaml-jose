@@ -549,7 +549,6 @@ let rfc7520_5_5_jwe =
   ^ "BoDlwPnTypYq-ivjmQvAYJLb5Q6l-F3LIgQomlz87yW4OPKbWE1zSTEFjDfhU9IPIOSA9Bml4m7iDFwA-1ZXvHteLDtw4R1XRGMEsDIqAYtskTTmzmzNa-_q4F_evAPUmwlO-ZG45Mnq4uhM1fm_D9rBtWolqZSF3xGNNkpOMQKF1Cl8i8wjzRli7-IXgyirlKQsbhhqRzkv8IcY6aHl24j03C-AR2le1r7URUhArM79BY8soZU0lzwI-sD5PZ3l4NDCCei9XkoIAfsXJWmySPoeRb2Ni5UZL4mYpvKDiwmyzGd65KqVw7MsFfI_K767G9C9Azp73gKZD0DyUn1mn0WW5LmyX_yJ-3AROq8p1WZBfG-ZyJ6195_JGG2m9Csg."
   ^ "WCCkNa-x4BeB9hIDIfFuhg"
 
-
 (* Section 5.13: Encrypting to Multiple Recipients using Different Algorithms
    Recipient #2 uses ECDH-ES+A256KW with P-384 key (Figure 108) *)
 let rfc7520_5_13_epk_pub =
@@ -615,7 +614,8 @@ let jwe_ecdh_tests =
           Bytes.set_int64_be aal 0
             Int64.(mul 8L (of_int (String.length header_str)));
           let hmac_input =
-            String.concat "" [ header_str; iv; data; Bytes.unsafe_to_string aal ]
+            String.concat ""
+              [ header_str; iv; data; Bytes.unsafe_to_string aal ]
           in
           let auth_tag =
             let full =

@@ -174,7 +174,8 @@ let aes_kw_tests =
             |> CCResult.get_exn
           in
           let secret =
-            Mirage_crypto_ec.P384.Dh.secret_of_octets d_recip |> CCResult.get_exn
+            Mirage_crypto_ec.P384.Dh.secret_of_octets d_recip
+            |> CCResult.get_exn
           in
           let x_epk =
             Utils.U_Base64.url_decode
@@ -192,7 +193,8 @@ let aes_kw_tests =
             |> CCResult.get_exn
           in
           let kek =
-            Utils.Concat_kdf.derive ~z ~keydatalen:256 ~alg_id:"ECDH-ES+A256KW" ()
+            Utils.Concat_kdf.derive ~z ~keydatalen:256 ~alg_id:"ECDH-ES+A256KW"
+              ()
           in
           let cek =
             Utils.U_Base64.url_decode
